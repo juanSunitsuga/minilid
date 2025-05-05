@@ -8,19 +8,13 @@ import './App.css';
 import Home from './view/Home';
 import Profile from './view/Profile';
 import Job from './view/Job';
+import Chat from './view/Chat';
 
 // Temporary placeholder components until they're moved to separate files
 const Jobs = () => (
   <div className="content-placeholder">
     <h1>Jobs</h1>
     <p>Find your dream job here</p>
-  </div>
-);
-
-const Chat = () => (
-  <div className="content-placeholder">
-    <h1>Messages</h1>
-    <p>Your conversations</p>
   </div>
 );
 
