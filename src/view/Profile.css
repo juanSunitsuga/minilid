@@ -1,0 +1,273 @@
+.profile-page {
+    max-width: 1128px;
+    margin: 72px auto 0;
+    padding: 0 24px;
+    text-align: left; /* Explicitly set left alignment for all content */
+  }
+  
+  /* Profile top section */
+  .profile-top {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  
+  .cover-photo {
+    background-color: #546e7a;
+    height: 200px;
+    position: relative;
+  }
+  
+  .edit-cover-btn {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    background-color: #fff;
+    border: none;
+    border-radius: 50%;
+    padding: 8px;
+    cursor: pointer;
+  }
+  
+  .profile-header {
+    padding: 0 24px 24px;
+    position: relative;
+  }
+  
+  .profile-photo-container {
+    position: relative;
+    margin-top: -90px;
+    width: 152px;
+    height: 152px;
+  }
+  
+  .profile-photo {
+    width: 150px;
+    height: 150px;
+    border: 4px solid #fff;
+    border-radius: 50%;
+  }
+  
+  .edit-photo-btn {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    background-color: #fff;
+    border: none;
+    border-radius: 50%;
+    padding: 6px;
+    cursor: pointer;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+  }
+  
+  .profile-info {
+    margin-top: 20px;
+  }
+  
+  .profile-name-section {
+    width: 100%;
+  }
+  
+  .profile-name-and-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  
+  .profile-name-and-buttons h1 {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+  }
+  
+  .headline {
+    font-size: 16px;
+    color: rgba(0, 0, 0, 0.9);
+    margin: 4px 0;
+  }
+  
+  .location, .connections {
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.6);
+    margin: 4px 0;
+  }
+  
+  .profile-buttons {
+    display: flex;
+    gap: 8px;
+    /* No text-align needed as these are flex items */
+  }
+  
+  .primary-btn {
+    background-color: #0a66c2;
+    color: #fff;
+    border: none;
+    border-radius: 24px;
+    padding: 6px 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .secondary-btn {
+    background-color: transparent;
+    color: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.6);
+    border-radius: 24px;
+    padding: 6px 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  
+  .company-badges {
+    display: flex;
+    margin-top: 20px;
+    gap: 10px;
+  }
+  
+  .company-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+  }
+  
+  .company-badge img {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+  }
+  
+  /* Profile section styling */
+  .profile-section {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+    margin-bottom: 16px;
+    padding: 24px;
+  }
+  
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    text-align: left; /* Keep section headers and content left-aligned */
+  }
+  
+  .section-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+  }
+  
+  .edit-btn, .icon-btn {
+    background-color: transparent;
+    border: none;
+    border-radius: 50%;
+    padding: 8px;
+    cursor: pointer;
+    color: rgba(0, 0, 0, 0.6);
+  }
+  
+  .edit-btn:hover, .icon-btn:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+  }
+  
+  .section-content {
+    text-align: left; /* Keep section headers and content left-aligned */
+  }
+  
+  .section-content p {
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-line;
+  }
+  
+  /* Experience and Education items */
+  .experience-item, .education-item {
+    display: flex;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+  
+  .experience-logo, .education-logo {
+    margin-right: 16px;
+    flex-shrink: 0;
+  }
+  
+  .experience-logo img, .education-logo img {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+  }
+  
+  .experience-details h3, .education-details h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+  }
+  
+  .company-name, .degree {
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.9);
+    margin: 0 0 4px 0;
+  }
+  
+  .date-range {
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.6);
+    margin: 0 0 4px 0;
+  }
+  
+  .description {
+    font-size: 14px;
+    margin: 8px 0 0 0;
+    line-height: 1.5;
+  }
+  
+  /* Skills section */
+  .skills-list {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .skill-item {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    text-align: left; /* Profile sections */
+  }
+  
+  .skill-item h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+  }
+  
+  .skill-item p {
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.6);
+    margin: 0;
+  }
+  
+  .show-more-btn {
+    background-color: transparent;
+    border: none;
+    color: rgba(0, 0, 0, 0.6);
+    font-weight: 600;
+    padding: 8px 0;
+    cursor: pointer;
+    text-align: center; /* This is already center-aligned in your CSS */
+    margin-top: 12px;
+    width: 100%;
+  }
+  
+  .show-more-btn:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+    border-radius: 4px;
+  }

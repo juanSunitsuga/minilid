@@ -1,0 +1,44 @@
+.home-container {
+  padding: 20px 0;
+}
+
+.featured-jobs {
+  margin-top: 40px;
+}
+
+.featured-jobs h2 {
+  margin-bottom: 20px;
+  font-size: 24px;
+  color: #333;
+}
+
+.job-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.job-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+  padding: 20px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.job-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.job-card h3 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  color: #0a66c2;
+}
+
+.job-card p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.6);
+}
