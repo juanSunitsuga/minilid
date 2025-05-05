@@ -1,3 +1,6 @@
+# config
+config
+
 # Logs
 logs
 *.log
@@ -22,3 +25,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+config/config.json
+config/config.json
