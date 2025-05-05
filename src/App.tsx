@@ -7,6 +7,7 @@ import './App.css';
 // Import views
 import Home from './view/Home';
 import Profile from './view/Profile';
+import Job from './view/Job';
 
 // Temporary placeholder components until they're moved to separate files
 const Jobs = () => (
@@ -76,7 +77,7 @@ function App() {
       <main className="content">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/jobs" element={<Jobs />} />
+          <Route path="/jobs" element={<Job />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/profile" element={<Profile />} />
         </Routes>

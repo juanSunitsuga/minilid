@@ -34,14 +34,6 @@ const Profile: React.FC = () => {
                   <p className="location">
                     <FaMapMarkerAlt /> Jakarta, Indonesia
                   </p>
-                  <p className="connections">500+ connections</p>
-                </div>
-                <div className="profile-buttons">
-                  <button className="primary-btn">
-                    <FaUserPlus /> Connect
-                  </button>
-                  <button className="secondary-btn">Message</button>
-                  <button className="secondary-btn">More</button>
                 </div>
               </div>
               
