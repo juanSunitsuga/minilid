@@ -17,6 +17,8 @@ import { Messages } from '../../models/messages';
 import { Recruiters } from '../../models/recruiters';
 import { Skills } from '../../models/skills';
 
+import registerLoginRoutes from './routes/registerLoginRoutes';
+
 
 app.use(cors({
     origin: 'http://localhost:5173', 
@@ -36,7 +38,7 @@ const sequelize = new Sequelize({
 });
 
 
-// app.use('/auth', registerLoginRoutes);
+app.use('/auth', registerLoginRoutes);
 
 app.use((req, res) => {
     res.status(404).json({ message: 'Route not found' });
