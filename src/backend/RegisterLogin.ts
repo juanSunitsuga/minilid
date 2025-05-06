@@ -46,12 +46,13 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
     
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    const hashedEmail = await bcrypt.hash(email, SALT_ROUNDS);
     
     // Create new user based on type
     let newUser;
-    if (userType === 'applicant') {
+    if (userType === 'appliers') {
       newUser = await Appliers.create({
-        email,
+        hashedEmail,
         password: hashedPassword,
         name,
         ...additionalData
@@ -61,9 +62,9 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
       if (!company) {
         return res.status(400).json({ message: 'Company name is required for recruiters' });
       }
-      
+
       newUser = await Recruiters.create({
-        email,
+        hashedEmail,
         password: hashedPassword,
         name,
         company,
@@ -134,8 +135,7 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
       userType
     };
     
-    const accessToken = generateAccessToken(userData);
-    const refreshToken = generateRefreshToken(userData);
+    const accessToken = jwtConfig.generateAccessToken(userData);
     
     // Remove password from response
     const userResponse = { ...user.get() };
@@ -144,8 +144,7 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
     return res.status(200).json({
       message: 'Login successful',
       user: userResponse,
-      accessToken,
-      refreshToken
+      accessToken
     });
     
   } catch (error) {
