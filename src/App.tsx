@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FaHome, FaBriefcase, FaSearch, FaUser, FaBell } from 'react-icons/fa';
+import { FaHome, FaBriefcase, FaSearch, FaUser, FaBell, FaSignInAlt } from 'react-icons/fa';
 import { BsChatDotsFill } from 'react-icons/bs';
 import { Link, Routes, Route, useLocation } from 'react-router-dom';
 import './App.css';
@@ -9,21 +9,21 @@ import Home from './view/Home';
 import Profile from './view/Profile';
 import Job from './view/Job';
 import Chat from './view/Chat';
-
-// Temporary placeholder components until they're moved to separate files
-const Jobs = () => (
-  <div className="content-placeholder">
-    <h1>Jobs</h1>
-    <p>Find your dream job here</p>
-  </div>
-);
+import Login from './view/Login'; // Make sure to create this component
+import Register from './view/Register';
 
 function App() {
   const location = useLocation();
   const [activePath, setActivePath] = useState('/');
+  // Add state to track if user is logged in
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   useEffect(() => {
     setActivePath(location.pathname);
+    
+    // Check if user is logged in by looking for token in localStorage
+    const token = localStorage.getItem('accessToken');
+    setIsLoggedIn(!!token);
   }, [location]);
 
   return (
@@ -60,10 +60,19 @@ function App() {
               </div>
               <span className="nav-text">Chat</span>
             </Link>
-            <Link to="/profile" className={`nav-item ${activePath === '/profile' ? 'active' : ''}`}>
-              <FaUser className="nav-icon profile-icon" />
-              <span className="nav-text">Me</span>
-            </Link>
+            
+            {/* Conditional rendering based on authentication status */}
+            {isLoggedIn ? (
+              <Link to="/profile" className={`nav-item ${activePath === '/profile' ? 'active' : ''}`}>
+                <FaUser className="nav-icon profile-icon" />
+                <span className="nav-text">Me</span>
+              </Link>
+            ) : (
+              <Link to="/login" className={`nav-item ${activePath === '/login' ? 'active' : ''}`}>
+                <FaSignInAlt className="nav-icon" />
+                <span className="nav-text">Login</span>
+              </Link>
+            )}
           </nav>
         </div>
       </header>
@@ -74,6 +83,8 @@ function App() {
           <Route path="/jobs" element={<Job />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
         </Routes>
       </main>
     </>
