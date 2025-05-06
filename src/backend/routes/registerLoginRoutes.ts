@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { Recruiters } from '../../../models/recruiters';
 import { Appliers } from '../../../models/appliers'; // Adjust model name if different
 import { appConfig } from '../../../config/app';
+import { v4 } from 'uuid'; // Import UUID generator
 import { body, validationResult } from 'express-validator';
 
 const router = express.Router();
@@ -46,14 +47,14 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
     }
     
     // Hash the password
-    const hashedEmail = await bcrypt.hash(email, SALT_ROUNDS);
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
     
     // Create new user based on type
     let newUser;
     if (userType === 'applier') {
       newUser = await Appliers.create({
-        email: hashedEmail,
+        applier_id: v4(),
+        email: email, // Use plain email, not hashed
         password: hashedPassword,
         name,
         ...additionalData
@@ -65,7 +66,8 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
       }
       
       newUser = await Recruiters.create({
-        email: hashedEmail,
+        recruiter_id: v4(),
+        email: email, // Use plain email, not hashed
         password: hashedPassword,
         name,
         company,
