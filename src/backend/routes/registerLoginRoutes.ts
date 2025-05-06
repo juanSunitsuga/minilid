@@ -48,13 +48,14 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
     
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    const hashedEmail = await bcrypt.hash(email, SALT_ROUNDS);
     
     // Create new user based on type
     let newUser;
     if (userType === 'applier') {
       newUser = await Appliers.create({
         applier_id: v4(),
-        email: email, // Use plain email, not hashed
+        email: hashedEmail, // Use plain email, not hashed
         password: hashedPassword,
         name,
         ...additionalData
