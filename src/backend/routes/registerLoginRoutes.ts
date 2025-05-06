@@ -1,11 +1,9 @@
 import express, { Request, Response } from 'express';
-import { Sequelize } from 'sequelize-typescript';
 import bcrypt from 'bcrypt';
-import { Recruiters } from '../../models/recruiters';
-import { Appliers } from '../../models/appliers';
-import { jwtConfig } from '../../config/jwt';
-import { body } from 'express-validator/check';
-import { validationResult } from 'express-validator/check';
+import { Recruiters } from '../../../models/recruiters';
+import { Appliers } from '../../../models/appliers'; // Adjust model name if different
+import { appConfig } from '../../../config/app';
+import { body, validationResult } from 'express-validator';
 
 const router = express.Router();
 const SALT_ROUNDS = 10;
@@ -15,15 +13,18 @@ const registerValidation = [
   body('email').isEmail().withMessage('Please enter a valid email'),
   body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   body('name').notEmpty().withMessage('Name is required'),
-  body('userType').isIn(['applicant', 'recruiter']).withMessage('User type must be applicant or recruiter'),
+  body('userType').isIn(['applier', 'recruiter']).withMessage('User type must be applier or recruiter'),
 ];
 
 const loginValidation = [
   body('email').isEmail().withMessage('Please enter a valid email'),
   body('password').notEmpty().withMessage('Password is required'),
-  body('userType').isIn(['applicant', 'recruiter']).withMessage('User type must be applicant or recruiter'),
+  body('userType').isIn(['applier', 'recruiter']).withMessage('User type must be applier or recruiter'),
 ];
 
+/**
+ * Register a new user (applier or recruiter)
+ */
 router.post('/register', registerValidation, async (req: Request, res: Response) => {
   try {
     // Check for validation errors
@@ -35,24 +36,24 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
     const { email, password, name, userType, company, position, ...additionalData } = req.body;
     
     // Check if user already exists
-    const userModel = userType === 'applicant' ? Appliers : Recruiters;
+    const userModel = userType === 'applier' ? Appliers : Recruiters;
     const existingUser = await userModel.findOne({ where: { email } });
     
     if (existingUser) {
       return res.status(409).json({ 
-        message: `${userType === 'applicant' ? 'Applicant' : 'Recruiter'} with this email already exists` 
+        message: `${userType === 'applier' ? 'Applier' : 'Recruiter'} with this email already exists` 
       });
     }
     
     // Hash the password
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
     const hashedEmail = await bcrypt.hash(email, SALT_ROUNDS);
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
     
     // Create new user based on type
     let newUser;
-    if (userType === 'appliers') {
+    if (userType === 'applier') {
       newUser = await Appliers.create({
-        hashedEmail,
+        email: hashedEmail,
         password: hashedPassword,
         name,
         ...additionalData
@@ -62,9 +63,9 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
       if (!company) {
         return res.status(400).json({ message: 'Company name is required for recruiters' });
       }
-
+      
       newUser = await Recruiters.create({
-        hashedEmail,
+        email: hashedEmail,
         password: hashedPassword,
         name,
         company,
@@ -80,16 +81,15 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
       userType
     };
     
-    const accessToken = jwtConfig.generateAccessToken(userData);
-    
+    const accessToken = appConfig.generateAccessToken(userData.id);
     // Remove password from response
     const userResponse = { ...newUser.get() };
     delete userResponse.password;
     
     return res.status(201).json({
-      message: `${userType === 'applicant' ? 'Applicant' : 'Recruiter'} registered successfully`,
+      message: `${userType === 'applier' ? 'Applier' : 'Recruiter'} registered successfully`,
       user: userResponse,
-      accessToken
+      accessToken,
     });
     
   } catch (error) {
@@ -99,7 +99,7 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
 });
 
 /**
- * Login for existing users (applicant or recruiter)
+ * Login for existing users (applier or recruiter)
  */
 router.post('/login', loginValidation, async (req: Request, res: Response) => {
   try {
@@ -112,7 +112,7 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
     const { email, password, userType } = req.body;
     
     // Select the appropriate model based on user type
-    const userModel: typeof Appliers | typeof Recruiters = userType === 'appliers' ? Appliers : Recruiters;
+    const userModel = userType === 'applier' ? Appliers : Recruiters;
     
     // Find the user
     const user = await userModel.findOne({ where: { email } });
@@ -135,7 +135,7 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
       userType
     };
     
-    const accessToken = jwtConfig.generateAccessToken(userData);
+    const accessToken = appConfig.generateAccessToken(userData.id);
     
     // Remove password from response
     const userResponse = { ...user.get() };
@@ -150,42 +150,6 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Login error:', error);
     return res.status(500).json({ message: 'Server error during login' });
-  }
-});
-
-/**
- * Get current user's profile
- * This route would typically be protected by auth middleware
- */
-router.get('/me', async (req: Request, res: Response) => {
-  try {
-    // The auth middleware would normally add the user to the request
-    // For this example, we're expecting the user ID and type from the query
-    // In production, get this from the JWT token
-    const { id, userType } = req.query;
-    
-    if (!id || !userType) {
-      return res.status(400).json({ message: 'User ID and type are required' });
-    }
-    
-    const userModel = userType === 'applicant' ? Appliers : Recruiters;
-    const user = await userModel.findByPk(id as string);
-    
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    
-    // Remove password from response
-    const userResponse = { ...user.get() };
-    delete userResponse.password;
-    
-    return res.status(200).json({
-      user: userResponse
-    });
-    
-  } catch (error) {
-    console.error('Profile fetch error:', error);
-    return res.status(500).json({ message: 'Server error while fetching profile' });
   }
 });
 

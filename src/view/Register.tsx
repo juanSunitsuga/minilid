@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './Register.css';
+import { FetchEndpoint } from './FetchEndpoint';
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -58,13 +59,7 @@ const Register: React.FC = () => {
       };
 
       // Call API
-      const response = await fetch('/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(registrationData),
-      });
+      const response = await FetchEndpoint('/auth/register', 'POST', null, registrationData);
 
       const data = await response.json();
 

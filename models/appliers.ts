@@ -25,6 +25,12 @@ export class Appliers extends Model {
 
     @Column({
         type: DataType.STRING,
+        allowNull: false, // Password should be required
+    })
+    declare password: string;
+
+    @Column({
+        type: DataType.STRING,
         allowNull: true,
     })
     declare resume: string;

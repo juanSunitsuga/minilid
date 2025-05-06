@@ -15,7 +15,7 @@ const Login: React.FC = () => {
 
         try {
             // Replace with your actual API endpoint
-            const response = FetchEndpoint('/auth/login', 'POST', null, { email, password });
+            const response = await FetchEndpoint('/auth/login', 'POST', null, { email, password });
             const data = await response.json();
 
             if (!response.ok) {
