@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { FaHome, FaBriefcase, FaSearch, FaUser, FaBell, FaSignInAlt } from 'react-icons/fa';
+import { FaHome, FaBriefcase, FaSearch, FaUser, FaBell, FaSignInAlt, FaSignOutAlt } from 'react-icons/fa';
 import { BsChatDotsFill } from 'react-icons/bs';
-import { Link, Routes, Route, useLocation } from 'react-router-dom';
+import { Link, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
 
 // Import views
@@ -9,11 +9,12 @@ import Home from './view/Home';
 import Profile from './view/Profile';
 import Job from './view/Job';
 import Chat from './view/Chat';
-import Login from './view/Login'; // Make sure to create this component
+import Login from './view/Login';
 import Register from './view/Register';
 
 function App() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [activePath, setActivePath] = useState('/');
   // Add state to track if user is logged in
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -25,6 +26,20 @@ function App() {
     const token = localStorage.getItem('accessToken');
     setIsLoggedIn(!!token);
   }, [location]);
+
+  // Logout function to clear user session
+  const handleLogout = () => {
+    // Remove all tokens from localStorage
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userType');
+    
+    // Update login state
+    setIsLoggedIn(false);
+    
+    // Redirect to home page
+    navigate('/');
+  };
 
   return (
     <>
@@ -63,10 +78,20 @@ function App() {
             
             {/* Conditional rendering based on authentication status */}
             {isLoggedIn ? (
-              <Link to="/profile" className={`nav-item ${activePath === '/profile' ? 'active' : ''}`}>
-                <FaUser className="nav-icon profile-icon" />
-                <span className="nav-text">Me</span>
-              </Link>
+              <>
+                <Link to="/profile" className={`nav-item ${activePath === '/profile' ? 'active' : ''}`}>
+                  <FaUser className="nav-icon profile-icon" />
+                  <span className="nav-text">Me</span>
+                </Link>
+                <button 
+                  onClick={handleLogout} 
+                  className="nav-item logout-button"
+                  aria-label="Logout"
+                >
+                  <FaSignOutAlt className="nav-icon" />
+                  <span className="nav-text">Logout</span>
+                </button>
+              </>
             ) : (
               <Link to="/login" className={`nav-item ${activePath === '/login' ? 'active' : ''}`}>
                 <FaSignInAlt className="nav-icon" />
