@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './Register.css';
 import { FetchEndpoint } from './FetchEndpoint';
+import { Password } from '@mui/icons-material';
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ const Register: React.FC = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    userType: 'appliers', // Default to applicant
+    userType: 'applier', // Change from 'appliers' to 'applier'
     company: '',           // Only for recruiters
     position: '',          // Only for recruiters
   });
@@ -59,7 +60,16 @@ const Register: React.FC = () => {
       };
 
       // Call API
-      const response = await FetchEndpoint('/auth/register', 'POST', null, registrationData);
+      const response = await FetchEndpoint('/auth/register', 'POST', null, { 
+        email: formData.email, 
+        password: formData.password, 
+        name: formData.name,
+        userType: formData.userType,
+        ...(formData.userType === 'recruiter' && {
+          company: formData.company,
+          position: formData.position || 'Recruiter'
+        })
+      });
 
       const data = await response.json();
 
@@ -69,7 +79,6 @@ const Register: React.FC = () => {
 
       // Store token in localStorage
       localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
 
       // Redirect to home page
       navigate('/');
@@ -146,8 +155,8 @@ const Register: React.FC = () => {
                 <input
                   type="radio"
                   name="userType"
-                  value="applicant"
-                  checked={formData.userType === 'applicant'}
+                  value="applier" // Change from 'applicant' to 'applier'
+                  checked={formData.userType === 'applier'} // Also change here
                   onChange={handleInputChange}
                 />
                 Job Seeker

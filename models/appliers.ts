@@ -7,7 +7,8 @@ import { Table, Column, Model, DataType } from "sequelize-typescript";
 export class Appliers extends Model {
     @Column({
         primaryKey: true,
-        type: DataType.UUID
+        type: DataType.UUID,
+        defaultValue: DataType.UUIDV4 // Add this line to auto-generate UUIDs
     })
     declare applier_id: string;
 
@@ -25,13 +26,7 @@ export class Appliers extends Model {
 
     @Column({
         type: DataType.STRING,
-        allowNull: false, // Password should be required
+        allowNull: false,
     })
     declare password: string;
-
-    @Column({
-        type: DataType.STRING,
-        allowNull: true,
-    })
-    declare resume: string;
 }

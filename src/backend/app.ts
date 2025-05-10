@@ -37,6 +37,8 @@ const sequelize = new Sequelize({
     ]
 });
 
+console.log("hello")
+
 
 app.use('/auth', registerLoginRoutes);
 
