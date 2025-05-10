@@ -122,9 +122,9 @@ const Job: React.FC = () => {
   // Sort jobs based on selected criteria
   const sortedJobs = [...filteredJobs].sort((a, b) => {
     if (sort === "newest") {
-      return new Date(b.postedDate) - new Date(a.postedDate);
+      return new Date(b.postedDate).getTime() - new Date(a.postedDate).getTime();
     } else if (sort === "oldest") {
-      return new Date(a.postedDate) - new Date(b.postedDate);
+      return new Date(a.postedDate).getTime() - new Date(b.postedDate).getTime();
     } else if (sort === "salaryAsc") {
       return parseInt(a.salary.split(' - ')[0].replace(/[^0-9]/g, '')) - parseInt(b.salary.split(' - ')[0].replace(/[^0-9]/g, ''));
     } else if (sort === "salaryDesc") {

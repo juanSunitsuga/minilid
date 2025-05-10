@@ -3,7 +3,6 @@ import {
   Box, 
   Container, 
   Typography, 
-  Grid, 
   Card, 
   CardContent,
   CardHeader,
@@ -74,9 +73,17 @@ const Home: React.FC = () => {
         </Box>
         <Divider sx={{ mb: 3 }} />
         
-        <Grid container spacing={3}>
+        {/* Flexbox container instead of Grid */}
+        <Box sx={{ 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          margin: theme => theme.spacing(-1.5) 
+        }}>
           {/* Job Card 1 */}
-          <Grid item xs={12} sm={6} md={4}>
+          <Box sx={{ 
+            width: { xs: '100%', sm: '50%', md: '33.33%' }, 
+            padding: 1.5
+          }}>
             <Card 
               sx={{ 
                 height: '100%', 
@@ -114,10 +121,13 @@ const Home: React.FC = () => {
                 <Button variant="outlined" fullWidth>View Details</Button>
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
 
           {/* Job Card 2 */}
-          <Grid item xs={12} sm={6} md={4}>
+          <Box sx={{ 
+            width: { xs: '100%', sm: '50%', md: '33.33%' }, 
+            padding: 1.5
+          }}>
             <Card 
               sx={{ 
                 height: '100%', 
@@ -155,10 +165,13 @@ const Home: React.FC = () => {
                 <Button variant="outlined" fullWidth>View Details</Button>
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
 
           {/* Job Card 3 */}
-          <Grid item xs={12} sm={6} md={4}>
+          <Box sx={{ 
+            width: { xs: '100%', sm: '50%', md: '33.33%' }, 
+            padding: 1.5
+          }}>
             <Card 
               sx={{ 
                 height: '100%', 
@@ -196,8 +209,8 @@ const Home: React.FC = () => {
                 <Button variant="outlined" fullWidth>View Details</Button>
               </CardContent>
             </Card>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Box>
       
       {/* Recent Jobs Section */}

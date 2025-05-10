@@ -2,13 +2,23 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App'
 import { BrowserRouter } from 'react-router-dom'
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
+import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import ReactDOM from 'react-dom';
 
+// Create your theme
 const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#0a66c2', // LinkedIn blue
+  components: {
+    MuiContainer: {
+      styleOverrides: {
+        root: {
+          paddingLeft: '24px',
+          paddingRight: '24px',
+          '@media (min-width: 600px)': {
+            paddingLeft: '32px',
+            paddingRight: '32px',
+          },
+        },
+      },
     },
   },
 });

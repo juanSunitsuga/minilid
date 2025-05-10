@@ -9,11 +9,9 @@ import {
   CardContent,
   CardHeader,
   Divider,
-  Grid,
   IconButton,
   Stack,
   Paper,
-  Chip,
   List,
   ListItem,
   ListItemAvatar,
@@ -337,78 +335,112 @@ const Profile: React.FC = () => {
           }
         />
         <CardContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={4}>
+          {/* Replace Grid with flexbox */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            margin: theme => theme.spacing(-1) // Negative margin to compensate for padding
+          }}>
+            {/* JavaScript skill */}
+            <Box sx={{ 
+              width: { xs: '100%', sm: '50%', md: '33.33%' }, 
+              padding: 1
+            }}>
               <Paper 
                 elevation={0} 
                 sx={{ 
                   p: 2, 
                   border: '1px solid', 
                   borderColor: 'divider',
-                  borderRadius: 2
+                  borderRadius: 2,
+                  height: '100%' // Ensure even height
                 }}
               >
                 <Typography variant="h6" gutterBottom>JavaScript</Typography>
                 <Typography variant="body2" color="text.secondary">7 endorsements</Typography>
               </Paper>
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            </Box>
+            
+            {/* React.js skill */}
+            <Box sx={{ 
+              width: { xs: '100%', sm: '50%', md: '33.33%' }, 
+              padding: 1
+            }}>
               <Paper 
                 elevation={0} 
                 sx={{ 
                   p: 2, 
                   border: '1px solid', 
                   borderColor: 'divider',
-                  borderRadius: 2
+                  borderRadius: 2,
+                  height: '100%'
                 }}
               >
                 <Typography variant="h6" gutterBottom>React.js</Typography>
                 <Typography variant="body2" color="text.secondary">15 endorsements</Typography>
               </Paper>
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            </Box>
+            
+            {/* Node.js skill */}
+            <Box sx={{ 
+              width: { xs: '100%', sm: '50%', md: '33.33%' }, 
+              padding: 1
+            }}>
               <Paper 
                 elevation={0} 
                 sx={{ 
                   p: 2, 
                   border: '1px solid', 
                   borderColor: 'divider',
-                  borderRadius: 2
+                  borderRadius: 2,
+                  height: '100%'
                 }}
               >
                 <Typography variant="h6" gutterBottom>Node.js</Typography>
                 <Typography variant="body2" color="text.secondary">12 endorsements</Typography>
               </Paper>
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            </Box>
+            
+            {/* SQL skill */}
+            <Box sx={{ 
+              width: { xs: '100%', sm: '50%', md: '33.33%' }, 
+              padding: 1
+            }}>
               <Paper 
                 elevation={0} 
                 sx={{ 
                   p: 2, 
                   border: '1px solid', 
                   borderColor: 'divider',
-                  borderRadius: 2
+                  borderRadius: 2,
+                  height: '100%'
                 }}
               >
                 <Typography variant="h6" gutterBottom>SQL</Typography>
                 <Typography variant="body2" color="text.secondary">8 endorsements</Typography>
               </Paper>
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            </Box>
+            
+            {/* Git skill */}
+            <Box sx={{ 
+              width: { xs: '100%', sm: '50%', md: '33.33%' }, 
+              padding: 1
+            }}>
               <Paper 
                 elevation={0} 
                 sx={{ 
                   p: 2, 
                   border: '1px solid', 
                   borderColor: 'divider',
-                  borderRadius: 2
+                  borderRadius: 2,
+                  height: '100%'
                 }}
               >
                 <Typography variant="h6" gutterBottom>Git</Typography>
                 <Typography variant="body2" color="text.secondary">10 endorsements</Typography>
               </Paper>
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
           
           <Button 
             sx={{ mt: 2 }}
