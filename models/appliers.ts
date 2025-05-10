@@ -1,4 +1,5 @@
-import { Table, Column, Model, DataType } from "sequelize-typescript";
+import { Table, Column, Model, DataType, HasMany } from "sequelize-typescript";
+import { Skills } from "./skills";
 
 @Table({
     tableName: "appliers",
@@ -29,4 +30,9 @@ export class Appliers extends Model {
         allowNull: false,
     })
     declare password: string;
+    
+    @HasMany(() => Skills, {
+        foreignKey: "job_id",
+    })
+    declare skills: Skills[];
 }

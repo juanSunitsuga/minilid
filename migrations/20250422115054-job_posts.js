@@ -9,6 +9,26 @@ export default {
         primaryKey: true,
         allowNull: false
       },
+      jobtype_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'job_types',
+          key: 'jobtype_id'     
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+      },
+      jobcategory_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'job_categorys',
+          key: 'jobcategory_id'     
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+      },
       title: {
         type: Sequelize.STRING,
         allowNull: false,

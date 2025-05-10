@@ -1,4 +1,7 @@
-import { Table, Column, Model, DataType } from "sequelize-typescript";
+import { Table, Column, Model, DataType, ForeignKey, HasMany } from "sequelize-typescript";
+import { JobCategories } from "./job_categories";
+import { JobTypes } from "./job_types";
+import { Skills } from "./skills";
 
 @Table({
     tableName: "job_posts",
@@ -7,7 +10,7 @@ import { Table, Column, Model, DataType } from "sequelize-typescript";
 export class JobPosts extends Model {
     @Column({
         primaryKey: true,
-        type: DataType.INTEGER,
+        type: DataType.UUID,
         autoIncrement: true,
     })
     declare job_id: string;
@@ -24,6 +27,20 @@ export class JobPosts extends Model {
     })
     declare description: string;
 
+    @ForeignKey(() => JobCategories)
+    @Column({ 
+        type: DataType.INTEGER,
+        allowNull: false
+    })
+    declare JobCategories: string;
+
+    @ForeignKey(() => JobTypes)
+    @Column({ 
+        type: DataType.INTEGER,
+        allowNull: false
+    })
+    declare JobTypes: string;
+
     @Column({
         type: DataType.DATE,
         allowNull: false,
@@ -37,4 +54,9 @@ export class JobPosts extends Model {
         defaultValue: false,
     })
     declare deleted: boolean;
+
+    @HasMany(() => Skills, {
+        foreignKey: "job_id",
+    })
+    declare skills: Skills[];
 }
