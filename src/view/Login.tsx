@@ -6,6 +6,7 @@ import { FetchEndpoint } from './FetchEndpoint';
 const Login: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [userType, setUserType] = useState('applier'); // Default to applier
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
@@ -14,8 +15,12 @@ const Login: React.FC = () => {
         setError('');
 
         try {
-            // Replace with your actual API endpoint
-            const response = await FetchEndpoint('/auth/login', 'POST', null, { email, password });
+            // Include userType in the request
+            const response = await FetchEndpoint('/auth/login', 'POST', null, { 
+                email, 
+                password,
+                userType 
+            });
             const data = await response.json();
 
             if (!response.ok) {
@@ -25,6 +30,7 @@ const Login: React.FC = () => {
             // Store token in localStorage
             localStorage.setItem('accessToken', data.accessToken);
             localStorage.setItem('refreshToken', data.refreshToken);
+            localStorage.setItem('userType', userType); // Store user type for future use
 
             // Redirect to home page
             navigate('/');
@@ -65,6 +71,32 @@ const Login: React.FC = () => {
                             onChange={(e) => setPassword(e.target.value)}
                             required
                         />
+                    </div>
+
+                    <div className="form-group">
+                        <label>I am a:</label>
+                        <div className="radio-group">
+                            <label className="radio-label">
+                                <input
+                                    type="radio"
+                                    name="userType"
+                                    value="applier"
+                                    checked={userType === 'applier'}
+                                    onChange={(e) => setUserType(e.target.value)}
+                                />
+                                Job Seeker
+                            </label>
+                            <label className="radio-label">
+                                <input
+                                    type="radio"
+                                    name="userType"
+                                    value="recruiter"
+                                    checked={userType === 'recruiter'}
+                                    onChange={(e) => setUserType(e.target.value)}
+                                />
+                                Recruiter
+                            </label>
+                        </div>
                     </div>
 
                     <button type="submit" className="login-button">Sign In</button>

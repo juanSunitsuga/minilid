@@ -1,34 +1,69 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { Recruiters } from '../../../models/recruiters';
-import { Appliers } from '../../../models/appliers'; // Adjust model name if different
+import { Appliers } from '../../../models/appliers';
 import { appConfig } from '../../../config/app';
-import { v4 } from 'uuid'; // Import UUID generator
-import { body, validationResult } from 'express-validator';
+import { v4 } from 'uuid';
 
 const router = express.Router();
 const SALT_ROUNDS = 10;
 
-// Validation middleware
-const registerValidation = [
-  body('email').isEmail().withMessage('Please enter a valid email'),
-  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
-  body('name').notEmpty().withMessage('Name is required'),
-  body('userType').isIn(['applier', 'recruiter']).withMessage('User type must be applier or recruiter'),
-];
+// Manual validation functions
+function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
 
-const loginValidation = [
-  body('email').isEmail().withMessage('Please enter a valid email'),
-  body('password').notEmpty().withMessage('Password is required'),
-  body('userType').isIn(['applier', 'recruiter']).withMessage('User type must be applier or recruiter'),
-];
+function validateRegistration(req: Request): string[] {
+  const errors: string[] = [];
+  const { email, password, name, userType } = req.body;
 
-router.post('/register', registerValidation, async (req: Request, res: Response) => {
+  if (!validateEmail(email)) {
+    errors.push('Please enter a valid email');
+  }
+  
+  if (!password || password.length < 8) {
+    errors.push('Password must be at least 8 characters');
+  }
+  
+  if (!name) {
+    errors.push('Name is required');
+  }
+  
+  if (userType !== 'applier' && userType !== 'recruiter') {
+    errors.push('User type must be applier or recruiter');
+  }
+  
+  return errors;
+}
+
+function validateLogin(req: Request): string[] {
+  const errors: string[] = [];
+  const { email, password, userType } = req.body;
+
+  if (!validateEmail(email)) {
+    errors.push('Please enter a valid email');
+  }
+  
+  if (!password) {
+    errors.push('Password is required');
+  }
+  
+  if (userType !== 'applier' && userType !== 'recruiter') {
+    errors.push('User type must be applier or recruiter');
+  }
+  
+  return errors;
+}
+
+router.post('/register', async (req: Request, res: Response) => {
   try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+    console.log("registering user", req.body);
+    
+    // Manual validation
+    const errors = validateRegistration(req);
+    if (errors.length > 0) {
+      return res.status(400).json({ errors });
     }
 
     const { email, password, name, userType, company, position, ...additionalData } = req.body;
@@ -100,12 +135,12 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
 /**
  * Login for existing users (applier or recruiter)
  */
-router.post('/login', loginValidation, async (req: Request, res: Response) => {
+router.post('/login', async (req: Request, res: Response) => {
   try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+    // Manual validation
+    const errors = validateLogin(req);
+    if (errors.length > 0) {
+      return res.status(400).json({ errors });
     }
 
     const { email, password, userType } = req.body;
