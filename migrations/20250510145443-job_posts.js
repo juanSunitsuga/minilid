@@ -17,6 +17,26 @@ export default {
         type: Sequelize.TEXT,
         allowNull: true,
       },
+      jobtype_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'job_types',
+          key: 'jobtype_id'     
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+      },
+      jobcategory_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'job_categories',
+          key: 'jobcategory_id'     
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+      },
       posted_date: {
         type: Sequelize.DATE,
         allowNull: false,
