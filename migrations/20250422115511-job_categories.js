@@ -3,7 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 export default {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('job_categorys', {
+    await queryInterface.createTable('job_categories', {
       jobcategory_id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
@@ -18,6 +18,6 @@ export default {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('job_categorys');
+    await queryInterface.dropTable('job_categories');
   },
 };
