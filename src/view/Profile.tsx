@@ -1,193 +1,424 @@
 import React from 'react';
-import './Profile.css';
-import { FaPen, FaPlus, FaCamera, FaLinkedin, FaTwitter, FaGlobe, FaMapMarkerAlt, FaBriefcase, FaGraduationCap, FaUserPlus } from 'react-icons/fa';
+import {
+  Box,
+  Container,
+  Typography,
+  Avatar,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Divider,
+  Grid,
+  IconButton,
+  Stack,
+  Paper,
+  Chip,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText
+} from '@mui/material';
+import {
+  Edit as EditIcon,
+  Add as AddIcon,
+  PhotoCamera as CameraIcon,
+  LocationOn as LocationIcon,
+  LinkedIn as LinkedInIcon,
+  Language as WebsiteIcon,
+  Twitter as TwitterIcon
+} from '@mui/icons-material';
 
 const Profile: React.FC = () => {
   return (
-    <div className="profile-page">
-      {/* Background and profile section */}
-      <div className="profile-top">
-        <div className="cover-photo">
-          <button className="edit-cover-btn">
-            <FaCamera />
-          </button>
-        </div>
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      {/* Cover Photo & Profile Section */}
+      <Box sx={{ position: 'relative', mb: 10 }}>
+        {/* Cover Photo */}
+        <Box 
+          sx={{
+            height: 200,
+            borderRadius: 2,
+            bgcolor: 'primary.main',
+            position: 'relative',
+            mb: 8
+          }}
+        >
+          <IconButton 
+            sx={{ 
+              position: 'absolute',
+              right: 16,
+              bottom: 16,
+              bgcolor: 'background.paper',
+              '&:hover': {
+                bgcolor: 'background.paper',
+                opacity: 0.9
+              }
+            }}
+            size="small"
+          >
+            <CameraIcon />
+          </IconButton>
+        </Box>
         
-        <div className="profile-header">
-          <div className="profile-photo-container">
-            <img 
-              src="https://placehold.co/150" 
-              alt="Profile" 
-              className="profile-photo" 
-            />
-            <button className="edit-photo-btn">
-              <FaCamera />
-            </button>
-          </div>
+        {/* Profile Photo */}
+        <Avatar 
+          src="https://placehold.co/150" 
+          alt="Profile"
+          sx={{
+            width: 150,
+            height: 150,
+            border: '4px solid #fff',
+            position: 'absolute',
+            left: 24,
+            bottom: -75,
+            boxShadow: 2
+          }}
+        />
+        
+        {/* Edit Profile Photo Button */}
+        <IconButton
+          size="small"
+          sx={{
+            position: 'absolute',
+            left: 130,
+            bottom: -40,
+            bgcolor: 'background.paper',
+            zIndex: 1,
+            border: '1px solid',
+            borderColor: 'divider',
+            '&:hover': {
+              bgcolor: 'background.paper',
+              opacity: 0.9
+            }
+          }}
+        >
+          <CameraIcon fontSize="small" />
+        </IconButton>
+        
+        {/* Profile Info */}
+        <Box 
+          sx={{ 
+            ml: { xs: 0, sm: 20 }, 
+            mt: { xs: 10, sm: 0 },
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            justifyContent: 'space-between'
+          }}
+        >
+          <Box>
+            <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+              John Doe
+            </Typography>
+            <Typography variant="subtitle1" gutterBottom>
+              Software Engineer at MiniLid Inc.
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <LocationIcon fontSize="small" color="action" sx={{ mr: 0.5 }} />
+              <Typography variant="body2" color="text.secondary">
+                Jakarta, Indonesia
+              </Typography>
+            </Box>
+          </Box>
           
-          <div className="profile-info">
-            <div className="profile-name-section">
-              <div className="profile-name-and-buttons">
-                <div>
-                  <h1>John Doe</h1>
-                  <p className="headline">Software Engineer at MiniLid Inc.</p>
-                  <p className="location">
-                    <FaMapMarkerAlt /> Jakarta, Indonesia
-                  </p>
-                </div>
-              </div>
-              
-              <div className="company-badges">
-                <div className="company-badge">
-                  <img src="https://placehold.co/40" alt="Company logo" />
-                  <span>MiniLid Inc.</span>
-                </div>
-                <div className="company-badge">
-                  <img src="https://placehold.co/40" alt="University logo" />
-                  <span>University of Indonesia</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+          <Stack direction="row" spacing={2} sx={{ mt: { xs: 2, md: 0 } }}>
+            <Button variant="contained" startIcon={<EditIcon />}>
+              Edit Profile
+            </Button>
+            <Button variant="outlined">
+              More
+            </Button>
+          </Stack>
+        </Box>
+        
+        {/* Company Badges */}
+        <Stack 
+          direction="row" 
+          spacing={2} 
+          sx={{ 
+            mt: 3,
+            ml: { xs: 0, sm: 20 }
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Avatar 
+              src="https://placehold.co/40" 
+              alt="Company logo"
+              sx={{ width: 32, height: 32, mr: 1 }}
+            />
+            <Typography variant="body2">MiniLid Inc.</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Avatar 
+              src="https://placehold.co/40" 
+              alt="University logo"
+              sx={{ width: 32, height: 32, mr: 1 }}
+            />
+            <Typography variant="body2">University of Indonesia</Typography>
+          </Box>
+        </Stack>
+      </Box>
       
-      {/* About section */}
-      <div className="profile-section">
-        <div className="section-header">
-          <h2>About</h2>
-          <button className="edit-btn">
-            <FaPen />
-          </button>
-        </div>
-        <div className="section-content">
-          <p>
+      {/* About Section */}
+      <Card sx={{ mb: 3, borderRadius: 2 }} elevation={1}>
+        <CardHeader
+          title="About"
+          action={
+            <IconButton aria-label="edit">
+              <EditIcon />
+            </IconButton>
+          }
+          sx={{ pb: 0 }}
+        />
+        <CardContent>
+          <Typography variant="body1">
             Experienced Software Engineer with a passion for developing innovative 
             applications that expedite the efficiency and effectiveness of organizational 
             success. Well-versed in technology and writing code to create systems that 
             are reliable and user-friendly. Skilled leader who has the proven ability 
             to motivate, educate, and manage a team to build software programs and 
             effectively track changes.
-          </p>
-        </div>
-      </div>
+          </Typography>
+        </CardContent>
+      </Card>
       
-      {/* Experience section */}
-      <div className="profile-section">
-        <div className="section-header">
-          <h2>Experience</h2>
-          <div>
-            <button className="icon-btn">
-              <FaPlus />
-            </button>
-            <button className="edit-btn">
-              <FaPen />
-            </button>
-          </div>
-        </div>
-        
-        <div className="experience-item">
-          <div className="experience-logo">
-            <img src="https://placehold.co/60" alt="Company Logo" />
-          </div>
-          <div className="experience-details">
-            <h3>Software Engineer</h3>
-            <p className="company-name">MiniLid Inc. · Full-time</p>
-            <p className="date-range">Jan 2021 - Present · 2 yrs 4 mos</p>
-            <p className="location">Jakarta, Indonesia</p>
-            <p className="description">
-              Developing and maintaining web applications using React, Node.js, 
-              and PostgreSQL. Leading a team of junior developers and mentoring them.
-            </p>
-          </div>
-        </div>
-        
-        <div className="experience-item">
-          <div className="experience-logo">
-            <img src="https://placehold.co/60" alt="Company Logo" />
-          </div>
-          <div className="experience-details">
-            <h3>Junior Developer</h3>
-            <p className="company-name">Tech Solutions · Full-time</p>
-            <p className="date-range">Jun 2018 - Dec 2020 · 2 yrs 7 mos</p>
-            <p className="location">Jakarta, Indonesia</p>
-            <p className="description">
-              Developed front-end interfaces using HTML, CSS, and JavaScript.
-              Collaborated with senior developers to implement new features.
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* Experience Section */}
+      <Card sx={{ mb: 3, borderRadius: 2 }} elevation={1}>
+        <CardHeader
+          title="Experience"
+          action={
+            <Box>
+              <IconButton size="small" sx={{ mr: 1 }}>
+                <AddIcon />
+              </IconButton>
+              <IconButton size="small">
+                <EditIcon />
+              </IconButton>
+            </Box>
+          }
+        />
+        <CardContent sx={{ pt: 0 }}>
+          <List sx={{ width: '100%' }}>
+            {/* First Job */}
+            <ListItem alignItems="flex-start" sx={{ px: 0 }}>
+              <ListItemAvatar sx={{ mr: 2 }}>
+                <Avatar 
+                  src="https://placehold.co/60" 
+                  alt="Company Logo"
+                  variant="rounded"
+                  sx={{ width: 60, height: 60 }}
+                />
+              </ListItemAvatar>
+              <ListItemText
+                primary={
+                  <Typography variant="h6">Software Engineer</Typography>
+                }
+                secondary={
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="subtitle1" component="div">
+                      MiniLid Inc. · Full-time
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Jan 2021 - Present · 2 yrs 4 mos
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      Jakarta, Indonesia
+                    </Typography>
+                    <Typography variant="body2">
+                      Developing and maintaining web applications using React, Node.js, 
+                      and PostgreSQL. Leading a team of junior developers and mentoring them.
+                    </Typography>
+                  </Box>
+                }
+              />
+            </ListItem>
+            
+            <Divider component="li" sx={{ my: 2 }} />
+            
+            {/* Second Job */}
+            <ListItem alignItems="flex-start" sx={{ px: 0 }}>
+              <ListItemAvatar sx={{ mr: 2 }}>
+                <Avatar 
+                  src="https://placehold.co/60" 
+                  alt="Company Logo"
+                  variant="rounded"
+                  sx={{ width: 60, height: 60 }}
+                />
+              </ListItemAvatar>
+              <ListItemText
+                primary={
+                  <Typography variant="h6">Junior Developer</Typography>
+                }
+                secondary={
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="subtitle1" component="div">
+                      Tech Solutions · Full-time
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Jun 2018 - Dec 2020 · 2 yrs 7 mos
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      Jakarta, Indonesia
+                    </Typography>
+                    <Typography variant="body2">
+                      Developed front-end interfaces using HTML, CSS, and JavaScript.
+                      Collaborated with senior developers to implement new features.
+                    </Typography>
+                  </Box>
+                }
+              />
+            </ListItem>
+          </List>
+        </CardContent>
+      </Card>
       
-      {/* Education section */}
-      <div className="profile-section">
-        <div className="section-header">
-          <h2>Education</h2>
-          <div>
-            <button className="icon-btn">
-              <FaPlus />
-            </button>
-            <button className="edit-btn">
-              <FaPen />
-            </button>
-          </div>
-        </div>
-        
-        <div className="education-item">
-          <div className="education-logo">
-            <img src="https://placehold.co/60" alt="University Logo" />
-          </div>
-          <div className="education-details">
-            <h3>University of Indonesia</h3>
-            <p className="degree">Bachelor of Science in Computer Science</p>
-            <p className="date-range">2014 - 2018</p>
-            <p className="description">
-              Activities and societies: Computer Science Club, Hackathon Participant
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* Education Section */}
+      <Card sx={{ mb: 3, borderRadius: 2 }} elevation={1}>
+        <CardHeader
+          title="Education"
+          action={
+            <Box>
+              <IconButton size="small" sx={{ mr: 1 }}>
+                <AddIcon />
+              </IconButton>
+              <IconButton size="small">
+                <EditIcon />
+              </IconButton>
+            </Box>
+          }
+        />
+        <CardContent sx={{ pt: 0 }}>
+          <List sx={{ width: '100%' }}>
+            <ListItem alignItems="flex-start" sx={{ px: 0 }}>
+              <ListItemAvatar sx={{ mr: 2 }}>
+                <Avatar 
+                  src="https://placehold.co/60" 
+                  alt="University Logo"
+                  variant="rounded"
+                  sx={{ width: 60, height: 60 }}
+                />
+              </ListItemAvatar>
+              <ListItemText
+                primary={
+                  <Typography variant="h6">University of Indonesia</Typography>
+                }
+                secondary={
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="subtitle1" component="div">
+                      Bachelor of Science in Computer Science
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      2014 - 2018
+                    </Typography>
+                    <Typography variant="body2">
+                      Activities and societies: Computer Science Club, Hackathon Participant
+                    </Typography>
+                  </Box>
+                }
+              />
+            </ListItem>
+          </List>
+        </CardContent>
+      </Card>
       
-      {/* Skills section */}
-      <div className="profile-section">
-        <div className="section-header">
-          <h2>Skills</h2>
-          <div>
-            <button className="icon-btn">
-              <FaPlus />
-            </button>
-            <button className="edit-btn">
-              <FaPen />
-            </button>
-          </div>
-        </div>
-        
-        <div className="skills-list">
-          <div className="skill-item">
-            <h3>JavaScript</h3>
-            <p>7 endorsements</p>
-          </div>
-          <div className="skill-item">
-            <h3>React.js</h3>
-            <p>15 endorsements</p>
-          </div>
-          <div className="skill-item">
-            <h3>Node.js</h3>
-            <p>12 endorsements</p>
-          </div>
-          <div className="skill-item">
-            <h3>SQL</h3>
-            <p>8 endorsements</p>
-          </div>
-          <div className="skill-item">
-            <h3>Git</h3>
-            <p>10 endorsements</p>
-          </div>
-        </div>
-        
-        <button className="show-more-btn">Show all 12 skills</button>
-      </div>
-    </div>
+      {/* Skills Section */}
+      <Card sx={{ mb: 3, borderRadius: 2 }} elevation={1}>
+        <CardHeader
+          title="Skills"
+          action={
+            <Box>
+              <IconButton size="small" sx={{ mr: 1 }}>
+                <AddIcon />
+              </IconButton>
+              <IconButton size="small">
+                <EditIcon />
+              </IconButton>
+            </Box>
+          }
+        />
+        <CardContent>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6} md={4}>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 2, 
+                  border: '1px solid', 
+                  borderColor: 'divider',
+                  borderRadius: 2
+                }}
+              >
+                <Typography variant="h6" gutterBottom>JavaScript</Typography>
+                <Typography variant="body2" color="text.secondary">7 endorsements</Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 2, 
+                  border: '1px solid', 
+                  borderColor: 'divider',
+                  borderRadius: 2
+                }}
+              >
+                <Typography variant="h6" gutterBottom>React.js</Typography>
+                <Typography variant="body2" color="text.secondary">15 endorsements</Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 2, 
+                  border: '1px solid', 
+                  borderColor: 'divider',
+                  borderRadius: 2
+                }}
+              >
+                <Typography variant="h6" gutterBottom>Node.js</Typography>
+                <Typography variant="body2" color="text.secondary">12 endorsements</Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 2, 
+                  border: '1px solid', 
+                  borderColor: 'divider',
+                  borderRadius: 2
+                }}
+              >
+                <Typography variant="h6" gutterBottom>SQL</Typography>
+                <Typography variant="body2" color="text.secondary">8 endorsements</Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 2, 
+                  border: '1px solid', 
+                  borderColor: 'divider',
+                  borderRadius: 2
+                }}
+              >
+                <Typography variant="h6" gutterBottom>Git</Typography>
+                <Typography variant="body2" color="text.secondary">10 endorsements</Typography>
+              </Paper>
+            </Grid>
+          </Grid>
+          
+          <Button 
+            sx={{ mt: 2 }}
+            variant="text"
+          >
+            Show all 12 skills
+          </Button>
+        </CardContent>
+      </Card>
+    </Container>
   );
 };
 

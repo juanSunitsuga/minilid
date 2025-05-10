@@ -1,6 +1,33 @@
 import React, { useState } from 'react';
-import './Job.css';
-import { FaMapMarkerAlt, FaRegClock, FaBriefcase, FaBookmark, FaSearch, FaFilter } from 'react-icons/fa';
+import {
+  Box,
+  Typography,
+  TextField,
+  Select,
+  MenuItem,
+  Button,
+  Container,
+  Grid,
+  Paper,
+  InputAdornment,
+  Card,
+  CardContent,
+  CardActions,
+  Stack,
+  Chip,
+  Divider,
+  FormControl,
+  InputLabel,
+  Avatar
+} from '@mui/material';
+import {
+  Search as SearchIcon,
+  LocationOn as LocationIcon,
+  Work as WorkIcon,
+  AccessTime as ClockIcon,
+  Bookmark as BookmarkIcon,
+  FilterList as FilterIcon,
+} from '@mui/icons-material';
 
 // Mock job data (replace with API calls in production)
 const jobListings = [
@@ -76,6 +103,9 @@ const Job: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedJobType, setSelectedJobType] = useState("All");
   const [selectedLocation, setSelectedLocation] = useState("All");
+  const [minSalary, setMinSalary] = useState("");
+  const [maxSalary, setMaxSalary] = useState("");
+  const [sort, setSort] = useState("newest");
 
   // Filter jobs based on search term and filters
   const filteredJobs = jobListings.filter(job => {
@@ -83,8 +113,24 @@ const Job: React.FC = () => {
                          job.company.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesJobType = selectedJobType === "All" || job.type === selectedJobType;
     const matchesLocation = selectedLocation === "All" || job.location.includes(selectedLocation);
+    const matchesSalary = (minSalary === "" || job.salary.split(' - ')[0].replace(/[^0-9]/g, '') >= minSalary) &&
+                          (maxSalary === "" || job.salary.split(' - ')[1].replace(/[^0-9]/g, '') <= maxSalary);
     
-    return matchesSearch && matchesJobType && matchesLocation;
+    return matchesSearch && matchesJobType && matchesLocation && matchesSalary;
+  });
+
+  // Sort jobs based on selected criteria
+  const sortedJobs = [...filteredJobs].sort((a, b) => {
+    if (sort === "newest") {
+      return new Date(b.postedDate) - new Date(a.postedDate);
+    } else if (sort === "oldest") {
+      return new Date(a.postedDate) - new Date(b.postedDate);
+    } else if (sort === "salaryAsc") {
+      return parseInt(a.salary.split(' - ')[0].replace(/[^0-9]/g, '')) - parseInt(b.salary.split(' - ')[0].replace(/[^0-9]/g, ''));
+    } else if (sort === "salaryDesc") {
+      return parseInt(b.salary.split(' - ')[0].replace(/[^0-9]/g, '')) - parseInt(a.salary.split(' - ')[0].replace(/[^0-9]/g, ''));
+    }
+    return 0;
   });
 
   return (
@@ -98,106 +144,150 @@ const Job: React.FC = () => {
         {/* Left sidebar with filters */}
         <div className="jobs-filters">
           <div className="search-bar">
-            <FaSearch className="search-icon" />
-            <input
-              type="text"
+            <SearchIcon className="search-icon" />
+            <TextField
+              variant="outlined"
               placeholder="Search by title, skill, or company"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              fullWidth
             />
           </div>
           
-          <div className="filter-section">
-            <h3>Job Type</h3>
-            <select 
+          <FormControl fullWidth variant="outlined" margin="normal">
+            <InputLabel>Job Type</InputLabel>
+            <Select 
               value={selectedJobType}
               onChange={(e) => setSelectedJobType(e.target.value)}
+              label="Job Type"
             >
-              <option value="All">All Types</option>
-              <option value="Full-time">Full-time</option>
-              <option value="Part-time">Part-time</option>
-              <option value="Contract">Contract</option>
-              <option value="Internship">Internship</option>
-            </select>
-          </div>
+              <MenuItem value="All">All Types</MenuItem>
+              <MenuItem value="Full-time">Full-time</MenuItem>
+              <MenuItem value="Part-time">Part-time</MenuItem>
+              <MenuItem value="Contract">Contract</MenuItem>
+              <MenuItem value="Internship">Internship</MenuItem>
+            </Select>
+          </FormControl>
           
-          <div className="filter-section">
-            <h3>Location</h3>
-            <select 
+          <FormControl fullWidth variant="outlined" margin="normal">
+            <InputLabel>Location</InputLabel>
+            <Select 
               value={selectedLocation}
               onChange={(e) => setSelectedLocation(e.target.value)}
+              label="Location"
             >
-              <option value="All">All Locations</option>
-              <option value="Jakarta">Jakarta</option>
-              <option value="Bandung">Bandung</option>
-              <option value="Remote">Remote</option>
-              <option value="Yogyakarta">Yogyakarta</option>
-            </select>
-          </div>
+              <MenuItem value="All">All Locations</MenuItem>
+              <MenuItem value="Jakarta">Jakarta</MenuItem>
+              <MenuItem value="Bandung">Bandung</MenuItem>
+              <MenuItem value="Remote">Remote</MenuItem>
+              <MenuItem value="Yogyakarta">Yogyakarta</MenuItem>
+            </Select>
+          </FormControl>
           
-          <div className="filter-section">
-            <h3>Salary Range</h3>
+          <div className="salary-range">
+            <Typography variant="subtitle1">Salary Range</Typography>
             <div className="salary-inputs">
-              <input type="text" placeholder="Min" />
-              <span>to</span>
-              <input type="text" placeholder="Max" />
+              <TextField 
+                variant="outlined" 
+                placeholder="Min" 
+                value={minSalary}
+                onChange={(e) => setMinSalary(e.target.value)}
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">Rp</InputAdornment>,
+                }}
+                fullWidth
+              />
+              <TextField 
+                variant="outlined" 
+                placeholder="Max" 
+                value={maxSalary}
+                onChange={(e) => setMaxSalary(e.target.value)}
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">Rp</InputAdornment>,
+                }}
+                fullWidth
+              />
             </div>
           </div>
           
-          <button className="filter-reset">Reset Filters</button>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            className="filter-reset"
+            onClick={() => {
+              setSearchTerm("");
+              setSelectedJobType("All");
+              setSelectedLocation("All");
+              setMinSalary("");
+              setMaxSalary("");
+              setSort("newest");
+            }}
+            fullWidth
+          >
+            Reset Filters
+          </Button>
         </div>
         
         {/* Right side with job listings */}
         <div className="job-listings">
           <div className="listings-header">
-            <h3>{filteredJobs.length} job results</h3>
+            <Typography variant="h6">{sortedJobs.length} job results</Typography>
             <div className="sort-by">
-              <span>Sort by:</span>
-              <select>
-                <option>Newest first</option>
-                <option>Relevance</option>
-                <option>Salary: high to low</option>
-                <option>Salary: low to high</option>
-              </select>
+              <Typography variant="body2">Sort by:</Typography>
+              <Select
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+                variant="outlined"
+                size="small"
+              >
+                <MenuItem value="newest">Newest first</MenuItem>
+                <MenuItem value="oldest">Oldest first</MenuItem>
+                <MenuItem value="salaryAsc">Salary: low to high</MenuItem>
+                <MenuItem value="salaryDesc">Salary: high to low</MenuItem>
+              </Select>
             </div>
           </div>
           
-          {filteredJobs.length > 0 ? (
+          {sortedJobs.length > 0 ? (
             <div className="job-cards">
-              {filteredJobs.map(job => (
-                <div className="job-card" key={job.id}>
-                  <div className="job-card-header">
-                    <img src={job.logo} alt={job.company} className="company-logo" />
-                    <div className="job-info">
-                      <h2>{job.title}</h2>
-                      <h3>{job.company}</h3>
-                      <div className="job-details">
-                        <span><FaMapMarkerAlt /> {job.location}</span>
-                        <span><FaBriefcase /> {job.type}</span>
-                        <span><FaRegClock /> {job.postedDate}</span>
+              {sortedJobs.map(job => (
+                <Card className="job-card" key={job.id}>
+                  <CardContent>
+                    <div className="job-card-header">
+                      <Avatar src={job.logo} alt={job.company} className="company-logo" />
+                      <div className="job-info">
+                        <Typography variant="h6">{job.title}</Typography>
+                        <Typography variant="subtitle1" color="textSecondary">{job.company}</Typography>
+                        <div className="job-details">
+                          <Chip label={job.location} icon={<LocationIcon />} size="small" />
+                          <Chip label={job.type} icon={<WorkIcon />} size="small" />
+                          <Chip label={job.postedDate} icon={<ClockIcon />} size="small" />
+                        </div>
                       </div>
+                      <Button className="save-job" size="small">
+                        <BookmarkIcon />
+                      </Button>
                     </div>
-                    <button className="save-job">
-                      <FaBookmark />
-                    </button>
-                  </div>
+                    
+                    <Divider />
+                    
+                    <div className="job-card-body">
+                      <Typography className="job-salary" variant="body1">{job.salary}</Typography>
+                      <Typography className="job-description" variant="body2" color="textSecondary">{job.description}</Typography>
+                    </div>
+                  </CardContent>
                   
-                  <div className="job-card-body">
-                    <p className="job-salary">{job.salary}</p>
-                    <p className="job-description">{job.description}</p>
-                  </div>
-                  
-                  <div className="job-card-footer">
-                    <button className="apply-btn">Apply Now</button>
-                    <button className="details-btn">View Details</button>
-                  </div>
-                </div>
+                  <CardActions>
+                    <Button className="apply-btn" size="small" variant="contained" color="primary">Apply Now</Button>
+                    <Button className="details-btn" size="small" variant="outlined" color="primary">View Details</Button>
+                  </CardActions>
+                </Card>
               ))}
             </div>
           ) : (
             <div className="no-jobs">
-              <h3>No jobs match your search criteria</h3>
-              <p>Try adjusting your filters or search term</p>
+              <Typography variant="h6">No jobs match your search criteria</Typography>
+              <Typography variant="body2" color="textSecondary">Try adjusting your filters or search term</Typography>
             </div>
           )}
         </div>
