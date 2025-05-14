@@ -8,9 +8,10 @@ import { Company } from "./company";
 export class CompanyAccounts extends Model {
     @Column({
         primaryKey: true,
-        type: DataType.UUID
+        type: DataType.STRING,
+        field: 'company_email'
     })
-    declare account_id: string;
+    declare company_email: string;
 
     @ForeignKey(() => Company)
     @Column({
@@ -18,12 +19,6 @@ export class CompanyAccounts extends Model {
         allowNull: false,
     })
     declare company_id: string;
-
-    @Column({
-        type: DataType.STRING,
-        allowNull: false,
-    })
-    declare username: string;
 
     @Column({
         type: DataType.STRING,

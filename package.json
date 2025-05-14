@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "backend": "tsx ./src/backend/app.ts",
+    "migrate-generate": "npx sequelize-cli migration:generate --name",
     "migrate-up": "npx sequelize-cli db:migrate",
     "migrate-down": "npx sequelize-cli db:migrate:undo:all",
     "dev": "vite",

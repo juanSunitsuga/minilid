@@ -16,6 +16,7 @@ import { JobTypes } from '../../models/job_types';
 import { Messages } from '../../models/messages';
 import { Recruiters } from '../../models/recruiters';
 import { Skills } from '../../models/skills';
+import { User } from '../../models/users';
 
 import registerLoginRoutes from './routes/registerLoginRoutes';
 
@@ -33,7 +34,8 @@ import config from '../../config/config.json'; // Adjust the path to your config
 const sequelize = new Sequelize({
     ...config.development,
     models: [Appliers, Attachments, Branch, Chats, CompanyAccounts, Company, Experiences, 
-        InterviewSchedules, JobCategories, JobPosts, JobTypes, Messages, Recruiters, Skills 
+        InterviewSchedules, JobCategories, JobPosts, JobTypes, Messages, Recruiters, Skills,
+        User, // Add your models here
     ]
 });
 

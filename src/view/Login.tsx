@@ -16,6 +16,8 @@ import {
   Paper,
   IconButton,
   InputAdornment,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { Visibility, VisibilityOff, Email, Lock } from '@mui/icons-material';
 
@@ -86,192 +88,254 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
 }));
 
 const Login: React.FC = () => {
-    const [showPassword, setShowPassword] = useState(false);
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [userType, setUserType] = useState('applier');
-    const [error, setError] = useState('');
-    const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [userType, setUserType] = useState('applier');
+  const [error, setError] = useState('');
+  const [loginType, setLoginType] = useState('individual');
+  const navigate = useNavigate();
 
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
 
-        try {
-            const response = await FetchEndpoint('/auth/login', 'POST', null, { 
-                email, 
-                password,
-                userType 
-            });
-            const data = await response.json();
+    try {
+      const response = await FetchEndpoint('/auth/login', 'POST', null, {
+        email,
+        password,
+        userType,
+      });
+      const data = await response.json();
 
-            if (!response.ok) {
-                throw new Error(data.message || 'Login failed');
-            }
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
 
-            localStorage.setItem('accessToken', data.accessToken);
-            localStorage.setItem('refreshToken', data.refreshToken);
-            localStorage.setItem('userType', userType);
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      localStorage.setItem('userType', userType);
 
-            navigate('/');
-            window.location.reload();
+      navigate('/');
+      window.location.reload();
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please try again.');
+    }
+  };
 
-        } catch (err: any) {
-            setError(err.message || 'Login failed. Please try again.');
-        }
-    };
+  return (
+    <LoginContainer>
+      <LoginCard elevation={0}>
+        <Typography
+          variant="h4"
+          component="h1"
+          gutterBottom
+          sx={{
+            fontWeight: 700,
+            color: '#1a1a1a',
+            textAlign: 'center',
+            mb: 3,
+          }}
+        >
+          Welcome to MiniLid
+        </Typography>
+        <Typography
+          variant="subtitle1"
+          gutterBottom
+          sx={{
+            color: '#666',
+            textAlign: 'center',
+            mb: 4,
+          }}
+        >
+          Sign in to access your account
+        </Typography>
 
-    return (
-        <LoginContainer>
-            <LoginCard elevation={0}>
-                <Typography 
-                    variant="h4" 
-                    component="h1" 
-                    gutterBottom 
-                    sx={{ 
-                        fontWeight: 700,
-                        color: '#1a1a1a',
-                        textAlign: 'center',
-                        mb: 3
-                    }}
+        {error && (
+          <Alert
+            severity="error"
+            sx={{
+              mb: 3,
+              borderRadius: '8px',
+              animation: 'fadeIn 0.3s ease-in-out',
+            }}
+          >
+            {error}
+          </Alert>
+        )}
+
+        <Tabs
+          value={loginType}
+          onChange={(e, newValue) => setLoginType(newValue)}
+          variant="fullWidth"
+          sx={{ mb: 4 }}
+        >
+          <Tab value="individual" label="Individual User" />
+          <Tab value="company" label="Company Administrator" />
+        </Tabs>
+
+        {loginType === 'individual' ? (
+          <form onSubmit={handleLogin}>
+            <FormGroup>
+              <StyledTextField
+                fullWidth
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Email sx={{ color: '#666' }} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <StyledTextField
+                fullWidth
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Lock sx={{ color: '#666' }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <FormControl
+                component="fieldset"
+                sx={{
+                  '& .MuiFormLabel-root': {
+                    color: '#666',
+                  },
+                  '& .MuiRadio-root': {
+                    color: '#007bff',
+                  },
+                }}
+              >
+                <FormLabel component="legend">I am a:</FormLabel>
+                <RadioGroup
+                  row
+                  name="userType"
+                  value={userType}
+                  onChange={(e) => setUserType(e.target.value)}
                 >
-                    Welcome to MiniLid
-                </Typography>
-                <Typography 
-                    variant="subtitle1" 
-                    gutterBottom
-                    sx={{ 
-                        color: '#666',
-                        textAlign: 'center',
-                        mb: 4
-                    }}
-                >
-                    Sign in to access your account
-                </Typography>
+                  <FormControlLabel
+                    value="applier"
+                    control={<Radio />}
+                    label="Job Seeker"
+                  />
+                  <FormControlLabel
+                    value="recruiter"
+                    control={<Radio />}
+                    label="Recruiter"
+                  />
+                </RadioGroup>
+              </FormControl>
+            </FormGroup>
 
-                {error && (
-                    <Alert 
-                        severity="error" 
-                        sx={{ 
-                            mb: 3,
-                            borderRadius: '8px',
-                            animation: 'fadeIn 0.3s ease-in-out'
-                        }}
-                    >
-                        {error}
-                    </Alert>
-                )}
+            <StyledButton type="submit" variant="contained">
+              Sign In
+            </StyledButton>
+          </form>
+        ) : (
+          <form onSubmit={handleLogin}>
+            <FormGroup>
+              <StyledTextField
+                fullWidth
+                label="Username"
+                type="text"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Email sx={{ color: '#666' }} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </FormGroup>
 
-                <form onSubmit={handleLogin}>
-                    <FormGroup>
-                        <StyledTextField
-                            fullWidth
-                            label="Email"
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <Email sx={{ color: '#666' }} />
-                                    </InputAdornment>
-                                ),
-                            }}
-                        />
-                    </FormGroup>
+            <FormGroup>
+              <StyledTextField
+                fullWidth
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Lock sx={{ color: '#666' }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </FormGroup>
 
-                    <FormGroup>
-                        <StyledTextField
-                            fullWidth
-                            label="Password"
-                            type={showPassword ? 'text' : 'password'}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <Lock sx={{ color: '#666' }} />
-                                    </InputAdornment>
-                                ),
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        <IconButton
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            edge="end"
-                                        >
-                                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                                        </IconButton>
-                                    </InputAdornment>
-                                ),
-                            }}
-                        />
-                    </FormGroup>
+            <StyledButton type="submit" variant="contained">
+              Sign In
+            </StyledButton>
+          </form>
+        )}
 
-                    <FormGroup>
-                        <FormControl 
-                            component="fieldset"
-                            sx={{
-                                '& .MuiFormLabel-root': {
-                                    color: '#666',
-                                },
-                                '& .MuiRadio-root': {
-                                    color: '#007bff',
-                                },
-                            }}
-                        >
-                            <FormLabel component="legend">I am a:</FormLabel>
-                            <RadioGroup
-                                row
-                                name="userType"
-                                value={userType}
-                                onChange={(e) => setUserType(e.target.value)}
-                            >
-                                <FormControlLabel
-                                    value="applier"
-                                    control={<Radio />}
-                                    label="Job Seeker"
-                                />
-                                <FormControlLabel
-                                    value="recruiter"
-                                    control={<Radio />}
-                                    label="Recruiter"
-                                />
-                            </RadioGroup>
-                        </FormControl>
-                    </FormGroup>
-
-                    <StyledButton type="submit" variant="contained">
-                        Sign In
-                    </StyledButton>
-                </form>
-
-                <Box sx={{ textAlign: 'center', mt: 3 }}>
-                    <Typography 
-                        variant="body2" 
-                        sx={{ 
-                            color: '#666',
-                            '& a': {
-                                color: '#007bff',
-                                textDecoration: 'none',
-                                fontWeight: 600,
-                                transition: 'color 0.2s ease-in-out',
-                                '&:hover': {
-                                    color: '#0056b3',
-                                },
-                            },
-                        }}
-                    >
-                        Don't have an account?{' '}
-                        <Link to="/register">
-                            Register
-                        </Link>
-                    </Typography>
-                </Box>
-            </LoginCard>
-        </LoginContainer>
-    );
+        <Box sx={{ textAlign: 'center', mt: 3 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: '#666',
+              '& a': {
+                color: '#007bff',
+                textDecoration: 'none',
+                fontWeight: 600,
+                transition: 'color 0.2s ease-in-out',
+                '&:hover': {
+                  color: '#0056b3',
+                },
+              },
+            }}
+          >
+            Don't have an account?{' '}
+            <Link to="/register">Register</Link>
+          </Typography>
+        </Box>
+      </LoginCard>
+    </LoginContainer>
+  );
 };
 
 export default Login;

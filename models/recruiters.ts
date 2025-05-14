@@ -1,40 +1,33 @@
-import { Table, Column, Model, DataType, ForeignKey } from "sequelize-typescript";
-import { Company } from "./company";
+import { Table, Column, Model, DataType } from "sequelize-typescript";
 
 @Table({
-    tableName: "recruiters",
-    timestamps: false,
+  tableName: "recruiters",
+  timestamps: false,
 })
 export class Recruiters extends Model {
-    @Column({
-        primaryKey: true,
-        type: DataType.UUID,
-        defaultValue: DataType.UUIDV4,
-    })
-    declare recruiter_id: string;
+  @Column({
+    primaryKey: true,
+    type: DataType.UUID,
+    field: 'recruiter_id'
+  })
+  declare recruiter_id: string;
 
-    @ForeignKey(() => Company)
-    @Column({
-        type: DataType.UUID,
-        allowNull: false,
-    })
-    declare company_id: string;
+  @Column({
+    type: DataType.STRING,
+    allowNull: false
+  })
+  declare name: string;
 
-    @Column({
-        type: DataType.STRING,
-        allowNull: false,
-    })
-    declare name: string;
+  @Column({
+    type: DataType.STRING,
+    allowNull: false,
+    unique: true
+  })
+  declare email: string;
 
-    @Column({
-        type: DataType.STRING,
-        allowNull: false,
-    })
-    declare email: string;
-
-    @Column({
-        type: DataType.STRING,
-        allowNull: true,
-    })
-    declare phone_number: string;
+  @Column({
+    type: DataType.STRING,
+    allowNull: false
+  })
+  declare password: string;
 }
