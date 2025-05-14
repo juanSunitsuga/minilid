@@ -6,19 +6,17 @@ import {
   Select,
   MenuItem,
   Button,
-  Container,
-  Grid,
   Paper,
   InputAdornment,
   Card,
   CardContent,
   CardActions,
-  Stack,
-  Chip,
   Divider,
   FormControl,
   InputLabel,
-  Avatar
+  Avatar,
+  Chip,
+  Stack
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -134,165 +132,276 @@ const Job: React.FC = () => {
   });
 
   return (
-    <div className="jobs-page">
-      <div className="jobs-header">
-        <h1>Find your dream job</h1>
-        <p>Discover opportunities that match your skills and interests</p>
-      </div>
+    <>
+      {/* Page header */}
+      <Box sx={{ textAlign: 'center', mb: 4 }}>
+        <Typography variant="h3" component="h1" gutterBottom>
+          Find your dream job
+        </Typography>
+        <Typography variant="h6" color="text.secondary">
+          Discover opportunities that match your skills and interests
+        </Typography>
+      </Box>
       
-      <div className="jobs-container">
+      {/* Main content layout - two columns */}
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', md: 'row' },
+        gap: 3
+      }}>
         {/* Left sidebar with filters */}
-        <div className="jobs-filters">
-          <div className="search-bar">
-            <SearchIcon className="search-icon" />
+        <Box sx={{ 
+          width: { xs: '100%', md: '280px' },
+          flexShrink: 0,
+        }}>
+          <Paper 
+            elevation={1}
+            sx={{ 
+              p: 2, 
+              position: { xs: 'static', md: 'sticky' },
+              top: '100px',
+              borderRadius: 2
+            }}
+          >
+            {/* Search field */}
             <TextField
-              variant="outlined"
+              fullWidth
               placeholder="Search by title, skill, or company"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              fullWidth
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ mb: 2 }}
+              variant="outlined"
             />
-          </div>
-          
-          <FormControl fullWidth variant="outlined" margin="normal">
-            <InputLabel>Job Type</InputLabel>
-            <Select 
-              value={selectedJobType}
-              onChange={(e) => setSelectedJobType(e.target.value)}
-              label="Job Type"
+            
+            {/* Job Type filter */}
+            <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
+              <InputLabel>Job Type</InputLabel>
+              <Select 
+                value={selectedJobType}
+                onChange={(e) => setSelectedJobType(e.target.value as string)}
+                label="Job Type"
+              >
+                <MenuItem value="All">All Types</MenuItem>
+                <MenuItem value="Full-time">Full-time</MenuItem>
+                <MenuItem value="Part-time">Part-time</MenuItem>
+                <MenuItem value="Contract">Contract</MenuItem>
+                <MenuItem value="Internship">Internship</MenuItem>
+              </Select>
+            </FormControl>
+            
+            {/* Location filter */}
+            <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
+              <InputLabel>Location</InputLabel>
+              <Select 
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value as string)}
+                label="Location"
+              >
+                <MenuItem value="All">All Locations</MenuItem>
+                <MenuItem value="Jakarta">Jakarta</MenuItem>
+                <MenuItem value="Bandung">Bandung</MenuItem>
+                <MenuItem value="Remote">Remote</MenuItem>
+                <MenuItem value="Yogyakarta">Yogyakarta</MenuItem>
+              </Select>
+            </FormControl>
+            
+            {/* Salary Range filter */}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Salary Range
+              </Typography>
+              <Stack spacing={1}>
+                <TextField 
+                  variant="outlined" 
+                  placeholder="Min" 
+                  value={minSalary}
+                  onChange={(e) => setMinSalary(e.target.value)}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">Rp</InputAdornment>,
+                  }}
+                  size="small"
+                  fullWidth
+                />
+                <TextField 
+                  variant="outlined" 
+                  placeholder="Max" 
+                  value={maxSalary}
+                  onChange={(e) => setMaxSalary(e.target.value)}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">Rp</InputAdornment>,
+                  }}
+                  size="small"
+                  fullWidth
+                />
+              </Stack>
+            </Box>
+            
+            {/* Reset button */}
+            <Button 
+              variant="outlined" 
+              color="primary"
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedJobType("All");
+                setSelectedLocation("All");
+                setMinSalary("");
+                setMaxSalary("");
+                setSort("newest");
+              }}
+              fullWidth
+              startIcon={<FilterIcon />}
             >
-              <MenuItem value="All">All Types</MenuItem>
-              <MenuItem value="Full-time">Full-time</MenuItem>
-              <MenuItem value="Part-time">Part-time</MenuItem>
-              <MenuItem value="Contract">Contract</MenuItem>
-              <MenuItem value="Internship">Internship</MenuItem>
-            </Select>
-          </FormControl>
-          
-          <FormControl fullWidth variant="outlined" margin="normal">
-            <InputLabel>Location</InputLabel>
-            <Select 
-              value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
-              label="Location"
-            >
-              <MenuItem value="All">All Locations</MenuItem>
-              <MenuItem value="Jakarta">Jakarta</MenuItem>
-              <MenuItem value="Bandung">Bandung</MenuItem>
-              <MenuItem value="Remote">Remote</MenuItem>
-              <MenuItem value="Yogyakarta">Yogyakarta</MenuItem>
-            </Select>
-          </FormControl>
-          
-          <div className="salary-range">
-            <Typography variant="subtitle1">Salary Range</Typography>
-            <div className="salary-inputs">
-              <TextField 
-                variant="outlined" 
-                placeholder="Min" 
-                value={minSalary}
-                onChange={(e) => setMinSalary(e.target.value)}
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">Rp</InputAdornment>,
-                }}
-                fullWidth
-              />
-              <TextField 
-                variant="outlined" 
-                placeholder="Max" 
-                value={maxSalary}
-                onChange={(e) => setMaxSalary(e.target.value)}
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">Rp</InputAdornment>,
-                }}
-                fullWidth
-              />
-            </div>
-          </div>
-          
-          <Button 
-            variant="contained" 
-            color="primary" 
-            className="filter-reset"
-            onClick={() => {
-              setSearchTerm("");
-              setSelectedJobType("All");
-              setSelectedLocation("All");
-              setMinSalary("");
-              setMaxSalary("");
-              setSort("newest");
-            }}
-            fullWidth
-          >
-            Reset Filters
-          </Button>
-        </div>
+              Reset Filters
+            </Button>
+          </Paper>
+        </Box>
         
         {/* Right side with job listings */}
-        <div className="job-listings">
-          <div className="listings-header">
-            <Typography variant="h6">{sortedJobs.length} job results</Typography>
-            <div className="sort-by">
-              <Typography variant="body2">Sort by:</Typography>
-              <Select
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                variant="outlined"
-                size="small"
-              >
-                <MenuItem value="newest">Newest first</MenuItem>
-                <MenuItem value="oldest">Oldest first</MenuItem>
-                <MenuItem value="salaryAsc">Salary: low to high</MenuItem>
-                <MenuItem value="salaryDesc">Salary: high to low</MenuItem>
-              </Select>
-            </div>
-          </div>
+        <Box sx={{ flexGrow: 1 }}>
+          {/* Results header */}
+          <Paper 
+            elevation={1}
+            sx={{ 
+              p: 2, 
+              mb: 2,
+              borderRadius: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <Typography variant="h6">
+              {sortedJobs.length} job results
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography variant="body2" sx={{ mr: 1 }}>
+                Sort by:
+              </Typography>
+              <FormControl size="small" sx={{ minWidth: 180 }}>
+                <Select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as string)}
+                  variant="outlined"
+                >
+                  <MenuItem value="newest">Newest first</MenuItem>
+                  <MenuItem value="oldest">Oldest first</MenuItem>
+                  <MenuItem value="salaryAsc">Salary: low to high</MenuItem>
+                  <MenuItem value="salaryDesc">Salary: high to low</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          </Paper>
           
+          {/* Job Cards */}
           {sortedJobs.length > 0 ? (
-            <div className="job-cards">
+            <Stack spacing={2}>
               {sortedJobs.map(job => (
-                <Card className="job-card" key={job.id}>
+                <Card key={job.id} sx={{ borderRadius: 2, boxShadow: 1 }}>
                   <CardContent>
-                    <div className="job-card-header">
-                      <Avatar src={job.logo} alt={job.company} className="company-logo" />
-                      <div className="job-info">
-                        <Typography variant="h6">{job.title}</Typography>
-                        <Typography variant="subtitle1" color="textSecondary">{job.company}</Typography>
-                        <div className="job-details">
-                          <Chip label={job.location} icon={<LocationIcon />} size="small" />
-                          <Chip label={job.type} icon={<WorkIcon />} size="small" />
-                          <Chip label={job.postedDate} icon={<ClockIcon />} size="small" />
-                        </div>
-                      </div>
-                      <Button className="save-job" size="small">
+                    <Box sx={{ 
+                      display: 'flex',
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      alignItems: { xs: 'flex-start', sm: 'center' },
+                      justifyContent: 'space-between',
+                      gap: 2
+                    }}>
+                      <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Avatar 
+                          src={job.logo} 
+                          alt={job.company} 
+                          variant="rounded"
+                          sx={{ width: 56, height: 56 }}
+                        />
+                        <Box>
+                          <Typography variant="h6" sx={{ mb: 0.5 }}>{job.title}</Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            {job.company}
+                          </Typography>
+                          <Stack 
+                            direction="row" 
+                            spacing={1} 
+                            sx={{ 
+                              flexWrap: 'wrap',
+                              '& .MuiChip-root': { mb: 0.5 }
+                            }}
+                          >
+                            <Chip 
+                              icon={<LocationIcon fontSize="small" />} 
+                              label={job.location}
+                              size="small"
+                              variant="outlined"
+                            />
+                            <Chip 
+                              icon={<WorkIcon fontSize="small" />} 
+                              label={job.type}
+                              size="small"
+                              variant="outlined"
+                            />
+                            <Chip 
+                              icon={<ClockIcon fontSize="small" />} 
+                              label={job.postedDate}
+                              size="small"
+                              variant="outlined"
+                            />
+                          </Stack>
+                        </Box>
+                      </Box>
+                      
+                      <Button
+                        size="small"
+                        sx={{ minWidth: 40, height: 40 }}
+                      >
                         <BookmarkIcon />
                       </Button>
-                    </div>
+                    </Box>
                     
-                    <Divider />
+                    <Divider sx={{ my: 2 }} />
                     
-                    <div className="job-card-body">
-                      <Typography className="job-salary" variant="body1">{job.salary}</Typography>
-                      <Typography className="job-description" variant="body2" color="textSecondary">{job.description}</Typography>
-                    </div>
+                    <Typography variant="subtitle1" gutterBottom fontWeight="bold">
+                      {job.salary}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {job.description}
+                    </Typography>
                   </CardContent>
                   
-                  <CardActions>
-                    <Button className="apply-btn" size="small" variant="contained" color="primary">Apply Now</Button>
-                    <Button className="details-btn" size="small" variant="outlined" color="primary">View Details</Button>
+                  <CardActions sx={{ px: 2, pb: 2 }}>
+                    <Button variant="contained" color="primary" sx={{ mr: 1 }}>
+                      Apply Now
+                    </Button>
+                    <Button variant="outlined">
+                      View Details
+                    </Button>
                   </CardActions>
                 </Card>
               ))}
-            </div>
+            </Stack>
           ) : (
-            <div className="no-jobs">
-              <Typography variant="h6">No jobs match your search criteria</Typography>
-              <Typography variant="body2" color="textSecondary">Try adjusting your filters or search term</Typography>
-            </div>
+            <Paper
+              sx={{ 
+                p: 4, 
+                textAlign: 'center',
+                borderRadius: 2
+              }}
+            >
+              <Typography variant="h6" gutterBottom>
+                No jobs match your search criteria
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Try adjusting your filters or search term
+              </Typography>
+            </Paper>
           )}
-        </div>
-      </div>
-    </div>
+        </Box>
+      </Box>
+    </>
   );
 };
 
