@@ -1,7 +1,6 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
-import { User, UserType } from '../../../models/users'; // Import the new User model
-import { CompanyAccounts } from '../../../models/company_accounts';
+import { User, UserType } from '../../../models/users';
 import { Company } from '../../../models/company';
 import { appConfig } from '../../../config/app';
 import { v4 } from 'uuid';
@@ -82,55 +81,37 @@ function validateLogin(req: Request): string[] {
   return errors;
 }
 
+// For company registration
 router.post('/register-company', async (req: Request, res: Response) => {
   try {
-    // Log the request body for debugging
-    console.log('Company registration request:', req.body);
+    // Validation remains the same
     
-    // FIX: Make sure we're using validateCompanyRegistration and not validateRegistration
-    const errors = validateCompanyRegistration(req);
-    if (errors.length > 0) {
-      return res.status(400).json({ errors });
-    }
-
     const { companyName, companyAddress, companyWebsite, companyEmail, companyPassword } = req.body;
     
-    // Check if company email already exists
-    const existingAccount = await CompanyAccounts.findOne({ 
-      where: { company_email: companyEmail } // Use the correct field name that matches the database
+    // Check if company email already exists in the consolidated table
+    const existingCompany = await Company.findOne({ 
+      where: { company_email: companyEmail }
     });
     
-    if (existingAccount) {
+    if (existingCompany) {
       return res.status(409).json({ message: 'Company with this email already exists' });
     }
 
-    // Generate company ID
-    const companyId = v4();
-    
     // Hash the password
     const hashedPassword = await bcrypt.hash(companyPassword, SALT_ROUNDS);
     
-    // Create company with correct field names
+    // Create company in the consolidated table
     const newCompany = await Company.create({
-      company_id: companyId,
+      company_id: v4(),
       company_name: companyName,
+      company_email: companyEmail,
+      password: hashedPassword,
       address: companyAddress || null,
       website: companyWebsite || null,
     });
-    
-    // Create company account with correct field names and link to company
-    const newCompanyAccount = await CompanyAccounts.create({
-      company_email: companyEmail,
-      company_id: companyId, // Link to the company
-      password: hashedPassword,
-    });
 
-    // Generate access token
-    const userData = {
-      email: companyEmail,
-      companyId: companyId
-    };
-    const accessToken = appConfig.generateAccessToken(companyEmail);
+    // Generate token
+    const accessToken = appConfig.generateAccessToken(newCompany.company_id);
 
     return res.status(201).json({
       message: 'Company registered successfully',
@@ -139,11 +120,10 @@ router.post('/register-company', async (req: Request, res: Response) => {
         name: newCompany.company_name,
         address: newCompany.address,
         website: newCompany.website,
-        email: companyEmail,
+        email: newCompany.company_email,
       },
       accessToken
     });
-
   } catch (error) {
     console.error('Company registration error:', error);
     return res.status(500).json({ message: 'Server error during company registration' });
@@ -222,39 +202,33 @@ router.post('/login-company', async (req: Request, res: Response) => {
   try {
     const { companyEmail, companyPassword } = req.body;
 
-    // Basic validation
-    if (!companyEmail || !companyPassword) {
-      return res.status(400).json({ message: 'Company email and password are required' });
-    }
+    // Find the company in the consolidated table
+    const company = await Company.findOne({ 
+      where: { company_email: companyEmail } 
+    });
 
-    // Find the company account
-    const companyAccount = await CompanyAccounts.findOne({ where: { companyEmail } });
-
-    if (!companyAccount) {
+    if (!company) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     // Compare passwords
-    const passwordMatch = await bcrypt.compare(companyPassword, companyAccount.password);
-
-    if (!passwordMatch) {
+    const validPassword = await bcrypt.compare(companyPassword, company.password);
+    
+    if (!validPassword) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Find the company details
-    const company = await Company.findOne({ where: { company_id: companyAccount.company_id } });
-
-    // Generate access token
-    const accessToken = appConfig.generateAccessToken(companyAccount.company_email);
+    // Generate token
+    const accessToken = appConfig.generateAccessToken(company.company_id);
 
     return res.status(200).json({
-      message: 'Company login successful',
+      message: 'Login successful',
       company: {
-        id: company?.company_id,
-        name: company?.company_name,
-        address: company?.address,
-        website: company?.website,
-        email: companyAccount.company_email,
+        id: company.company_id,
+        name: company.company_name,
+        address: company.address,
+        website: company.website,
+        email: company.company_email,
       },
       accessToken
     });

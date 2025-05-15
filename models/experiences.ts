@@ -1,5 +1,5 @@
-import { Table, Column, Model, DataType, ForeignKey } from "sequelize-typescript";
-import { Appliers } from "./appliers";
+import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
+import { User } from "./users";
 
 @Table({
     tableName: "experiences",
@@ -12,12 +12,16 @@ export class Experiences extends Model {
     })
     declare experience_id: string;
 
-    @ForeignKey(() => Appliers)
+    @ForeignKey(() => User)
     @Column({
         type: DataType.UUID,
         allowNull: false,
+        field: 'user_id' // Change from applier_id if your database schema is updated
     })
-    declare applier_id: string;
+    declare user_id: string;
+
+    @BelongsTo(() => User)
+    declare user: User;
 
     @Column({
         type: DataType.STRING,

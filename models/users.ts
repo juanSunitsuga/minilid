@@ -1,4 +1,7 @@
-import { Table, Column, Model, DataType } from "sequelize-typescript";
+import { Table, Column, Model, DataType, HasMany } from "sequelize-typescript";
+import { Experiences } from "./experiences";
+import { JobPosts } from "./job_posts";
+import { InterviewSchedules } from "./interview_schedules";
 
 export enum UserType {
   APPLIER = 'applier',
@@ -7,7 +10,9 @@ export enum UserType {
 
 @Table({
     tableName: "users",
-    timestamps: false,
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
 })
 export class User extends Model {
     @Column({
@@ -42,4 +47,18 @@ export class User extends Model {
         allowNull: false,
     })
     declare usertype: UserType;
+
+    @HasMany(() => Experiences, { foreignKey: 'user_id' })
+    declare experiences: Experiences[];
+
+    @HasMany(() => JobPosts, { foreignKey: 'recruiter_id' })
+    declare job_posts: JobPosts[];
+
+    @HasMany(() => InterviewSchedules, { foreignKey: 'recruiter_id' })
+    declare recruiter_interviews: InterviewSchedules[];
+
+    @HasMany(() => InterviewSchedules, { foreignKey: 'applier_id' })
+    declare applier_interviews: InterviewSchedules[];
+
+    // Add other associations as needed...
 }
