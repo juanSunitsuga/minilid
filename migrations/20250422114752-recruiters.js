@@ -9,6 +9,16 @@ export default {
         primaryKey: true,
         allowNull: false
       },
+      company_id: {
+        type: Sequelize.UUID,
+        allowNull: true,
+        references: {
+          model: 'companies',
+          key: 'company_id', 
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
+      },
       name: {
         type: Sequelize.STRING,
         allowNull: false,
@@ -17,7 +27,11 @@ export default {
         type: Sequelize.STRING,
         allowNull: false,
         unique: true, 
-      }
+      },
+      password: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
     });
   },
 

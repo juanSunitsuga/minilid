@@ -24,6 +24,8 @@ import {
   CircularProgress,
   Tabs,
   Tab,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { 
   Visibility, 
@@ -349,15 +351,48 @@ const Login: React.FC = () => {
                 userType: individualData.userType 
             });
             const data = await response.json();
+    try {
+      let response;
+      let data;
 
-            if (!response.ok) {
-                throw new Error(data.message || 'Login failed');
-            }
+      if (loginType === 'individual') {
+        // Determine endpoint based on user type
+        const endpoint =
+          userType === 'applier'
+            ? '/auth/login-applier'
+            : '/auth/login-recruiter';
+
+        // Call the appropriate user endpoint
+        response = await FetchEndpoint(endpoint, 'POST', null, {
+          email,
+          password,
+        });
+
+        data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Login failed');
+        }
 
             // Store token in localStorage
-            localStorage.setItem('accessToken', data.accessToken);
-            localStorage.setItem('refreshToken', data.refreshToken);
-            localStorage.setItem('userType', individualData.userType);
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('userType', individualData.userType);
+      } else {
+        // Company login
+        response = await FetchEndpoint('/auth/login-company', 'POST', null, {
+          companyEmail: email, // Use companyEmail field for company login
+          companyPassword: password, // Use companyPassword field for company login
+        });
+
+        data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Company login failed');
+        }
+
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('userType', 'company');
+      }
 
             // Success animation before redirecting
             await new Promise(resolve => setTimeout(resolve, 500));

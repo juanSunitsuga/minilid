@@ -1,20 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { FetchEndpoint } from './FetchEndpoint';
 import {
   Box,
   Typography,
   TextField,
   Button,
+  Paper,
   Radio,
   RadioGroup,
   FormControlLabel,
   FormControl,
   FormLabel,
-  Alert,
-  styled,
-  Paper,
-  IconButton,
+  FormGroup,
   InputAdornment,
   Zoom,
   Fade,
@@ -25,6 +21,12 @@ import {
   Tabs,
   Tab,
   Divider,
+  IconButton,
+  Alert,
+  Divider,
+  Tabs,
+  Tab,
+  styled
 } from '@mui/material';
 import { 
   Visibility, 
@@ -38,6 +40,8 @@ import {
   Language,
   LocationOn,
 } from '@mui/icons-material';
+import { Link, useNavigate } from 'react-router-dom';
+import { FetchEndpoint } from './FetchEndpoint';
 
 // Enhanced styled components with animations
 const RegisterContainer = styled(Box)(({ theme }) => ({
@@ -107,6 +111,7 @@ const FormGroup = styled('div')(({ theme }) => ({
 }));
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
   '& .MuiOutlinedInput-root': {
     borderRadius: '12px',
     fontSize: '16px',
@@ -338,11 +343,12 @@ const Register: React.FC = () => {
     setIsLoading(true);
 
     // Basic validation
-    if (individualData.password !== individualData.confirmPassword) {
-      setError("Passwords don't match");
-      setIsLoading(false);
+    if (userType === 'individual') {
+      if (individualData.password !== individualData.confirmPassword) {
+        setError("Passwords don't match");
+        setIsLoading(false);
       return;
-    }
+      }
 
     if (individualData.password.length < 8) {
       setError("Password must be at least 8 characters");
@@ -350,50 +356,98 @@ const Register: React.FC = () => {
       return;
     }
 
-    // Additional validation for recruiters
-    if (individualData.userType === 'recruiter' && !individualData.company) {
-      setError("Company name is required for recruiters");
-      setIsLoading(false);
-      return;
-    }
+      try {
+        const registrationData = {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        };
 
-    try {
-      // Simulate network delay (remove in production)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Prepare data for API
-      const registrationData = {
-        name: individualData.name,
-        email: individualData.email,
-        password: individualData.password,
-        userType: individualData.userType,
-        ...(individualData.userType === 'recruiter' && {
-          company: individualData.company,
-          position: individualData.position || 'Recruiter' // Default position if none provided
-        })
-      };
+        const endpoint = formData.userType === 'applier' 
+          ? '/auth/register-applier' 
+          : '/auth/register-recruiter';
 
-      // Call API
-      const response = await FetchEndpoint('/auth/register', 'POST', null, registrationData);
-      const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
-      }
+        const response = await FetchEndpoint(endpoint, 'POST', null, registrationData);
+        const data = await response.json();
 
-      // Store token in localStorage
-      localStorage.setItem('accessToken', data.accessToken);
+        if (!response.ok) {
+          throw new Error(data.message || 'Registration failed');
+        }
+
+        localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('userType', individualData.userType);
 
       // Success animation before redirecting
       await new Promise(resolve => setTimeout(resolve, 500));
+        navigate('/');
+        window.location.reload();
+      } catch (err: any) {
+        setError(err.message || 'Registration failed. Please try again.');
+      }
+    } else {
+      
+      if (!formData.companyName) {
+        setError("Company name is required");
+        return;
+      }
 
-      // Redirect to home page
-      navigate('/');
-      // Refresh page to update auth state
-      window.location.reload();
-    } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
+      if (!formData.accountEmail || formData.accountEmail.length < 4) {
+        setError("Email must be at least 4 characters");
+        return;
+      }
+
+      if (formData.accountPassword.length < 8) {
+        setError("Account password must be at least 8 characters");
+        return;
+      }
+
+      if (formData.accountPassword !== formData.confirmAccountPassword) {
+        setError("Account passwords don't match");
+        return;
+      }
+
+      // Format website URL if provided
+      let website = formData.companyWebsite;
+      if (website && !website.match(/^https?:\/\//)) {
+        website = 'https://' + website;
+      }
+
+      try {
+        // Prepare data for company registration
+        const companyRegistrationData = {
+          companyName: formData.companyName,
+          companyAddress: formData.companyAddress || null,
+          companyWebsite: formData.companyWebsite || null,
+          companyEmail: formData.accountEmail,
+          companyPassword: formData.accountPassword
+        };
+
+        console.log('Sending company registration data:', companyRegistrationData);
+
+        // Call company registration API
+        const response = await FetchEndpoint('/auth/register-company', 'POST', null, companyRegistrationData);
+
+        // Check if response is ok before parsing JSON
+        if (!response.ok) {
+          let errorMessage = `Registration failed with status ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (e) {
+            console.error('Could not parse error response:', e);
+          }
+          throw new Error(errorMessage);
+        }
+
+        const data = await response.json();
+        localStorage.setItem('accessToken', data.accessToken);
+        navigate('/');
+        window.location.reload();
+      } catch (err: any) {
+        console.error('Registration error:', err);
+        setError(err.message || 'Company registration failed. Please try again.');
+      }
       setIsLoading(false);
     }
   };

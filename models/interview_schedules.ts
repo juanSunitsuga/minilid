@@ -1,5 +1,8 @@
-import { Table, Column, Model, DataType, ForeignKey } from "sequelize-typescript";
+import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
+import { Recruiters } from "./recruiters";
 import { JobPosts } from "./job_posts";
+import { Appliers } from "./appliers";
+import App from "../src/App";
 
 @Table({
     tableName: "interview_schedules",
@@ -30,4 +33,27 @@ export class InterviewSchedules extends Model {
         allowNull: true,
     })
     declare location: string;
+
+    @ForeignKey(() => Recruiters)
+    @Column({
+        type: DataType.UUID,
+        allowNull: false,
+        field: 'recruiter_id' // Keep field name the same for DB compatibility
+    })
+    declare recruiter_id: string;
+
+    @BelongsTo(() => Recruiters, { foreignKey: 'recruiter_id', constraints: false })
+    declare recruiter: Recruiters;
+    
+    // If you have applier_id as well:
+    @ForeignKey(() => Appliers)
+    @Column({
+        type: DataType.UUID,
+        allowNull: false,
+        field: 'applier_id' // Keep field name the same for DB compatibility
+    })
+    declare applier_id: string;
+
+    @BelongsTo(() => Appliers, { foreignKey: 'applier_id', constraints: false })
+    declare applier: Appliers;
 }
