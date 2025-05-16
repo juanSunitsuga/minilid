@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { FaHome, FaBriefcase, FaSearch, FaUser, FaBell, FaSignInAlt, FaSignOutAlt } from 'react-icons/fa';
 import { BsChatDotsFill } from 'react-icons/bs';
 import { Link, Routes, Route, useLocation, useNavigate } from 'react-router-dom';

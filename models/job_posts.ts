@@ -1,4 +1,5 @@
-import { Table, Column, Model, DataType } from "sequelize-typescript";
+import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
+import { Recruiters } from "./recruiters";
 
 @Table({
     tableName: "job_posts",
@@ -37,4 +38,15 @@ export class JobPosts extends Model {
         defaultValue: false,
     })
     declare deleted: boolean;
+
+    @ForeignKey(() => Recruiters)
+    @Column({
+        type: DataType.UUID,
+        allowNull: false,
+        field: 'recruiter_id' // Keep field name the same for DB compatibility
+    })
+    declare recruiter_id: string;
+
+    @BelongsTo(() => Recruiters, { foreignKey: 'recruiter_id', constraints: false })
+    declare recruiter: Recruiters;
 }
