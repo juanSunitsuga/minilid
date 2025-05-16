@@ -22,6 +22,8 @@ import {
   Grow,
   Collapse,
   CircularProgress,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { 
   Visibility, 
@@ -29,6 +31,7 @@ import {
   Email, 
   Lock,
   AlternateEmail,
+  Business,
   LightbulbOutlined,
 } from '@mui/icons-material';
 
@@ -171,6 +174,9 @@ const StyledButton = styled(Button)(({ theme }) => ({
     transform: 'translateY(0) scale(0.99)',
     boxShadow: '0 2px 10px rgba(74, 141, 248, 0.3)',
   },
+  '&.Mui-disabled': {
+    backgroundColor: 'rgba(74, 141, 248, 0.4)',
+  }
 }));
 
 const UserTypeOption = styled(FormControlLabel)(({ value, selected }: { value: string, selected: boolean }) => ({
@@ -214,6 +220,29 @@ const ShiningTitle = styled(Typography)(() => ({
   },
 }));
 
+const StyledTabs = styled(Tabs)(({ theme }) => ({
+  marginBottom: '32px',
+  '& .MuiTab-root': {
+    fontSize: '16px',
+    fontWeight: 600,
+    textTransform: 'none',
+    borderRadius: '12px',
+    minHeight: '48px',
+    transition: 'all 0.3s ease',
+    '&:hover': {
+      backgroundColor: 'rgba(74, 141, 248, 0.05)',
+    },
+  },
+  '& .Mui-selected': {
+    color: '#4a8df8',
+  },
+  '& .MuiTabs-indicator': {
+    backgroundColor: '#4a8df8',
+    height: '3px',
+    borderRadius: '8px 8px 0 0',
+  },
+}));
+
 const Tip = styled(Box)(({ theme }) => ({
   marginTop: '28px',
   padding: '12px 16px',
@@ -230,15 +259,26 @@ const Tip = styled(Box)(({ theme }) => ({
 }));
 
 const Login: React.FC = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [userType, setUserType] = useState('applier'); // Default to applier
+    const navigate = useNavigate();
+    const [loginType, setLoginType] = useState('individual');
     const [error, setError] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [formFilled, setFormFilled] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const [showTip, setShowTip] = useState(false);
-    const navigate = useNavigate();
+    
+    // Individual login state
+    const [individualData, setIndividualData] = useState({
+        email: '',
+        password: '',
+        userType: 'applier',
+    });
+    
+    // Company login state
+    const [companyData, setCompanyData] = useState({
+        email: '',
+        password: '',
+    });
     
     // Random tip messages
     const tips = [
@@ -252,12 +292,16 @@ const Login: React.FC = () => {
 
     // Check if form is filled enough to enable login button
     useEffect(() => {
-      if (email.includes('@') && password.length >= 6) {
-        setFormFilled(true);
-      } else {
-        setFormFilled(false);
-      }
-    }, [email, password]);
+        if (loginType === 'individual') {
+            const isEmailValid = individualData.email.includes('@');
+            const isPasswordValid = individualData.password.length >= 6;
+            setFormFilled(isEmailValid && isPasswordValid);
+        } else {
+            const isEmailValid = companyData.email.includes('@');
+            const isPasswordValid = companyData.password.length >= 6;
+            setFormFilled(isEmailValid && isPasswordValid);
+        }
+    }, [individualData, companyData, loginType]);
 
     // Show tip after 2 seconds
     useEffect(() => {
@@ -268,7 +312,28 @@ const Login: React.FC = () => {
       return () => clearTimeout(timer);
     }, []);
 
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleIndividualInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setIndividualData(prev => ({
+            ...prev,
+            [name]: value,
+        }));
+    };
+    
+    const handleCompanyInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setCompanyData(prev => ({
+            ...prev,
+            [name]: value,
+        }));
+    };
+
+    const handleLoginTypeChange = (event: React.SyntheticEvent, newValue: string) => {
+        setLoginType(newValue);
+        setError('');
+    };
+
+    const handleIndividualLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
@@ -279,9 +344,9 @@ const Login: React.FC = () => {
             
             // Include userType in the request
             const response = await FetchEndpoint('/auth/login', 'POST', null, { 
-                email, 
-                password,
-                userType 
+                email: individualData.email, 
+                password: individualData.password,
+                userType: individualData.userType 
             });
             const data = await response.json();
 
@@ -292,7 +357,7 @@ const Login: React.FC = () => {
             // Store token in localStorage
             localStorage.setItem('accessToken', data.accessToken);
             localStorage.setItem('refreshToken', data.refreshToken);
-            localStorage.setItem('userType', userType); // Store user type for future use
+            localStorage.setItem('userType', individualData.userType);
 
             // Success animation before redirecting
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -304,6 +369,44 @@ const Login: React.FC = () => {
 
         } catch (err: any) {
             setError(err.message || 'Login failed. Please try again.');
+            setIsLoading(false);
+        }
+    };
+    
+    const handleCompanyLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setIsLoading(true);
+
+        try {
+            // Simulate network delay (remove in production)
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            const response = await FetchEndpoint('/auth/login-company', 'POST', null, { 
+                email: companyData.email, 
+                password: companyData.password
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Company login failed');
+            }
+
+            // Store token in localStorage
+            localStorage.setItem('accessToken', data.accessToken);
+            localStorage.setItem('refreshToken', data.refreshToken);
+            localStorage.setItem('userType', 'company');
+
+            // Success animation before redirecting
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Redirect to home page
+            navigate('/');
+            // Refresh page to update auth state
+            window.location.reload();
+
+        } catch (err: any) {
+            setError(err.message || 'Company login failed. Please try again.');
             setIsLoading(false);
         }
     };
@@ -366,168 +469,285 @@ const Login: React.FC = () => {
                                 {error}
                             </Alert>
                         </Collapse>
+                        
+                        <StyledTabs
+                            value={loginType}
+                            onChange={handleLoginTypeChange}
+                            variant="fullWidth"
+                            sx={{ mb: 4 }}
+                        >
+                            <Tab value="individual" label="Individual User" />
+                            <Tab value="company" label="Company Administrator" />
+                        </StyledTabs>
 
-                        <form onSubmit={handleLogin}>
-                            <Fade in={true} timeout={800} style={{ transitionDelay: '400ms' }}>
-                                <FormGroup>
-                                    <StyledTextField
-                                        fullWidth
-                                        label="Email"
-                                        type="email"
-                                        id="email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        required
-                                        InputProps={{
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <AlternateEmail 
-                                                        sx={{ 
-                                                            color: email ? '#4a8df8' : '#888',
-                                                            transition: 'color 0.3s ease, transform 0.3s ease',
-                                                            transform: email ? 'scale(1.1)' : 'scale(1)'
-                                                        }} 
-                                                    />
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                    />
-                                </FormGroup>
-                            </Fade>
+                        {loginType === 'individual' ? (
+                            <form onSubmit={handleIndividualLogin}>
+                                <Fade in={true} timeout={800} style={{ transitionDelay: '400ms' }}>
+                                    <FormGroup>
+                                        <StyledTextField
+                                            fullWidth
+                                            label="Email"
+                                            type="email"
+                                            name="email"
+                                            value={individualData.email}
+                                            onChange={handleIndividualInputChange}
+                                            required
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <InputAdornment position="start">
+                                                        <AlternateEmail 
+                                                            sx={{ 
+                                                                color: individualData.email ? '#4a8df8' : '#888',
+                                                                transition: 'color 0.3s ease, transform 0.3s ease',
+                                                                transform: individualData.email ? 'scale(1.1)' : 'scale(1)'
+                                                            }} 
+                                                        />
+                                                    </InputAdornment>
+                                                ),
+                                            }}
+                                        />
+                                    </FormGroup>
+                                </Fade>
 
-                            <Fade in={true} timeout={800} style={{ transitionDelay: '600ms' }}>
-                                <FormGroup>
-                                    <StyledTextField
-                                        fullWidth
-                                        label="Password"
-                                        type={showPassword ? 'text' : 'password'}
-                                        id="password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        required
-                                        InputProps={{
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <Lock 
-                                                        sx={{ 
-                                                            color: password ? '#4a8df8' : '#888',
-                                                            transition: 'color 0.3s ease, transform 0.3s ease',
-                                                            transform: password ? 'scale(1.1)' : 'scale(1)'
-                                                        }} 
-                                                    />
-                                                </InputAdornment>
-                                            ),
-                                            endAdornment: (
-                                                <InputAdornment position="end">
-                                                    <IconButton
-                                                        onClick={() => setShowPassword(!showPassword)}
-                                                        edge="end"
-                                                        sx={{
-                                                            transition: 'all 0.2s ease',
-                                                            '&:hover': {
-                                                                backgroundColor: 'rgba(74, 141, 248, 0.1)',
+                                <Fade in={true} timeout={800} style={{ transitionDelay: '600ms' }}>
+                                    <FormGroup>
+                                        <StyledTextField
+                                            fullWidth
+                                            label="Password"
+                                            type={showPassword ? 'text' : 'password'}
+                                            name="password"
+                                            value={individualData.password}
+                                            onChange={handleIndividualInputChange}
+                                            required
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <InputAdornment position="start">
+                                                        <Lock 
+                                                            sx={{ 
+                                                                color: individualData.password ? '#4a8df8' : '#888',
+                                                                transition: 'color 0.3s ease, transform 0.3s ease',
+                                                                transform: individualData.password ? 'scale(1.1)' : 'scale(1)'
+                                                            }} 
+                                                        />
+                                                    </InputAdornment>
+                                                ),
+                                                endAdornment: (
+                                                    <InputAdornment position="end">
+                                                        <IconButton
+                                                            onClick={() => setShowPassword(!showPassword)}
+                                                            edge="end"
+                                                            sx={{
+                                                                transition: 'all 0.2s ease',
+                                                                '&:hover': {
+                                                                    backgroundColor: 'rgba(74, 141, 248, 0.1)',
+                                                                }
+                                                            }}
+                                                        >
+                                                            {showPassword ? 
+                                                                <VisibilityOff sx={{ color: '#4a8df8' }} /> : 
+                                                                <Visibility sx={{ color: '#888' }} />
                                                             }
-                                                        }}
-                                                    >
-                                                        {showPassword ? 
-                                                            <VisibilityOff sx={{ color: '#4a8df8' }} /> : 
-                                                            <Visibility sx={{ color: '#888' }} />
-                                                        }
-                                                    </IconButton>
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                    />
-                                </FormGroup>
-                            </Fade>
+                                                        </IconButton>
+                                                    </InputAdornment>
+                                                ),
+                                            }}
+                                        />
+                                    </FormGroup>
+                                </Fade>
 
-                            <Fade in={true} timeout={800} style={{ transitionDelay: '800ms' }}>
-                                <FormGroup>
-                                    <FormControl 
-                                        component="fieldset"
-                                        sx={{
-                                            '& .MuiFormLabel-root': {
-                                                color: '#555',
-                                                fontWeight: 500,
-                                                marginBottom: '8px',
-                                            },
-                                        }}
-                                    >
-                                        <FormLabel component="legend">I am a:</FormLabel>
-                                        <RadioGroup
-                                            row
-                                            name="userType"
-                                            value={userType}
-                                            onChange={(e) => setUserType(e.target.value)}
+                                <Fade in={true} timeout={800} style={{ transitionDelay: '800ms' }}>
+                                    <FormGroup>
+                                        <FormControl 
+                                            component="fieldset"
                                             sx={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                width: '100%',
-                                                marginTop: '8px',
+                                                '& .MuiFormLabel-root': {
+                                                    color: '#555',
+                                                    fontWeight: 500,
+                                                    marginBottom: '8px',
+                                                },
                                             }}
                                         >
-                                            <UserTypeOption
-                                                value="applier"
-                                                control={
-                                                    <Radio 
-                                                        sx={{ 
-                                                            color: '#4a8df8',
-                                                            '&.Mui-checked': {
+                                            <FormLabel component="legend">I am a:</FormLabel>
+                                            <RadioGroup
+                                                row
+                                                name="userType"
+                                                value={individualData.userType}
+                                                onChange={handleIndividualInputChange}
+                                                sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    width: '100%',
+                                                    marginTop: '8px',
+                                                }}
+                                            >
+                                                <UserTypeOption
+                                                    value="applier"
+                                                    control={
+                                                        <Radio 
+                                                            sx={{ 
                                                                 color: '#4a8df8',
-                                                            }
-                                                        }} 
-                                                    />
-                                                }
-                                                label={
-                                                    <Typography sx={{ fontWeight: userType === 'applier' ? 600 : 400 }}>
-                                                        Job Seeker
-                                                    </Typography>
-                                                }
-                                                selected={userType === 'applier'}
-                                            />
-                                            <UserTypeOption
-                                                value="recruiter"
-                                                control={
-                                                    <Radio 
-                                                        sx={{ 
-                                                            color: '#4a8df8',
-                                                            '&.Mui-checked': {
+                                                                '&.Mui-checked': {
+                                                                    color: '#4a8df8',
+                                                                }
+                                                            }} 
+                                                        />
+                                                    }
+                                                    label={
+                                                        <Typography sx={{ fontWeight: individualData.userType === 'applier' ? 600 : 400 }}>
+                                                            Job Seeker
+                                                        </Typography>
+                                                    }
+                                                    selected={individualData.userType === 'applier'}
+                                                />
+                                                <UserTypeOption
+                                                    value="recruiter"
+                                                    control={
+                                                        <Radio 
+                                                            sx={{ 
                                                                 color: '#4a8df8',
+                                                                '&.Mui-checked': {
+                                                                    color: '#4a8df8',
+                                                                }
+                                                            }} 
+                                                        />
+                                                    }
+                                                    label={
+                                                        <Typography sx={{ fontWeight: individualData.userType === 'recruiter' ? 600 : 400 }}>
+                                                            Recruiter
+                                                        </Typography>
+                                                    }
+                                                    selected={individualData.userType === 'recruiter'}
+                                                />
+                                            </RadioGroup>
+                                        </FormControl>
+                                    </FormGroup>
+                                </Fade>
+                                
+                                <Grow in={true} timeout={1000} style={{ transitionDelay: '1000ms' }}>
+                                    <Box>
+                                        <StyledButton 
+                                            type="submit"
+                                            disabled={isLoading || !formFilled}
+                                            sx={{
+                                                opacity: formFilled ? 1 : 0.7,
+                                                position: 'relative',
+                                            }}
+                                        >
+                                            {isLoading ? (
+                                                <CircularProgress size={24} color="inherit" />
+                                            ) : (
+                                                `Sign In as ${individualData.userType === 'applier' ? 'Job Seeker' : 'Recruiter'}`
+                                            )}
+                                        </StyledButton>
+                                    </Box>
+                                </Grow>
+                            </form>
+                        ) : (
+                            <form onSubmit={handleCompanyLogin}>
+                                <Fade in={true} timeout={800} style={{ transitionDelay: '400ms' }}>
+                                    <FormGroup>
+                                        <StyledTextField
+                                            fullWidth
+                                            label="Company Email"
+                                            type="email"
+                                            name="email"
+                                            value={companyData.email}
+                                            onChange={handleCompanyInputChange}
+                                            required
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <InputAdornment position="start">
+                                                        <Business 
+                                                            sx={{ 
+                                                                color: companyData.email ? '#4a8df8' : '#888',
+                                                                transition: 'color 0.3s ease, transform 0.3s ease',
+                                                                transform: companyData.email ? 'scale(1.1)' : 'scale(1)'
+                                                            }} 
+                                                        />
+                                                    </InputAdornment>
+                                                ),
+                                            }}
+                                        />
+                                    </FormGroup>
+                                </Fade>
+
+                                <Fade in={true} timeout={800} style={{ transitionDelay: '600ms' }}>
+                                    <FormGroup>
+                                        <StyledTextField
+                                            fullWidth
+                                            label="Password"
+                                            type={showPassword ? 'text' : 'password'}
+                                            name="password"
+                                            value={companyData.password}
+                                            onChange={handleCompanyInputChange}
+                                            required
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <InputAdornment position="start">
+                                                        <Lock 
+                                                            sx={{ 
+                                                                color: companyData.password ? '#4a8df8' : '#888',
+                                                                transition: 'color 0.3s ease, transform 0.3s ease',
+                                                                transform: companyData.password ? 'scale(1.1)' : 'scale(1)'
+                                                            }} 
+                                                        />
+                                                    </InputAdornment>
+                                                ),
+                                                endAdornment: (
+                                                    <InputAdornment position="end">
+                                                        <IconButton
+                                                            onClick={() => setShowPassword(!showPassword)}
+                                                            edge="end"
+                                                            sx={{
+                                                                transition: 'all 0.2s ease',
+                                                                '&:hover': {
+                                                                    backgroundColor: 'rgba(74, 141, 248, 0.1)',
+                                                                }
+                                                            }}
+                                                        >
+                                                            {showPassword ? 
+                                                                <VisibilityOff sx={{ color: '#4a8df8' }} /> : 
+                                                                <Visibility sx={{ color: '#888' }} />
                                                             }
-                                                        }} 
-                                                    />
-                                                }
-                                                label={
-                                                    <Typography sx={{ fontWeight: userType === 'recruiter' ? 600 : 400 }}>
-                                                        Recruiter
-                                                    </Typography>
-                                                }
-                                                selected={userType === 'recruiter'}
-                                            />
-                                        </RadioGroup>
-                                    </FormControl>
-                                </FormGroup>
-                            </Fade>
-                            
-                            <Grow in={true} timeout={1000} style={{ transitionDelay: '1000ms' }}>
-                                <Box>
-                                    <StyledButton 
-                                        type="submit"
-                                        disabled={isLoading || !formFilled}
-                                        sx={{
-                                            opacity: formFilled ? 1 : 0.7,
-                                            position: 'relative',
-                                        }}
-                                    >
-                                        {isLoading ? (
-                                            <CircularProgress size={24} color="inherit" />
-                                        ) : (
-                                            `Sign In as ${userType === 'applier' ? 'Job Seeker' : 'Recruiter'}`
-                                        )}
-                                    </StyledButton>
+                                                        </IconButton>
+                                                    </InputAdornment>
+                                                ),
+                                            }}
+                                        />
+                                    </FormGroup>
+                                </Fade>
+                                
+                                <Grow in={true} timeout={1000} style={{ transitionDelay: '1000ms' }}>
+                                    <Box>
+                                        <StyledButton 
+                                            type="submit"
+                                            disabled={isLoading || !formFilled}
+                                            sx={{
+                                                opacity: formFilled ? 1 : 0.7,
+                                                position: 'relative',
+                                            }}
+                                        >
+                                            {isLoading ? (
+                                                <CircularProgress size={24} color="inherit" />
+                                            ) : (
+                                                'Sign In as Company Administrator'
+                                            )}
+                                        </StyledButton>
+                                    </Box>
+                                </Grow>
+                            </form>
+                        )}
+
+                        <Fade in={showTip} timeout={800}>
+                            <Tip>
+                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                                    <LightbulbOutlined sx={{ color: '#4a8df8', mt: 0.3 }} />
+                                    <Typography variant="body2" color="text.secondary">
+                                        <strong>Tip:</strong> {currentTip}
+                                    </Typography>
                                 </Box>
-                            </Grow>
-                        </form>
+                            </Tip>
+                        </Fade>
 
                         <Fade in={true} timeout={1200} style={{ transitionDelay: '1200ms' }}>
                             <Box sx={{ textAlign: 'center', mt: 3 }}>
