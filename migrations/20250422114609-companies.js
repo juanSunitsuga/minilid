@@ -7,15 +7,51 @@ export default {
       company_id: {
         type: Sequelize.UUID,
         primaryKey: true,
+        defaultValue: Sequelize.UUIDV4,
         allowNull: false
       },
-      name: {
+      company_name: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
+      company_email: {
         type: Sequelize.STRING,
         allowNull: false,
+        unique: true
       },
-      desc: {
+      password: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
+      address: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+      website: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+      logo_url: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+      description: {
         type: Sequelize.TEXT,
-        allowNull: true,
+        allowNull: true
+      },
+      industry: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+      created_at: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      },
+      updated_at: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
   },

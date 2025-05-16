@@ -1,6 +1,8 @@
 import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
-import { User } from "./users";
+import { Recruiters } from "./recruiters";
 import { JobPosts } from "./job_posts";
+import { Appliers } from "./appliers";
+import App from "../src/App";
 
 @Table({
     tableName: "interview_schedules",
@@ -32,7 +34,7 @@ export class InterviewSchedules extends Model {
     })
     declare location: string;
 
-    @ForeignKey(() => User)
+    @ForeignKey(() => Recruiters)
     @Column({
         type: DataType.UUID,
         allowNull: false,
@@ -40,11 +42,11 @@ export class InterviewSchedules extends Model {
     })
     declare recruiter_id: string;
 
-    @BelongsTo(() => User, { foreignKey: 'recruiter_id', constraints: false })
-    declare recruiter: User;
+    @BelongsTo(() => Recruiters, { foreignKey: 'recruiter_id', constraints: false })
+    declare recruiter: Recruiters;
     
     // If you have applier_id as well:
-    @ForeignKey(() => User)
+    @ForeignKey(() => Appliers)
     @Column({
         type: DataType.UUID,
         allowNull: false,
@@ -52,6 +54,6 @@ export class InterviewSchedules extends Model {
     })
     declare applier_id: string;
 
-    @BelongsTo(() => User, { foreignKey: 'applier_id', constraints: false })
-    declare applier: User;
+    @BelongsTo(() => Appliers, { foreignKey: 'applier_id', constraints: false })
+    declare applier: Appliers;
 }

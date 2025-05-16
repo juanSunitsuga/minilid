@@ -101,20 +101,46 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      const response = await FetchEndpoint('/auth/login', 'POST', null, {
-        email,
-        password,
-        userType,
-      });
-      const data = await response.json();
+      let response;
+      let data;
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+      if (loginType === 'individual') {
+        // Determine endpoint based on user type
+        const endpoint =
+          userType === 'applier'
+            ? '/auth/login-applier'
+            : '/auth/login-recruiter';
+
+        // Call the appropriate user endpoint
+        response = await FetchEndpoint(endpoint, 'POST', null, {
+          email,
+          password,
+        });
+
+        data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Login failed');
+        }
+
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('userType', userType);
+      } else {
+        // Company login
+        response = await FetchEndpoint('/auth/login-company', 'POST', null, {
+          companyEmail: email, // Use companyEmail field for company login
+          companyPassword: password, // Use companyPassword field for company login
+        });
+
+        data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Company login failed');
+        }
+
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('userType', 'company');
       }
-
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
-      localStorage.setItem('userType', userType);
 
       navigate('/');
       window.location.reload();
@@ -264,7 +290,7 @@ const Login: React.FC = () => {
             <FormGroup>
               <StyledTextField
                 fullWidth
-                label="Username"
+                label="Email"
                 type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

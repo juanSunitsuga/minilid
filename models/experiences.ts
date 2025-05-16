@@ -1,5 +1,5 @@
 import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
-import { User } from "./users";
+import { Appliers } from "./appliers";
 
 @Table({
     tableName: "experiences",
@@ -12,7 +12,7 @@ export class Experiences extends Model {
     })
     declare experience_id: string;
 
-    @ForeignKey(() => User)
+    @ForeignKey(() => Appliers)
     @Column({
         type: DataType.UUID,
         allowNull: false,
@@ -20,8 +20,8 @@ export class Experiences extends Model {
     })
     declare user_id: string;
 
-    @BelongsTo(() => User)
-    declare user: User;
+    @BelongsTo(() => Appliers)
+    declare user: Appliers;
 
     @Column({
         type: DataType.STRING,

@@ -1,6 +1,5 @@
 import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
-import { User } from "./users";
-import { Company } from "./company";
+import { Recruiters } from "./recruiters";
 
 @Table({
     tableName: "job_posts",
@@ -40,7 +39,7 @@ export class JobPosts extends Model {
     })
     declare deleted: boolean;
 
-    @ForeignKey(() => User)
+    @ForeignKey(() => Recruiters)
     @Column({
         type: DataType.UUID,
         allowNull: false,
@@ -48,6 +47,6 @@ export class JobPosts extends Model {
     })
     declare recruiter_id: string;
 
-    @BelongsTo(() => User, { foreignKey: 'recruiter_id', constraints: false })
-    declare recruiter: User;
+    @BelongsTo(() => Recruiters, { foreignKey: 'recruiter_id', constraints: false })
+    declare recruiter: Recruiters;
 }

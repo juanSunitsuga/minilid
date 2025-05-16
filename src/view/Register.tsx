@@ -124,16 +124,18 @@ const Register: React.FC = () => {
       }
 
       try {
-        // Prepare data for individual user registration
         const registrationData = {
           name: formData.name,
           email: formData.email,
           password: formData.password,
-          userType: formData.userType,
         };
 
-        // Call API
-        const response = await FetchEndpoint('/auth/register', 'POST', null, registrationData);
+        const endpoint = formData.userType === 'applier' 
+          ? '/auth/register-applier' 
+          : '/auth/register-recruiter';
+
+
+        const response = await FetchEndpoint(endpoint, 'POST', null, registrationData);
         const data = await response.json();
 
         if (!response.ok) {
@@ -147,7 +149,7 @@ const Register: React.FC = () => {
         setError(err.message || 'Registration failed. Please try again.');
       }
     } else {
-      // Company registration validation
+      
       if (!formData.companyName) {
         setError("Company name is required");
         return;
