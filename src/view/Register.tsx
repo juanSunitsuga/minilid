@@ -10,7 +10,6 @@ import {
   FormControlLabel,
   FormControl,
   FormLabel,
-  FormGroup,
   InputAdornment,
   Zoom,
   Fade,
@@ -18,9 +17,6 @@ import {
   Grow,
   Collapse,
   CircularProgress,
-  Tabs,
-  Tab,
-  Divider,
   IconButton,
   Alert,
   Divider,
@@ -337,198 +333,167 @@ const Register: React.FC = () => {
     setError('');
   };
 
+  // Fixed handleIndividualRegister function to use correct data and endpoints
   const handleIndividualRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Basic validation
-    if (userType === 'individual') {
+    try {
+      // Basic validation
       if (individualData.password !== individualData.confirmPassword) {
         setError("Passwords don't match");
         setIsLoading(false);
-      return;
+        return;
       }
 
-    if (individualData.password.length < 8) {
-      setError("Password must be at least 8 characters");
-      setIsLoading(false);
-      return;
-    }
+      if (individualData.password.length < 8) {
+        setError("Password must be at least 8 characters");
+        setIsLoading(false);
+        return;
+      }
 
-      try {
-        const registrationData = {
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-        };
+      // Create the registration data object
+      const registrationData = {
+        name: individualData.name,
+        email: individualData.email,
+        password: individualData.password,
+        userType: individualData.userType // Adding userType to fix validation error
+      };
 
-        const endpoint = formData.userType === 'applier' 
-          ? '/auth/register-applier' 
-          : '/auth/register-recruiter';
+      // Choose the right endpoint based on user type
+      const endpoint = individualData.userType === 'applier' 
+        ? '/auth/register-applier' 
+        : '/auth/register-recruiter';
+      
+      // Log the request for debugging
+      console.log(`Registering ${individualData.userType} with endpoint ${endpoint}`, registrationData);
 
+      // Make the API call
+      const response = await FetchEndpoint(endpoint, 'POST', null, registrationData);
+      
+      // Check if the response is successful
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || 
+          (errorData.errors && errorData.errors.join(', ')) || 
+          'Registration failed'
+        );
+      }
+      
+      // Parse the response data - handle both direct and wrapped formats
+      const responseData = await response.json();
+      const data = responseData.data || responseData;
 
-        const response = await FetchEndpoint(endpoint, 'POST', null, registrationData);
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Registration failed');
-        }
-
-        localStorage.setItem('accessToken', data.accessToken);
+      // Store auth token and user type
+      localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('userType', individualData.userType);
+      
+      if (data.user) {
+        localStorage.setItem('userId', data.user.user_id);
+        localStorage.setItem('userName', data.user.name);
+      }
 
       // Success animation before redirecting
       await new Promise(resolve => setTimeout(resolve, 500));
-        navigate('/');
-        window.location.reload();
-      } catch (err: any) {
-        setError(err.message || 'Registration failed. Please try again.');
-      }
-    } else {
       
-      if (!formData.companyName) {
-        setError("Company name is required");
-        return;
-      }
-
-      if (!formData.accountEmail || formData.accountEmail.length < 4) {
-        setError("Email must be at least 4 characters");
-        return;
-      }
-
-      if (formData.accountPassword.length < 8) {
-        setError("Account password must be at least 8 characters");
-        return;
-      }
-
-      if (formData.accountPassword !== formData.confirmAccountPassword) {
-        setError("Account passwords don't match");
-        return;
-      }
-
-      // Format website URL if provided
-      let website = formData.companyWebsite;
-      if (website && !website.match(/^https?:\/\//)) {
-        website = 'https://' + website;
-      }
-
-      try {
-        // Prepare data for company registration
-        const companyRegistrationData = {
-          companyName: formData.companyName,
-          companyAddress: formData.companyAddress || null,
-          companyWebsite: formData.companyWebsite || null,
-          companyEmail: formData.accountEmail,
-          companyPassword: formData.accountPassword
-        };
-
-        console.log('Sending company registration data:', companyRegistrationData);
-
-        // Call company registration API
-        const response = await FetchEndpoint('/auth/register-company', 'POST', null, companyRegistrationData);
-
-        // Check if response is ok before parsing JSON
-        if (!response.ok) {
-          let errorMessage = `Registration failed with status ${response.status}`;
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-          } catch (e) {
-            console.error('Could not parse error response:', e);
-          }
-          throw new Error(errorMessage);
-        }
-
-        const data = await response.json();
-        localStorage.setItem('accessToken', data.accessToken);
-        navigate('/');
-        window.location.reload();
-      } catch (err: any) {
-        console.error('Registration error:', err);
-        setError(err.message || 'Company registration failed. Please try again.');
-      }
+      // Redirect to homepage
+      navigate('/');
+      window.location.reload();
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
       setIsLoading(false);
     }
   };
-  
+
+  // Fixed handleCompanyRegister function
   const handleCompanyRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Basic validation
-    if (!companyData.companyName) {
-      setError("Company name is required");
-      setIsLoading(false);
-      return;
-    }
-
-    if (!companyData.accountEmail || !companyData.accountEmail.includes('@')) {
-      setError("Valid email address is required");
-      setIsLoading(false);
-      return;
-    }
-
-    if (companyData.accountPassword.length < 8) {
-      setError("Account password must be at least 8 characters");
-      setIsLoading(false);
-      return;
-    }
-
-    if (companyData.accountPassword !== companyData.confirmAccountPassword) {
-      setError("Account passwords don't match");
-      setIsLoading(false);
-      return;
-    }
-
-    // Format website URL if provided
-    let website = companyData.companyWebsite;
-    if (website && !website.match(/^https?:\/\//)) {
-      website = 'https://' + website;
-    }
-
     try {
-      // Simulate network delay (remove in production)
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Basic validation (unchanged)
+      if (!companyData.companyName) {
+        setError("Company name is required");
+        setIsLoading(false);
+        return;
+      }
+
+      if (!companyData.accountEmail || !companyData.accountEmail.includes('@')) {
+        setError("Valid email address is required");
+        setIsLoading(false);
+        return;
+      }
+
+      if (companyData.accountPassword.length < 8) {
+        setError("Account password must be at least 8 characters");
+        setIsLoading(false);
+        return;
+      }
+
+      if (companyData.accountPassword !== companyData.confirmAccountPassword) {
+        setError("Account passwords don't match");
+        setIsLoading(false);
+        return;
+      }
+
+      // Format website URL if provided
+      let website = companyData.companyWebsite;
+      if (website && !website.match(/^https?:\/\//)) {
+        website = 'https://' + website;
+      }
       
       // Prepare data for company registration
       const companyRegistrationData = {
         companyName: companyData.companyName,
+        companyEmail: companyData.accountEmail, // Make sure to use this format
+        companyPassword: companyData.accountPassword, // Make sure to use this format
         companyAddress: companyData.companyAddress || null,
         companyWebsite: website || null,
-        companyEmail: companyData.accountEmail,
-        companyPassword: companyData.accountPassword
       };
+
+      console.log('Sending company registration data:', companyRegistrationData);
 
       // Call company registration API
       const response = await FetchEndpoint('/auth/register-company', 'POST', null, companyRegistrationData);
       
       // Check if response is ok before parsing JSON
       if (!response.ok) {
-        let errorMessage = `Registration failed with status ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch (e) {
-          console.error('Could not parse error response:', e);
-        }
-        throw new Error(errorMessage);
+        const errorData = await response.json();
+        throw new Error(
+          errorData.data?.message || 
+          errorData.message || 
+          `Registration failed with status ${response.status}`
+        );
       }
 
-      const data = await response.json();
+      // Parse the response data - handle both direct and wrapped formats
+      const responseData = await response.json();
+      const data = responseData.data || responseData;
+
+      // Store auth token and user type
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('userType', 'company');
+      
+      if (data.company) {
+        localStorage.setItem('companyId', data.company.id);
+        localStorage.setItem('companyName', data.company.name);
+      }
 
       // Success animation before redirecting
       await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Redirect to home page
+      
+      // Redirect to homepage
       navigate('/');
-      // Refresh page to update auth state
       window.location.reload();
     } catch (err: any) {
+      console.error('Company registration error:', err);
       setError(err.message || 'Company registration failed. Please try again.');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -989,7 +954,7 @@ const Register: React.FC = () => {
                       fullWidth
                       label="Company Email"
                       type="email"
-                      name="accountEmail"
+                      name="email" // Keep as "email" for state management
                       value={companyData.accountEmail}
                       onChange={handleCompanyInputChange}
                       required

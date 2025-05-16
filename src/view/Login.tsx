@@ -24,8 +24,6 @@ import {
   CircularProgress,
   Tabs,
   Tab,
-  Tabs,
-  Tab,
 } from '@mui/material';
 import { 
   Visibility, 
@@ -335,113 +333,85 @@ const Login: React.FC = () => {
         setError('');
     };
 
-    const handleIndividualLogin = async (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
 
         try {
-            // Simulate network delay (remove in production)
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Include userType in the request
-            const response = await FetchEndpoint('/auth/login', 'POST', null, { 
-                email: individualData.email, 
-                password: individualData.password,
-                userType: individualData.userType 
-            });
-            const data = await response.json();
-    try {
-      let response;
-      let data;
+            let response;
+            let endpoint = '';
+            let payload = {};
 
-      if (loginType === 'individual') {
-        // Determine endpoint based on user type
-        const endpoint =
-          userType === 'applier'
-            ? '/auth/login-applier'
-            : '/auth/login-recruiter';
-
-        // Call the appropriate user endpoint
-        response = await FetchEndpoint(endpoint, 'POST', null, {
-          email,
-          password,
-        });
-
-        data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Login failed');
-        }
-
-            // Store token in localStorage
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('userType', individualData.userType);
-      } else {
-        // Company login
-        response = await FetchEndpoint('/auth/login-company', 'POST', null, {
-          companyEmail: email, // Use companyEmail field for company login
-          companyPassword: password, // Use companyPassword field for company login
-        });
-
-        data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Company login failed');
-        }
-
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('userType', 'company');
-      }
-
-            // Success animation before redirecting
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // Redirect to home page
-            navigate('/');
-            // Refresh page to update auth state
-            window.location.reload();
-
-        } catch (err: any) {
-            setError(err.message || 'Login failed. Please try again.');
-            setIsLoading(false);
-        }
-    };
-    
-    const handleCompanyLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-        setIsLoading(true);
-
-        try {
-            // Simulate network delay (remove in production)
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const response = await FetchEndpoint('/auth/login-company', 'POST', null, { 
-                email: companyData.email, 
-                password: companyData.password
-            });
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Company login failed');
+            // Determine the correct endpoint and payload based on login type
+            if (loginType === 'individual') {
+                // For individual users, use the dedicated endpoint based on user type
+                endpoint = individualData.userType === 'applier' 
+                    ? '/auth/login-applier' 
+                    : '/auth/login-recruiter';
+                    
+                payload = { 
+                    email: individualData.email, 
+                    password: individualData.password 
+                };
+            } else {
+                // For company login, use the correct field names expected by the backend
+                endpoint = '/auth/login-company';
+                payload = { 
+                    companyEmail: companyData.email, // Changed from email to companyEmail
+                    companyPassword: companyData.password // Changed from password to companyPassword
+                };
             }
 
-            // Store token in localStorage
+            // Make the API call
+            response = await FetchEndpoint(endpoint, 'POST', null, payload);
+            
+            // Process the response
+            const responseData = await response.json();
+            
+            // The response structure will be:
+            // { status: 200, data: { message, user/company, accessToken } }
+            
+            if (!response.ok) {
+                // Handle error response
+                throw new Error(
+                  responseData.data?.message || 
+                  responseData.message || 
+                  'Login failed'
+                );
+            }
+            
+            // Extract the data from the response
+            const data = responseData.data || responseData;
+            
+            // Store the appropriate data in localStorage
             localStorage.setItem('accessToken', data.accessToken);
-            localStorage.setItem('refreshToken', data.refreshToken);
-            localStorage.setItem('userType', 'company');
+            
+            if (loginType === 'company') {
+                // Store company-specific data
+                localStorage.setItem('userType', 'company');
+                localStorage.setItem('companyId', data.company.id);
+                localStorage.setItem('companyName', data.company.name);
+                localStorage.setItem('companyEmail', data.company.email);
+              } else {
+                // Store user data (applier or recruiter)
+                localStorage.setItem('userType', loginType);
+                localStorage.setItem('userId', data.user.user_id);
+                localStorage.setItem('userName', data.user.name);
+                localStorage.setItem('userEmail', data.user.email);
+              }
 
             // Success animation before redirecting
             await new Promise(resolve => setTimeout(resolve, 500));
-
+            
             // Redirect to home page
             navigate('/');
             // Refresh page to update auth state
             window.location.reload();
-
         } catch (err: any) {
-            setError(err.message || 'Company login failed. Please try again.');
+            console.error('Login error:', err);
+            setError(err.message || 'Login failed. Please try again.');
+        } finally {
             setIsLoading(false);
         }
     };
@@ -516,7 +486,7 @@ const Login: React.FC = () => {
                         </StyledTabs>
 
                         {loginType === 'individual' ? (
-                            <form onSubmit={handleIndividualLogin}>
+                            <form onSubmit={handleLogin}>
                                 <Fade in={true} timeout={800} style={{ transitionDelay: '400ms' }}>
                                     <FormGroup>
                                         <StyledTextField
@@ -678,14 +648,14 @@ const Login: React.FC = () => {
                                 </Grow>
                             </form>
                         ) : (
-                            <form onSubmit={handleCompanyLogin}>
+                            <form onSubmit={handleLogin}>
                                 <Fade in={true} timeout={800} style={{ transitionDelay: '400ms' }}>
                                     <FormGroup>
                                         <StyledTextField
                                             fullWidth
                                             label="Company Email"
                                             type="email"
-                                            name="email"
+                                            name="email" 
                                             value={companyData.email}
                                             onChange={handleCompanyInputChange}
                                             required
