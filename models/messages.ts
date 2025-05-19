@@ -11,7 +11,7 @@ export class Messages extends Model {
         type: DataType.INTEGER,
         autoIncrement: true,
     })
-    declare message_id: string;
+    declare message_id: number;
 
     @ForeignKey(() => Chats)
     @Column({

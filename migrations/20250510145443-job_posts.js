@@ -6,25 +6,24 @@ export default {
     await queryInterface.createTable('job_posts', {
       job_id: {
         type: Sequelize.UUID,
-        primaryKey: true,
-        allowNull: false
+        primaryKey: true
       },
-      jobtype_id: {
+      type_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
           model: 'job_types',
-          key: 'jobtype_id'     
+          key: 'type_id'     
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      jobcategory_id: {
+      category_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'job_categorys',
-          key: 'jobcategory_id'     
+          model: 'job_categories',
+          key: 'category_id'     
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
@@ -36,26 +35,6 @@ export default {
       description: {
         type: Sequelize.TEXT,
         allowNull: true,
-      },
-      jobtype_id: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'job_types',
-          key: 'jobtype_id'     
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
-      },
-      jobcategory_id: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'job_categories',
-          key: 'jobcategory_id'     
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
       },
       posted_date: {
         type: Sequelize.DATE,

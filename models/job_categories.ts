@@ -10,7 +10,7 @@ export class JobCategories extends Model {
         type: DataType.INTEGER,
         autoIncrement: true,
     })
-    declare category_id: string;
+    declare category_id: number;
 
     @Column({
         type: DataType.STRING,

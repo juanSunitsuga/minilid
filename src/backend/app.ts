@@ -16,8 +16,11 @@ import { JobTypes } from '../../models/job_types';
 import { Messages } from '../../models/messages';
 import { Recruiters } from '../../models/recruiters';
 import { Skills } from '../../models/skills';
+import { JobPostSkill } from '../../models/job_post_skills';
+import { ApplierSkill } from '../../models/applier_skills';
 
 import registerLoginRoutes from './routes/registerLoginRoutes';
+import createPostRoutes from './routes/createPostRoutes';
 
 
 app.use(cors({
@@ -33,7 +36,8 @@ import config from '../../config/config.json'; // Adjust the path to your config
 const sequelize = new Sequelize({
     ...config.development,
     models: [Appliers, Attachments, Branch, Chats, CompanyAccounts, Company, Experiences, 
-        InterviewSchedules, JobCategories, JobPosts, JobTypes, Messages, Recruiters, Skills 
+        InterviewSchedules, JobCategories, JobPosts, JobTypes, Messages, Recruiters, Skills, JobPostSkill,
+        ApplierSkill
     ]
 });
 
@@ -41,6 +45,7 @@ console.log("hello")
 
 
 app.use('/auth', registerLoginRoutes);
+app.use('/job', createPostRoutes);
 
 app.use((req, res) => {
     res.status(404).json({ message: 'Route not found' });
