@@ -16,7 +16,7 @@ export class Recruiters extends Model {
     @ForeignKey(() => Company)
     @Column({
         type: DataType.UUID,
-        allowNull: false,
+        allowNull: true,
     })
     declare company_id: string;
 
@@ -34,7 +34,7 @@ export class Recruiters extends Model {
 
     @Column({
         type: DataType.STRING,
-        allowNull: true,
+        allowNull: false,
     })
-    declare phone_number: string;
+    declare password: string;
 }

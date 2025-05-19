@@ -1,39 +1,41 @@
-const API_BASE_URL = 'http://localhost:3000'; // Change this to match your API URL
-
-export const FetchEndpoint = async (url: string, method: string, headers: any, body: any): Promise<Response> => {
+export const FetchEndpoint = async (endpoint: string, method: string, token: string | null, body?: any) => {
+  // Replace process.env with a direct string
+  const baseUrl = 'http://localhost:3000'; 
+  
+  console.log(`${method} request to ${endpoint}:`, body);
+  
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const options: RequestInit = {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  };
+  
   try {
-    // Create standard fetch options
-    const options: RequestInit = {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(headers || {})
-      },
-      body: body ? JSON.stringify(body) : undefined
-    };
-
-    // Use fetch to make the request
-    console.log(`Making ${method} request to ${API_BASE_URL}${url}`, body);
-    const response = await fetch(`${API_BASE_URL}${url}`, options);
+    const response = await fetch(`${baseUrl}${endpoint}`, options);
     
-    // Log the response status
+    // Log response status
     console.log(`Response status: ${response.status} ${response.statusText}`);
     
-    // Return the Response object directly
+    // For debugging - log the raw response
+    const clone = response.clone();
+    try {
+      const responseData = await clone.text();
+      console.log('Raw response:', responseData);
+    } catch (e) {
+      console.error('Could not read response body for logging:', e);
+    }
+    
     return response;
   } catch (error) {
-    console.error(`Error in fetchEndpoint for ${method} ${url}:`, error);
-    
-    // Create a mock Response object for client-side errors
-    // This ensures that response.json() is always available
-    return new Response(JSON.stringify({
-      success: false,
-      message: error instanceof Error ? error.message : 'Network error occurred'
-    }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+    console.error('Fetch error:', error);
+    throw error;
   }
 };

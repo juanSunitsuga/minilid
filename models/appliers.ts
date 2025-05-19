@@ -9,7 +9,7 @@ export class Appliers extends Model {
     @Column({
         primaryKey: true,
         type: DataType.UUID,
-        defaultValue: DataType.UUIDV4 // Add this line to auto-generate UUIDs
+        defaultValue: DataType.UUIDV4
     })
     declare applier_id: string;
 
