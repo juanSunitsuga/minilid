@@ -280,16 +280,6 @@ const Login: React.FC = () => {
         password: '',
     });
     
-    // Random tip messages
-    const tips = [
-      "Complete your profile to get noticed by top recruiters!",
-      "Use a professional email for better opportunities.",
-      "Regularly update your skills to match industry trends.",
-      "Add a portfolio link to showcase your work."
-    ];
-    
-    const [currentTip] = useState(tips[Math.floor(Math.random() * tips.length)]);
-
     // Check if form is filled enough to enable login button
     useEffect(() => {
         if (loginType === 'individual') {
@@ -743,16 +733,7 @@ const Login: React.FC = () => {
                             </form>
                         )}
 
-                        <Fade in={showTip} timeout={800}>
-                            <Tip>
-                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                                    <LightbulbOutlined sx={{ color: '#4a8df8', mt: 0.3 }} />
-                                    <Typography variant="body2" color="text.secondary">
-                                        <strong>Tip:</strong> {currentTip}
-                                    </Typography>
-                                </Box>
-                            </Tip>
-                        </Fade>
+
 
                         <Fade in={true} timeout={1200} style={{ transitionDelay: '1200ms' }}>
                             <Box sx={{ textAlign: 'center', mt: 3 }}>
