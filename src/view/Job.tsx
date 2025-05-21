@@ -23,7 +23,10 @@ import {
   CircularProgress,
   Fade,
   Slider,
-  useTheme
+  useTheme,
+  Stack,
+  Grid,
+  Chip
 } from '@mui/material';
 import {
   Search as SearchIcon,

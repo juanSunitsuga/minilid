@@ -954,7 +954,7 @@ const Register: React.FC = () => {
                       fullWidth
                       label="Company Email"
                       type="email"
-                      name="email" // Keep as "email" for state management
+                      name="accountEmail" // Keep as "email" for state management
                       value={companyData.accountEmail}
                       onChange={handleCompanyInputChange}
                       required
