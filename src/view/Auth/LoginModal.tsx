@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FetchEndpoint } from '../FetchEndpoint';
+import { useAuth } from '../Context/AuthContext';
 import {
   Box,
   Typography,
@@ -274,10 +275,16 @@ interface LoginModalProps {
   onClose: () => void;
   onLoginSuccess?: () => void;
   onRegisterClick?: () => void; // Add this prop for opening register modal
+  initialData?: {
+    email?: string;
+    password?: string;
+    userType?: 'applier' | 'recruiter';
+  };
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, onRegisterClick }) => {
+const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, onRegisterClick, initialData }) => {
     const navigate = useNavigate();
+    const { refreshUserData } = useAuth(); // Add this to get the refresh function
     const [loginType, setLoginType] = useState('individual');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -339,6 +346,23 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
         return () => clearTimeout(timer);
       }
     }, [open]);
+
+    // Init data from props
+    useEffect(() => {
+      if (open && initialData?.email) {
+        if (loginType === 'individual') {
+          setIndividualData(prev => ({
+            ...prev,
+            email: initialData.email || ''
+          }));
+        } else {
+          setCompanyData(prev => ({
+            ...prev,
+            email: initialData.email || ''
+          }));
+        }
+      }
+    }, [initialData, loginType, open]);
 
     const handleIndividualInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -419,21 +443,33 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
                 localStorage.setItem('companyEmail', data.company.email);
             } else {
                 // Store user data (applier or recruiter)
-                localStorage.setItem('userType', loginType);
+                localStorage.setItem('userType', individualData.userType);
                 localStorage.setItem('userId', data.user.user_id);
                 localStorage.setItem('userName', data.user.name);
                 localStorage.setItem('userEmail', data.user.email);
             }
 
-            // Success animation before closing
-            await new Promise(resolve => setTimeout(resolve, 500));
+            console.log('Login successful, refreshing user data...');
             
-            // Close the modal without reloading
-            onClose();
-            
-            // Call success callback if provided
-            if (onLoginSuccess) {
-                onLoginSuccess();
+            try {
+                // Call refreshUserData and await it
+                await refreshUserData();
+                console.log('Auth context refreshed successfully');
+                
+                // Success animation before closing
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Close the modal
+                onClose();
+                
+                // Call success callback if provided
+                if (onLoginSuccess) {
+                    onLoginSuccess();
+                }
+            } catch (refreshError) {
+                console.error('Failed to refresh auth data:', refreshError);
+                // Fallback: If refresh fails, force a page reload as last resort
+                window.location.reload();
             }
         } catch (err: any) {
             console.error('Login error:', err);

@@ -1,6 +1,7 @@
 import { AnimatePresence } from 'framer-motion';
 import { Routes, Route } from 'react-router-dom';
 import './App.css';
+import { AuthProvider } from './view/Context/AuthContext';
 import { ModalProvider } from './view/Context/ModalContext';
 import Navbar from './components/Navbar';
 
@@ -12,18 +13,20 @@ import Chat from './view/Chat';
 
 function App() {
   return (
-    <ModalProvider>
-      <Navbar />
+    <AuthProvider>
+      <ModalProvider>
+        <Navbar />
 
-      <main className="content">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/jobs" element={<Job />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/profile" element={<Profile />} />
-        </Routes>
-      </main>
-    </ModalProvider>
+        <main className="content">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/jobs" element={<Job />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/profile" element={<Profile />} />
+          </Routes>
+        </main>
+      </ModalProvider>
+    </AuthProvider>
   );
 }
 

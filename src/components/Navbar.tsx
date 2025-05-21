@@ -2,38 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FaHome, FaBriefcase, FaSearch, FaUser, FaBell, FaSignInAlt, FaSignOutAlt } from 'react-icons/fa';
 import { BsChatDotsFill } from 'react-icons/bs';
+import { useAuth } from '../view/Context/AuthContext';
 import { useModal } from '../view/Context/ModalContext';
 
 const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activePath, setActivePath] = useState('/');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  
-  // Get modal functions from context
+  const { isAuthenticated, userType, userData, companyData, logout } = useAuth();
   const { openLoginModal, openRegisterModal } = useModal();
+  
+  // Debug auth state
+  useEffect(() => {
+    console.log('Navbar auth state:', { isAuthenticated, userType, userData, companyData });
+  }, [isAuthenticated, userType]);
 
   useEffect(() => {
     setActivePath(location.pathname);
-
-    // Check if user is logged in by looking for token in localStorage
-    const token = localStorage.getItem('accessToken');
-    setIsLoggedIn(!!token);
   }, [location]);
-
-  // Logout function to clear user session
-  const handleLogout = () => {
-    // Remove all tokens from localStorage
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('userType');
-
-    // Update login state
-    setIsLoggedIn(false);
-
-    // Redirect to home page
-    navigate('/');
-  };
 
   return (
     <header className="minilid-header">
@@ -70,7 +56,7 @@ const Navbar: React.FC = () => {
           </Link>
 
           {/* Conditional rendering based on authentication status */}
-          {isLoggedIn ? (
+          {isAuthenticated ? (
             <>
               <Link to="/profile" className={`nav-item ${activePath === '/profile' ? 'active' : ''}`}>
                 <FaUser className="nav-icon profile-icon" />
@@ -78,7 +64,7 @@ const Navbar: React.FC = () => {
               </Link>
 
               {/* Tampilkan Create Job button hanya untuk recruiter */}
-              {localStorage.getItem('userType') === 'recruiter' && (
+              {userType === 'recruiter' && (
                 <Link to="/create-job" className={`nav-item ${activePath === '/create-job' ? 'active' : ''}`}>
                   <FaBriefcase className="nav-icon" />
                   <span className="nav-text">Create Job</span>
@@ -86,7 +72,7 @@ const Navbar: React.FC = () => {
               )}
 
               <button
-                onClick={handleLogout}
+                onClick={logout}
                 className="nav-item logout-button"
                 aria-label="Logout"
               >
@@ -97,7 +83,7 @@ const Navbar: React.FC = () => {
           ) : (
             // Changed from Link to button that opens the modal
             <button 
-              onClick={() => openLoginModal()}
+              onClick={openLoginModal}
               className={`nav-item ${activePath === '/login' ? 'active' : ''}`}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
             >

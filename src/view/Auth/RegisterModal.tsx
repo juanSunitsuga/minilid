@@ -400,29 +400,33 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
         );
       }
       
-      // Parse the response data - handle both direct and wrapped formats
+      // Get response data
       const responseData = await response.json();
       const data = responseData.data || responseData;
-
-      // Store auth token and user type
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('userType', individualData.userType);
       
-      if (data.user) {
-        localStorage.setItem('userId', data.user.user_id);
-        localStorage.setItem('userName', data.user.name);
-      }
-
       // Success animation before closing modal
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Close the modal
+      // Store the email for auto-filling the login form
+      const registeredEmail = individualData.email;
+      
+      // Close the register modal
       onClose();
       
       // Call success callback if provided
       if (onRegisterSuccess) {
         onRegisterSuccess();
       }
+      
+      // Open the login modal after a short delay
+      setTimeout(() => {
+        if (onLoginClick) {
+          onLoginClick(); 
+          // Optionally, you could use localStorage to pass the email to the login modal
+          localStorage.setItem('lastRegisteredEmail', registeredEmail);
+        }
+      }, 300);
+      
     } catch (err: any) {
       console.error('Registration error:', err);
       setError(err.message || 'Registration failed. Please try again.');
@@ -509,6 +513,9 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
       // Success animation before closing modal
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      // Store the email for auto-filling the login form
+      const registeredEmail = companyData.accountEmail;
+      
       // Close the modal
       onClose();
       
@@ -516,6 +523,16 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
       if (onRegisterSuccess) {
         onRegisterSuccess();
       }
+      
+      // Open the login modal after a short delay
+      setTimeout(() => {
+        if (onLoginClick) {
+          onLoginClick();
+          // Save email for login modal
+          localStorage.setItem('lastRegisteredEmail', registeredEmail);
+        }
+      }, 300);
+      
     } catch (err: any) {
       console.error('Company registration error:', err);
       setError(err.message || 'Company registration failed. Please try again.');

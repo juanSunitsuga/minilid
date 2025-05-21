@@ -1,68 +1,104 @@
 import React from 'react';
+import { useAuth } from './Context/AuthContext';
 import {
-  Box,
-  Container,
-  Typography,
-  Avatar,
+  Container, 
+  Box, 
+  Typography, 
+  Paper, 
+  Avatar, 
+  IconButton, 
   Button,
-  Card,
-  CardContent,
-  CardHeader,
   Divider,
-  IconButton,
-  Stack,
-  Paper,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText
+  Chip,
+  Grid,
+  Skeleton
 } from '@mui/material';
-import {
+import { 
+  CameraAlt as CameraIcon, 
   Edit as EditIcon,
-  Add as AddIcon,
-  PhotoCamera as CameraIcon,
+  Work as WorkIcon,
+  School as SchoolIcon,
   LocationOn as LocationIcon,
-  LinkedIn as LinkedInIcon,
-  Language as WebsiteIcon,
-  Twitter as TwitterIcon
+  Email as EmailIcon
 } from '@mui/icons-material';
 
 const Profile: React.FC = () => {
-  return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      {/* Cover Photo & Profile Section */}
-      <Box sx={{ position: 'relative', mb: 10 }}>
-        {/* Cover Photo */}
-        <Box 
-          sx={{
-            height: 200,
-            borderRadius: 2,
-            bgcolor: 'primary.main',
-            position: 'relative',
-            mb: 8
-          }}
-        >
-          <IconButton 
-            sx={{ 
+  const { userData, companyData, userType, isLoading } = useAuth();
+  
+  // Loading state
+  if (isLoading) {
+    return (
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Box sx={{ position: 'relative', mb: 10 }}>
+          <Skeleton variant="rectangular" height={200} sx={{ borderRadius: '16px 16px 0 0' }} />
+          <Skeleton 
+            variant="circular"
+            width={150}
+            height={150}
+            sx={{
               position: 'absolute',
-              right: 16,
-              bottom: 16,
-              bgcolor: 'background.paper',
-              '&:hover': {
-                bgcolor: 'background.paper',
-                opacity: 0.9
-              }
+              left: 24,
+              bottom: -75,
             }}
-            size="small"
-          >
-            <CameraIcon />
-          </IconButton>
+          />
         </Box>
+        <Box sx={{ mt: 10, ml: { xs: 0, sm: 20 } }}>
+          <Skeleton variant="text" height={60} width="60%" />
+          <Skeleton variant="text" height={30} width="40%" />
+          <Skeleton variant="text" height={30} width="30%" />
+        </Box>
+      </Container>
+    );
+  }
+  
+  // Render different profile based on user type
+  const renderProfileContent = () => {
+    if (userType === 'applier' || userType === 'recruiter') {
+      // Individual user profile
+      return renderIndividualProfile();
+    } else if (userType === 'company') {
+      // Company profile
+      return renderCompanyProfile();
+    } else {
+      // Not logged in
+      return (
+        <Paper sx={{ p: 4, textAlign: 'center', mt: 4 }}>
+          <Typography variant="h5">Please log in to view your profile</Typography>
+          <Button 
+            variant="contained" 
+            sx={{ mt: 2 }}
+            onClick={() => {
+              // You can implement login modal opening here
+            }}
+          >
+            Login
+          </Button>
+        </Paper>
+      );
+    }
+  };
+  
+  // Individual user (applier or recruiter) profile
+  const renderIndividualProfile = () => {
+    if (!userData) return null;
+    
+    return (
+      <>
+        {/* Cover image */}
+        <Box 
+          sx={{ 
+            height: 200, 
+            borderRadius: '16px 16px 0 0',
+            backgroundColor: 'primary.light',
+            backgroundImage: 'linear-gradient(120deg, #e0c3fc 0%, #8ec5fc 100%)',
+            position: 'relative'
+          }}
+        />
         
-        {/* Profile Photo */}
+        {/* Profile avatar */}
         <Avatar 
           src="https://placehold.co/150" 
-          alt="Profile"
+          alt={userData.name}
           sx={{
             width: 150,
             height: 150,
@@ -74,7 +110,7 @@ const Profile: React.FC = () => {
           }}
         />
         
-        {/* Edit Profile Photo Button */}
+        {/* Avatar edit button */}
         <IconButton
           size="small"
           sx={{
@@ -105,351 +141,174 @@ const Profile: React.FC = () => {
           }}
         >
           <Box>
-            <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
-              John Doe
+            <Typography variant="h4" fontWeight={600}>
+              {userData.name}
             </Typography>
-            <Typography variant="subtitle1" gutterBottom>
-              Software Engineer at MiniLid Inc.
+            
+            <Typography variant="body1" color="text.secondary" sx={{ mt: 1, display: 'flex', alignItems: 'center' }}>
+              <EmailIcon fontSize="small" sx={{ mr: 1 }} />
+              {userData.email}
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <LocationIcon fontSize="small" color="action" sx={{ mr: 0.5 }} />
-              <Typography variant="body2" color="text.secondary">
-                Jakarta, Indonesia
+            
+            {userData.userType === 'recruiter' && (
+              <Typography variant="body1" color="text.secondary" sx={{ mt: 1, display: 'flex', alignItems: 'center' }}>
+                <WorkIcon fontSize="small" sx={{ mr: 1 }} />
+                {userData.company || 'Company not specified'} - {userData.position || 'Position not specified'}
               </Typography>
-            </Box>
-          </Box>
-          
-          <Stack direction="row" spacing={2} sx={{ mt: { xs: 2, md: 0 } }}>
-            <Button variant="contained" startIcon={<EditIcon />}>
-              Edit Profile
-            </Button>
-            <Button variant="outlined">
-              More
-            </Button>
-          </Stack>
-        </Box>
-        
-        {/* Company Badges */}
-        <Stack 
-          direction="row" 
-          spacing={2} 
-          sx={{ 
-            mt: 3,
-            ml: { xs: 0, sm: 20 }
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Avatar 
-              src="https://placehold.co/40" 
-              alt="Company logo"
-              sx={{ width: 32, height: 32, mr: 1 }}
-            />
-            <Typography variant="body2">MiniLid Inc.</Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Avatar 
-              src="https://placehold.co/40" 
-              alt="University logo"
-              sx={{ width: 32, height: 32, mr: 1 }}
-            />
-            <Typography variant="body2">University of Indonesia</Typography>
-          </Box>
-        </Stack>
-      </Box>
-      
-      {/* About Section */}
-      <Card sx={{ mb: 3, borderRadius: 2 }} elevation={1}>
-        <CardHeader
-          title="About"
-          action={
-            <IconButton aria-label="edit">
-              <EditIcon />
-            </IconButton>
-          }
-          sx={{ pb: 0 }}
-        />
-        <CardContent>
-          <Typography variant="body1">
-            Experienced Software Engineer with a passion for developing innovative 
-            applications that expedite the efficiency and effectiveness of organizational 
-            success. Well-versed in technology and writing code to create systems that 
-            are reliable and user-friendly. Skilled leader who has the proven ability 
-            to motivate, educate, and manage a team to build software programs and 
-            effectively track changes.
-          </Typography>
-        </CardContent>
-      </Card>
-      
-      {/* Experience Section */}
-      <Card sx={{ mb: 3, borderRadius: 2 }} elevation={1}>
-        <CardHeader
-          title="Experience"
-          action={
-            <Box>
-              <IconButton size="small" sx={{ mr: 1 }}>
-                <AddIcon />
-              </IconButton>
-              <IconButton size="small">
-                <EditIcon />
-              </IconButton>
-            </Box>
-          }
-        />
-        <CardContent sx={{ pt: 0 }}>
-          <List sx={{ width: '100%' }}>
-            {/* First Job */}
-            <ListItem alignItems="flex-start" sx={{ px: 0 }}>
-              <ListItemAvatar sx={{ mr: 2 }}>
-                <Avatar 
-                  src="https://placehold.co/60" 
-                  alt="Company Logo"
-                  variant="rounded"
-                  sx={{ width: 60, height: 60 }}
-                />
-              </ListItemAvatar>
-              <ListItemText
-                primary={
-                  <Typography variant="h6">Software Engineer</Typography>
-                }
-                secondary={
-                  <Box sx={{ mt: 1 }}>
-                    <Typography variant="subtitle1" component="div">
-                      MiniLid Inc. · Full-time
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Jan 2021 - Present · 2 yrs 4 mos
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      Jakarta, Indonesia
-                    </Typography>
-                    <Typography variant="body2">
-                      Developing and maintaining web applications using React, Node.js, 
-                      and PostgreSQL. Leading a team of junior developers and mentoring them.
-                    </Typography>
-                  </Box>
-                }
+            )}
+            
+            <Box sx={{ mt: 2 }}>
+              <Chip 
+                label={userData.userType === 'applier' ? 'Job Seeker' : 'Recruiter'} 
+                color="primary" 
+                variant="outlined" 
+                size="small"
               />
-            </ListItem>
-            
-            <Divider component="li" sx={{ my: 2 }} />
-            
-            {/* Second Job */}
-            <ListItem alignItems="flex-start" sx={{ px: 0 }}>
-              <ListItemAvatar sx={{ mr: 2 }}>
-                <Avatar 
-                  src="https://placehold.co/60" 
-                  alt="Company Logo"
-                  variant="rounded"
-                  sx={{ width: 60, height: 60 }}
-                />
-              </ListItemAvatar>
-              <ListItemText
-                primary={
-                  <Typography variant="h6">Junior Developer</Typography>
-                }
-                secondary={
-                  <Box sx={{ mt: 1 }}>
-                    <Typography variant="subtitle1" component="div">
-                      Tech Solutions · Full-time
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Jun 2018 - Dec 2020 · 2 yrs 7 mos
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      Jakarta, Indonesia
-                    </Typography>
-                    <Typography variant="body2">
-                      Developed front-end interfaces using HTML, CSS, and JavaScript.
-                      Collaborated with senior developers to implement new features.
-                    </Typography>
-                  </Box>
-                }
-              />
-            </ListItem>
-          </List>
-        </CardContent>
-      </Card>
-      
-      {/* Education Section */}
-      <Card sx={{ mb: 3, borderRadius: 2 }} elevation={1}>
-        <CardHeader
-          title="Education"
-          action={
-            <Box>
-              <IconButton size="small" sx={{ mr: 1 }}>
-                <AddIcon />
-              </IconButton>
-              <IconButton size="small">
-                <EditIcon />
-              </IconButton>
-            </Box>
-          }
-        />
-        <CardContent sx={{ pt: 0 }}>
-          <List sx={{ width: '100%' }}>
-            <ListItem alignItems="flex-start" sx={{ px: 0 }}>
-              <ListItemAvatar sx={{ mr: 2 }}>
-                <Avatar 
-                  src="https://placehold.co/60" 
-                  alt="University Logo"
-                  variant="rounded"
-                  sx={{ width: 60, height: 60 }}
-                />
-              </ListItemAvatar>
-              <ListItemText
-                primary={
-                  <Typography variant="h6">University of Indonesia</Typography>
-                }
-                secondary={
-                  <Box sx={{ mt: 1 }}>
-                    <Typography variant="subtitle1" component="div">
-                      Bachelor of Science in Computer Science
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      2014 - 2018
-                    </Typography>
-                    <Typography variant="body2">
-                      Activities and societies: Computer Science Club, Hackathon Participant
-                    </Typography>
-                  </Box>
-                }
-              />
-            </ListItem>
-          </List>
-        </CardContent>
-      </Card>
-      
-      {/* Skills Section */}
-      <Card sx={{ mb: 3, borderRadius: 2 }} elevation={1}>
-        <CardHeader
-          title="Skills"
-          action={
-            <Box>
-              <IconButton size="small" sx={{ mr: 1 }}>
-                <AddIcon />
-              </IconButton>
-              <IconButton size="small">
-                <EditIcon />
-              </IconButton>
-            </Box>
-          }
-        />
-        <CardContent>
-          {/* Replace Grid with flexbox */}
-          <Box sx={{ 
-            display: 'flex', 
-            flexWrap: 'wrap', 
-            margin: theme => theme.spacing(-1) // Negative margin to compensate for padding
-          }}>
-            {/* JavaScript skill */}
-            <Box sx={{ 
-              width: { xs: '100%', sm: '50%', md: '33.33%' }, 
-              padding: 1
-            }}>
-              <Paper 
-                elevation={0} 
-                sx={{ 
-                  p: 2, 
-                  border: '1px solid', 
-                  borderColor: 'divider',
-                  borderRadius: 2,
-                  height: '100%' // Ensure even height
-                }}
-              >
-                <Typography variant="h6" gutterBottom>JavaScript</Typography>
-                <Typography variant="body2" color="text.secondary">7 endorsements</Typography>
-              </Paper>
-            </Box>
-            
-            {/* React.js skill */}
-            <Box sx={{ 
-              width: { xs: '100%', sm: '50%', md: '33.33%' }, 
-              padding: 1
-            }}>
-              <Paper 
-                elevation={0} 
-                sx={{ 
-                  p: 2, 
-                  border: '1px solid', 
-                  borderColor: 'divider',
-                  borderRadius: 2,
-                  height: '100%'
-                }}
-              >
-                <Typography variant="h6" gutterBottom>React.js</Typography>
-                <Typography variant="body2" color="text.secondary">15 endorsements</Typography>
-              </Paper>
-            </Box>
-            
-            {/* Node.js skill */}
-            <Box sx={{ 
-              width: { xs: '100%', sm: '50%', md: '33.33%' }, 
-              padding: 1
-            }}>
-              <Paper 
-                elevation={0} 
-                sx={{ 
-                  p: 2, 
-                  border: '1px solid', 
-                  borderColor: 'divider',
-                  borderRadius: 2,
-                  height: '100%'
-                }}
-              >
-                <Typography variant="h6" gutterBottom>Node.js</Typography>
-                <Typography variant="body2" color="text.secondary">12 endorsements</Typography>
-              </Paper>
-            </Box>
-            
-            {/* SQL skill */}
-            <Box sx={{ 
-              width: { xs: '100%', sm: '50%', md: '33.33%' }, 
-              padding: 1
-            }}>
-              <Paper 
-                elevation={0} 
-                sx={{ 
-                  p: 2, 
-                  border: '1px solid', 
-                  borderColor: 'divider',
-                  borderRadius: 2,
-                  height: '100%'
-                }}
-              >
-                <Typography variant="h6" gutterBottom>SQL</Typography>
-                <Typography variant="body2" color="text.secondary">8 endorsements</Typography>
-              </Paper>
-            </Box>
-            
-            {/* Git skill */}
-            <Box sx={{ 
-              width: { xs: '100%', sm: '50%', md: '33.33%' }, 
-              padding: 1
-            }}>
-              <Paper 
-                elevation={0} 
-                sx={{ 
-                  p: 2, 
-                  border: '1px solid', 
-                  borderColor: 'divider',
-                  borderRadius: 2,
-                  height: '100%'
-                }}
-              >
-                <Typography variant="h6" gutterBottom>Git</Typography>
-                <Typography variant="body2" color="text.secondary">10 endorsements</Typography>
-              </Paper>
             </Box>
           </Box>
           
           <Button 
-            sx={{ mt: 2 }}
-            variant="text"
+            variant="outlined" 
+            startIcon={<EditIcon />}
+            sx={{ alignSelf: 'flex-start', mt: { xs: 2, md: 0 } }}
           >
-            Show all 12 skills
+            Edit Profile
           </Button>
-        </CardContent>
-      </Card>
+        </Box>
+        
+        {/* Additional user details sections can go here */}
+      </>
+    );
+  };
+  
+  // Company profile
+  const renderCompanyProfile = () => {
+    if (!companyData) return null;
+    
+    return (
+      <>
+        {/* Cover image */}
+        <Box 
+          sx={{ 
+            height: 200, 
+            borderRadius: '16px 16px 0 0',
+            backgroundColor: 'secondary.light',
+            backgroundImage: 'linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%)',
+            position: 'relative'
+          }}
+        />
+        
+        {/* Company logo */}
+        <Avatar 
+          src={companyData.logoUrl || "https://placehold.co/150"} 
+          alt={companyData.name}
+          sx={{
+            width: 150,
+            height: 150,
+            border: '4px solid #fff',
+            position: 'absolute',
+            left: 24,
+            bottom: -75,
+            boxShadow: 2
+          }}
+        />
+        
+        {/* Logo edit button */}
+        <IconButton
+          size="small"
+          sx={{
+            position: 'absolute',
+            left: 130,
+            bottom: -40,
+            bgcolor: 'background.paper',
+            zIndex: 1,
+            border: '1px solid',
+            borderColor: 'divider',
+            '&:hover': {
+              bgcolor: 'background.paper',
+              opacity: 0.9
+            }
+          }}
+        >
+          <CameraIcon fontSize="small" />
+        </IconButton>
+        
+        {/* Company Info */}
+        <Box 
+          sx={{ 
+            ml: { xs: 0, sm: 20 }, 
+            mt: { xs: 10, sm: 0 },
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            justifyContent: 'space-between'
+          }}
+        >
+          <Box>
+            <Typography variant="h4" fontWeight={600}>
+              {companyData.name}
+            </Typography>
+            
+            <Typography variant="body1" color="text.secondary" sx={{ mt: 1, display: 'flex', alignItems: 'center' }}>
+              <EmailIcon fontSize="small" sx={{ mr: 1 }} />
+              {companyData.email}
+            </Typography>
+            
+            {companyData.address && (
+              <Typography variant="body1" color="text.secondary" sx={{ mt: 1, display: 'flex', alignItems: 'center' }}>
+                <LocationIcon fontSize="small" sx={{ mr: 1 }} />
+                {companyData.address}
+              </Typography>
+            )}
+            
+            {companyData.website && (
+              <Typography 
+                component="a"
+                href={companyData.website.startsWith('http') ? companyData.website : `https://${companyData.website}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="body1" 
+                color="primary" 
+                sx={{ 
+                  mt: 1, 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  textDecoration: 'none',
+                  '&:hover': {
+                    textDecoration: 'underline'
+                  } 
+                }}
+              >
+                {companyData.website}
+              </Typography>
+            )}
+            
+            <Box sx={{ mt: 2 }}>
+              <Chip 
+                label="Company" 
+                color="secondary" 
+                variant="outlined" 
+                size="small"
+              />
+            </Box>
+          </Box>
+          
+          <Button 
+            variant="outlined" 
+            startIcon={<EditIcon />}
+            sx={{ alignSelf: 'flex-start', mt: { xs: 2, md: 0 } }}
+          >
+            Edit Company Profile
+          </Button>
+        </Box>
+      </>
+    );
+  };
+
+  return (
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <Box sx={{ position: 'relative', mb: 10 }}>
+        {renderProfileContent()}
+      </Box>
     </Container>
   );
 };

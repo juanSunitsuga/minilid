@@ -45,13 +45,20 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }>({});
 
     // Open modals
-    const openLoginModal = (prefillData?: any) => {
-        if (prefillData) {
-            setLoginPrefillData(prefillData);
-        } else {
-            setLoginPrefillData({});
+    const openLoginModal = (initialData?: { email?: string, userType?: 'applier' | 'recruiter' | 'company' }) => {
+        // Check if we have a lastRegisteredEmail in localStorage
+        const lastRegisteredEmail = localStorage.getItem('lastRegisteredEmail');
+        
+        // If available, use it and then remove it
+        if (lastRegisteredEmail && (!initialData || !initialData.email)) {
+            initialData = {
+                ...initialData,
+                email: lastRegisteredEmail
+            };
+            localStorage.removeItem('lastRegisteredEmail');
         }
-
+        
+        setLoginPrefillData(initialData || {});
         setIsLoginModalOpen(true);
         setIsRegisterModalOpen(false);
         setIsForgotPasswordModalOpen(false);

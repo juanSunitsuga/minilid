@@ -107,9 +107,6 @@ router.post('/register-company', controllerWrapper(async (req: Request, res: Res
     website: companyWebsite || null,
   });
 
-  // Generate token
-  const accessToken = appConfig.generateAccessToken(newCompany.company_id);
-
   return {
     status: 201,
     data: {
@@ -120,8 +117,7 @@ router.post('/register-company', controllerWrapper(async (req: Request, res: Res
         address: newCompany.address,
         website: newCompany.website,
         email: newCompany.company_email,
-      },
-      accessToken
+      }
     }
   };
 }));
@@ -162,8 +158,6 @@ router.post('/register-applier', controllerWrapper(async (req: Request, res: Res
     name: newUser.name,
   };
 
-  const accessToken = appConfig.generateAccessToken(userData.id);
-
   const userResponse = { ...newUser.get() };
   delete userResponse.password;
 
@@ -176,8 +170,7 @@ router.post('/register-applier', controllerWrapper(async (req: Request, res: Res
         name: userResponse.name,
         email: userResponse.email,
         usertype: userResponse.usertype
-      },
-      accessToken,
+      }
     }
   };
 }));
@@ -217,7 +210,6 @@ router.post('/register-recruiter', controllerWrapper(async (req: Request, res: R
     name: newUser.name,
   };
 
-  const accessToken = appConfig.generateAccessToken(userData.id);
 
   const userResponse = { ...newUser.get() };
   delete userResponse.password;
@@ -231,8 +223,7 @@ router.post('/register-recruiter', controllerWrapper(async (req: Request, res: R
         name: userResponse.name,
         email: userResponse.email,
         usertype: userResponse.usertype
-      },
-      accessToken,
+      }
     }
   };
 }));
