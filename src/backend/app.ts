@@ -84,7 +84,6 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
-    // Initialize database when server starts
     await initializeDatabase();
     console.log(`Server is running on port ${PORT}`);
 });

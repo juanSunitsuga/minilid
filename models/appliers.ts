@@ -30,6 +30,12 @@ export class Appliers extends Model {
         allowNull: false,
     })
     declare password: string;
+
+    @Column({
+        type: DataType.TEXT,
+        allowNull: true,
+    })
+    declare about: string | null;
     
     @HasMany(() => Skills, {
         foreignKey: "job_id",

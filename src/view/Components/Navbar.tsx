@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FaHome, FaBriefcase, FaSearch, FaUser, FaBell, FaSignInAlt, FaSignOutAlt } from 'react-icons/fa';
 import { BsChatDotsFill } from 'react-icons/bs';
-import { useAuth } from '../view/Context/AuthContext';
-import { useModal } from '../view/Context/ModalContext';
+import { useAuth } from '../Context/AuthContext';
+import { useModal } from '../Context/ModalContext';
 
 const Navbar: React.FC = () => {
   const location = useLocation();
