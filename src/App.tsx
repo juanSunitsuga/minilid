@@ -4,6 +4,7 @@ import { FaHome, FaBriefcase, FaSearch, FaUser, FaBell, FaSignInAlt, FaSignOutAl
 import { BsChatDotsFill } from 'react-icons/bs';
 import { Link, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Fade, Backdrop } from '@mui/material';
 
 // Import views
 import Home from './view/Home';
@@ -19,6 +20,8 @@ function App() {
   const [activePath, setActivePath] = useState('/');
   // Add state to track if user is logged in
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // Add state for logout confirmation dialog
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   
   useEffect(() => {
     setActivePath(location.pathname);
@@ -28,8 +31,16 @@ function App() {
     setIsLoggedIn(!!token);
   }, [location]);
 
+  // Show logout confirmation dialog
+  const showLogoutConfirmation = () => {
+    setLogoutDialogOpen(true);
+  };
+
   // Logout function to clear user session
   const handleLogout = () => {
+    // Close the dialog
+    setLogoutDialogOpen(false);
+    
     // Remove all tokens from localStorage
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
@@ -40,6 +51,11 @@ function App() {
     
     // Redirect to home page
     navigate('/');
+  };
+
+  // Cancel logout
+  const cancelLogout = () => {
+    setLogoutDialogOpen(false);
   };
 
   return (
@@ -85,7 +101,7 @@ function App() {
                   <span className="nav-text">Me</span>
                 </Link>
                 <button 
-                  onClick={handleLogout} 
+                  onClick={showLogoutConfirmation} 
                   className="nav-item logout-button"
                   aria-label="Logout"
                 >
@@ -102,6 +118,74 @@ function App() {
           </nav>
         </div>
       </header>
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog
+        open={logoutDialogOpen}
+        onClose={cancelLogout}
+        TransitionComponent={Fade}
+        keepMounted
+        aria-labelledby="logout-dialog-title"
+        BackdropComponent={Backdrop}
+        BackdropProps={{
+          timeout: 500,
+        }}
+        PaperProps={{
+          elevation: 8,
+          sx: {
+            borderRadius: '12px',
+            padding: '8px',
+            minWidth: '300px',
+          }
+        }}
+      >
+        <DialogTitle id="logout-dialog-title" sx={{ fontWeight: 600 }}>
+          Confirm Logout
+        </DialogTitle>
+        <DialogContent>
+          Are you sure you want to log out from your account?
+        </DialogContent>
+        <DialogActions sx={{ padding: '16px', justifyContent: 'space-between' }}>
+          <Button 
+            onClick={cancelLogout} 
+            variant="outlined"
+            sx={{ 
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 500,
+              transform: 'scale(0.9)',
+              '&:hover': {
+                backgroundColor: '#f0f0f0',
+                transition: '0.7s',
+                transform: 'scale(1)',
+                
+              }
+            }}
+            >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleLogout} 
+            variant="contained" 
+            color="primary" 
+            autoFocus
+            sx={{ 
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 500,
+              backgroundColor: '#ff5252',
+              transform: 'scale(0.9)',
+              '&:hover': {
+                backgroundColor: '#ff1744',
+                transition: '0.7s',
+                transform: 'scale(1)',                
+              }
+            }}
+            >
+            Logout
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <main className="content">
         <Routes>

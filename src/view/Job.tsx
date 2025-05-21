@@ -23,7 +23,10 @@ import {
   CircularProgress,
   Fade,
   Slider,
-  useTheme
+  useTheme,
+  Stack,
+  Chip,
+  Grid,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -215,7 +218,6 @@ const Job: React.FC = () => {
     setSort("newest");
   };
 
-  // Replace the outer Container component with a fixed-size Box
   return (
     <Box sx={{
       width: '1200px',
