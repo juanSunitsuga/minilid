@@ -1,8 +1,8 @@
 'use strict';
 
 /** @type {import('sequelize-cli').Migration} */
-module.exports = {
-  async up (queryInterface, Sequelize) {
+export default {
+  async up(queryInterface, Sequelize) {
     await queryInterface.createTable('job_appliers', {
       id: {
         type: Sequelize.INTEGER,
@@ -10,8 +10,8 @@ module.exports = {
         autoIncrement: true,
         primaryKey: true
       },
-      jobId: {
-        type: Sequelize.INTEGER,
+      job_id: {
+        type: Sequelize.UUID,
         allowNull: false,
         references: {
           model: 'job_posts',
@@ -21,7 +21,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       applier_id: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.UUID,
         allowNull: false,
         references: {
           model: 'appliers',
@@ -48,7 +48,7 @@ module.exports = {
     });
   },
 
-  async down (queryInterface, Sequelize) {
+  async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('job_appliers');
   }
 };

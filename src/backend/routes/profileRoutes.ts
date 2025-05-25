@@ -238,6 +238,7 @@ router.post("/experiences", authMiddleware, controllerWrapper(async (req, res) =
     });
 
     return {
+        status: 'success',
         message: "Experience added successfully.",
         data: experience
     };

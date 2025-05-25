@@ -1,5 +1,7 @@
-import { Table, Column, Model, DataType, ForeignKey } from "sequelize-typescript";
+import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
 import { Chats } from "./chats";
+import { Appliers } from "./appliers";
+import { Recruiters } from "./recruiters";
 
 @Table({
     tableName: "messages",
@@ -20,11 +22,20 @@ export class Messages extends Model {
     })
     declare chat_id: string;
 
+    @BelongsTo(() => Chats, { foreignKey: 'chat_id' })
+    declare chat: Chats;
+
     @Column({
         type: DataType.UUID,
         allowNull: false,
     })
     declare sender_id: string;
+
+    @Column({
+        type: DataType.BOOLEAN,
+        allowNull: false,
+    })
+    declare is_recruiter: boolean;
 
     @Column({
         type: DataType.STRING,
@@ -35,6 +46,7 @@ export class Messages extends Model {
     @Column({
         type: DataType.ENUM("TEXT", "IMAGE", "VIDEO", "FILE"),
         allowNull: false,
+        defaultValue: "TEXT"
     })
     declare message_type: string;
 

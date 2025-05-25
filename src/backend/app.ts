@@ -23,6 +23,8 @@ import { ApplierSkill } from '../../models/applier_skills';
 import registerLoginRoutes from './routes/registerLoginRoutes';
 import createPostRoutes from './routes/createPostRoutes';
 import profileRoutes from './routes/profileRoutes';
+import chatRoutes from './routes/chatRoutes';
+// import jobApplicationRoutes from './routes/jobApplicationRoutes';
 
 // Import configuration
 import config from '../../config/config.json';
@@ -55,8 +57,11 @@ async function initializeDatabase() {
         await sequelize.authenticate();
         console.log('Database connection has been established successfully.');
         
-        // Sync models with database (set force: false in production)
-        await sequelize.sync({ force: false });
+        await sequelize.sync({ 
+          force: false, 
+          alter: true,
+          hooks: true
+        });
         console.log('Database synchronized successfully');
     } catch (error) {
         console.error('Unable to connect to the database:', error);
@@ -67,9 +72,8 @@ async function initializeDatabase() {
 app.use('/auth', registerLoginRoutes);
 app.use('/profile', profileRoutes);
 app.use('/job', createPostRoutes);
+app.use('/chat', chatRoutes);
 
-// ERROR HANDLING
-// Default 404 handler
 app.use((req, res) => {
     res.status(404).json({ message: 'Route not found' });
 });
