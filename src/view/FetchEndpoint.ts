@@ -19,7 +19,17 @@ export const FetchEndpoint = async (endpoint: string, method: string, token: str
   };
   
   try {
+    console.log('Request options:', options);
+    console.log('Request headers:', headers);
+    console.log('Request body:', body);
+    console.log('Request URL:', `${baseUrl}${endpoint}`);
+    console.log('Request method:', method);
+    console.log('Request token:', token);
+
     const response = await fetch(`${baseUrl}${endpoint}`, options);
+
+    console.log('TEST');
+    console.log('Response:', response);
     
     // Log response status
     console.log(`Response status: ${response.status} ${response.statusText}`);

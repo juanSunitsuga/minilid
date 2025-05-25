@@ -22,6 +22,7 @@ import { ApplierSkill } from '../../models/applier_skills';
 // Import routes
 import registerLoginRoutes from './routes/registerLoginRoutes';
 import createPostRoutes from './routes/createPostRoutes';
+import profileRoutes from './routes/profileRoutes';
 
 // Import configuration
 import config from '../../config/config.json';
@@ -64,6 +65,7 @@ async function initializeDatabase() {
 
 // ROUTES
 app.use('/auth', registerLoginRoutes);
+app.use('/profile', profileRoutes);
 app.use('/job', createPostRoutes);
 
 // ERROR HANDLING

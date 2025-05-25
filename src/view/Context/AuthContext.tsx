@@ -9,6 +9,7 @@ interface BaseUserData {
 interface ApplierData extends BaseUserData {
   user_id: string;
   userType: 'applier';
+  about?: string;
 }
 
 interface RecruiterData extends BaseUserData {

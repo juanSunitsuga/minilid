@@ -22,27 +22,14 @@ declare global {
     }
 }
 
-router.get("/profile-appliers", controllerWrapper(async (req, res) => {
+router.get("/appliers", controllerWrapper(async (req, res) => {
     const applierId = req.query.applier_id;
     if (!applierId) {
         throw new Error("Applier ID is required.");
     }
 
     const applier = await Appliers.findOne({
-        where: { applier_id: applierId },
-        include: [
-            {
-                model: Skills,
-                as: "skills",
-                attributes: ["skill_id", "name"],
-                through: { attributes: [] },
-            },
-            {
-                model: Experiences,
-                as: "experiences",
-                attributes: ["experience_id", "company_name", "start_date", "end_date"],
-            },
-        ],
+        where: { user_id: applierId },
     });
 
     if (!applier) {
@@ -55,7 +42,40 @@ router.get("/profile-appliers", controllerWrapper(async (req, res) => {
     }
 }));
 
-router.get("/profile-recruiters", controllerWrapper(async (req, res) => {
+router.get("/appliers/:id", controllerWrapper(async (req, res) => {
+    const applierId = req.params.id;
+    if (!applierId) {
+        throw new Error("Applier ID is required.");
+    }
+
+    const applier = await Appliers.findOne({
+        where: { applier_id: applierId }
+        // include: [
+            // {
+            //     model: Skills,
+            //     as: "skills",
+            //     attributes: ["skill_id", "name"],
+            //     through: { attributes: [] },
+            // },
+            // {
+            //     model: Experiences,
+            //     as: "experiences",
+            //     attributes: ["experience_id", "company_name", "start_date", "end_date"],
+            // },
+        // ],
+    });
+
+    if (!applier) {
+        throw new Error("Applier not found.");
+    }
+
+    return {
+        message: "Applier profile retrieved successfully.",
+        data: applier,
+    }
+}));
+
+router.get("/recruiters", controllerWrapper(async (req, res) => {
     const recruiterId = req.query.recruiter_id;
     if (!recruiterId) {
         throw new Error("Recruiter ID is required.");
@@ -84,7 +104,7 @@ router.get("/profile-recruiters", controllerWrapper(async (req, res) => {
 }));
 
 // Update the skills endpoint
-router.get("profile-appliers-skills", controllerWrapper(async (req, res) => {
+router.get("/appliers-skills", controllerWrapper(async (req, res) => {
     const applierId = req.query.applier_id;
 
     if (!applierId) {
@@ -116,7 +136,7 @@ router.get("profile-appliers-skills", controllerWrapper(async (req, res) => {
     };
 }));
 
-router.post("/profile-appliers-skills", authMiddleware, controllerWrapper(async (req, res) => {
+router.post("/appliers-skills", authMiddleware, controllerWrapper(async (req, res) => {
     const { applier_id, skills } = req.body;
 
     if (!applier_id || !skills) {
@@ -176,7 +196,7 @@ router.post("/profile-appliers-skills", authMiddleware, controllerWrapper(async 
     };
 }));
 
-router.post("/profile-experiences", authMiddleware, controllerWrapper(async (req, res) => {
+router.post("/experiences", authMiddleware, controllerWrapper(async (req, res) => {
     const { 
         user_type, 
         user_id, 
@@ -223,7 +243,7 @@ router.post("/profile-experiences", authMiddleware, controllerWrapper(async (req
     };
 }));
 
-router.get("/profile-experiences", controllerWrapper(async (req, res) => {
+router.get("/experiences", controllerWrapper(async (req, res) => {
     const { user_type, user_id } = req.query;
 
     if (!user_type || !user_id) {
@@ -250,7 +270,7 @@ router.get("/profile-experiences", controllerWrapper(async (req, res) => {
     };
 }));
 
-router.put("/profile-experiences/:experience_id", controllerWrapper(async (req, res) => {
+router.put("/experiences/:experience_id", controllerWrapper(async (req, res) => {
     const { experience_id } = req.params;
     const { 
         company_name, 
@@ -280,7 +300,7 @@ router.put("/profile-experiences/:experience_id", controllerWrapper(async (req, 
     };
 }));
 
-router.delete("/profile-experiences/:experience_id", controllerWrapper(async (req, res) => {
+router.delete("/experiences/:experience_id", controllerWrapper(async (req, res) => {
     const { experience_id } = req.params;
 
     const experience = await Experiences.findByPk(experience_id);

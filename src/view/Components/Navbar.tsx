@@ -13,9 +13,6 @@ const Navbar: React.FC = () => {
   const { openLoginModal, openRegisterModal } = useModal();
   
   // Debug auth state
-  useEffect(() => {
-    console.log('Navbar auth state:', { isAuthenticated, userType, userData, companyData });
-  }, [isAuthenticated, userType]);
 
   useEffect(() => {
     setActivePath(location.pathname);
