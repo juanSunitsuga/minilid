@@ -3,7 +3,7 @@ import { FetchEndpoint } from "../view/FetchEndpoint";
 // Get all chats for current user
 export const getChats = async () => {
     try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('accessToken');
         const response = await FetchEndpoint('/chat/chats', 'GET', token, null);
         if (!response.ok) {
             throw new Error(`Failed to fetch chats: ${response.status}`);
@@ -19,7 +19,7 @@ export const getChats = async () => {
 // Get specific chat with messages
 export const getChatById = async (chatId: string) => {
     try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('accessToken');;
         const response = await FetchEndpoint(`/chat/chats/${chatId}`, 'GET', token, null);
         if (!response.ok) {
             throw new Error(`Failed to fetch chats: ${response.status}`);
@@ -35,7 +35,7 @@ export const getChatById = async (chatId: string) => {
 // Send a message
 export const sendMessage = async (chatId: string, message: string, messageType = 'TEXT') => {
     try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('accessToken');;
         const response = await FetchEndpoint(
             `/chat/chats/${chatId}/messages`,
             'POST',
@@ -76,7 +76,7 @@ interface AttachmentResponse {
 // Function to send an attachment
 export const sendAttachment = async (chatId: string, file: File): Promise<AttachmentResponse> => {
     try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('accessToken');;
 
         // For file uploads, we need to use FormData
         // If FetchEndpoint doesn't support FormData directly, you'll need to modify it

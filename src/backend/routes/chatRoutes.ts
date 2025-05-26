@@ -10,6 +10,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import multer from 'multer';
 import process from 'process';
+import { readdirSync } from 'fs';  // Import native fs module
 
 const PROJECT_ROOT = process.cwd();
 const BASE_DIR = path.join(PROJECT_ROOT, 'data');
@@ -81,11 +82,11 @@ export const createChatDocument = async (chatData: ChatData): Promise<void> => {
 // Read chat from JSON file
 export const readChatJson = async (chatId: string): Promise<ChatData | null> => {
   const filePath = getChatFilePath(chatId);
-  
+
   if (!await fs.pathExists(filePath)) {
     return null;
   }
-  
+
   return await fs.readJSON(filePath);
 };
 
@@ -93,7 +94,7 @@ export const readChatJson = async (chatId: string): Promise<ChatData | null> => 
 export const addTextMessage = async (chatId: string, userId: string, isRecruiter: boolean, content: string) => {
   const chatPath = getChatFilePath(chatId);
   const chat = await fs.readJSON(chatPath) as ChatData;
-  
+
   const messageId = uuidv4();
   const newMessage: ChatMessage = {
     message_id: messageId,
@@ -104,42 +105,42 @@ export const addTextMessage = async (chatId: string, userId: string, isRecruiter
     timestamp: new Date().toISOString(),
     status: 'SENT'
   };
-  
+
   // Add new message
   if (!chat.messages) {
     chat.messages = [];
   }
   chat.messages.push(newMessage);
-  
+
   // Update metadata
   chat.updated_at = new Date().toISOString();
   chat.last_message = content;
-  
+
   // Write back to file
   await fs.writeJSON(chatPath, chat, { spaces: 2 });
-  
+
   return newMessage;
 };
 
 // Add an attachment message
 export const addAttachmentMessage = async (
-  chatId: string, 
-  userId: string, 
-  isRecruiter: boolean, 
-  attachmentId: string, 
-  filename: string, 
-  fileSize: number, 
+  chatId: string,
+  userId: string,
+  isRecruiter: boolean,
+  attachmentId: string,
+  filename: string,
+  fileSize: number,
   mimeType: string
 ) => {
   const chatPath = getChatFilePath(chatId);
   const chat = await fs.readJSON(chatPath) as ChatData;
-  
+
   const messageId = uuidv4();
   let messageType = 'FILE';
-  
+
   if (mimeType.startsWith('image/')) messageType = 'IMAGE';
   if (mimeType.startsWith('video/')) messageType = 'VIDEO';
-  
+
   const newMessage: ChatMessage = {
     message_id: messageId,
     sender_id: userId,
@@ -155,20 +156,20 @@ export const addAttachmentMessage = async (
       mime_type: mimeType
     }
   };
-  
+
   // Add new message
   if (!chat.messages) {
     chat.messages = [];
   }
   chat.messages.push(newMessage);
-  
+
   // Update metadata
   chat.updated_at = new Date().toISOString();
   chat.last_message = `[${messageType}] ${filename}`;
-  
+
   // Write back to file
   await fs.writeJSON(chatPath, chat, { spaces: 2 });
-  
+
   return newMessage;
 };
 
@@ -176,11 +177,11 @@ export const addAttachmentMessage = async (
 const updateChatIndex = async (applicationId: string, chatId: string) => {
   const indexPath = path.join(CHATS_DIR, 'chat_index.json');
   let index: Record<string, string> = {};
-  
+
   if (await fs.pathExists(indexPath)) {
     index = await fs.readJSON(indexPath);
   }
-  
+
   index[applicationId] = chatId;
   await fs.writeJSON(indexPath, index, { spaces: 2 });
 };
@@ -203,24 +204,38 @@ export const findChatByApplicationId = async (applicationId: string): Promise<st
 // Get chats for user
 export const getChatsForUser = async (userId: string, isRecruiter: boolean): Promise<ChatData[]> => {
   try {
-    const files = await fs.readdir(CHATS_DIR);
+    // First check if directory exists using fs-extra
+    if (!await fs.pathExists(CHATS_DIR)) {
+      console.log(`Chat directory doesn't exist: ${CHATS_DIR}`);
+      return [];
+    }
+    
+    // Use Node.js native fs module instead of fs-extra for directory reading
+    const files = readdirSync(CHATS_DIR);
+    console.log(`Found ${files.length} files in chat directory:`, files);
+
     const chatIds = files
       .filter(file => file.startsWith('chat_') && file.endsWith('.json'))
       .map(file => file.replace('chat_', '').replace('.json', ''));
-    
+
+    console.log(`Found ${chatIds.length} chat files`);
+
     const chats: ChatData[] = [];
-    
+
     for (const chatId of chatIds) {
-      const chat = await readChatJson(chatId);
-      if (chat) {
-        if ((isRecruiter && chat.recruiter_id === userId) || 
+      try {
+        const chat = await readChatJson(chatId);
+        if (chat) {
+          if ((isRecruiter && chat.recruiter_id === userId) ||
             (!isRecruiter && chat.applier_id === userId)) {
-          chats.push(chat);
+            chats.push(chat);
+          }
         }
+      } catch (chatError) {
+        console.error(`Error reading chat ${chatId}:`, chatError);
       }
     }
-    
-    // Sort by updated_at (newest first)
+
     return chats.sort((a, b) => {
       return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
     });
@@ -233,21 +248,21 @@ export const getChatsForUser = async (userId: string, isRecruiter: boolean): Pro
 // Add message to chat
 export const addMessageToChat = async (chatId: string, message: ChatMessage): Promise<void> => {
   const chatPath = getChatFilePath(chatId);
-  
+
   if (!await fs.pathExists(chatPath)) {
     throw new Error(`Chat file not found: ${chatId}`);
   }
-  
+
   const chat = await fs.readJSON(chatPath) as ChatData;
-  
+
   if (!chat.messages) {
     chat.messages = [];
   }
-  
+
   chat.messages.push(message);
   chat.updated_at = new Date().toISOString();
   chat.last_message = message.content;
-  
+
   await fs.writeJSON(chatPath, chat, { spaces: 2 });
 };
 
@@ -296,38 +311,31 @@ const chatAccessMiddleware = controllerWrapper(async (req, res, next) => {
 });
 
 router.get("/chats", authMiddleware, controllerWrapper(async (req, res) => {
+  console.log("GET /chats - User:", req.user);
+  const userId = req.user?.id;
+
+  if (!userId) {
+    throw new Error("Unauthorized: User ID is required");
+  }
+
+  // Ensure directories exist
+  fs.ensureDirSync(CHATS_DIR);
+  console.log("Ensured chats directory exists at:", CHATS_DIR);
+
+  // Determine if user is applier or recruiter
+  const applier = await Appliers.findOne({ where: { applier_id: userId } });
+  const recruiter = await Recruiters.findOne({ where: { recruiter_id: userId } });
+
+  console.log("User type:", {
+    isApplier: !!applier,
+    applierId: applier?.applier_id,
+    isRecruiter: !!recruiter,
+    recruiterId: recruiter?.recruiter_id
+  });
+
+  // Get chats from JSON files
+  let chats = [];
   try {
-    console.log("GET /chats - User:", req.user);
-    const userId = req.user?.id;
-
-    if (!userId) {
-      throw new Error("Unauthorized: User ID is required");
-    }
-
-    // Ensure directories exist
-    if (!fs.existsSync(CHATS_DIR)) {
-      fs.mkdirSync(CHATS_DIR, { recursive: true });
-      console.log("Created chats directory at:", CHATS_DIR);
-      // If no chats directory existed, return empty array rather than error
-      return {
-        message: "No chats found",
-        data: []
-      };
-    }
-
-    // Determine if user is applier or recruiter
-    const applier = await Appliers.findOne({ where: { user_id: userId } });
-    const recruiter = await Recruiters.findOne({ where: { user_id: userId } });
-    
-    console.log("User type:", { 
-      isApplier: !!applier, 
-      applierId: applier?.applier_id,
-      isRecruiter: !!recruiter,
-      recruiterId: recruiter?.recruiter_id
-    });
-
-    // Get chats from JSON files
-    let chats = [];
     if (applier) {
       chats = await getChatsForUser(applier.applier_id, false);
     } else if (recruiter) {
@@ -340,48 +348,51 @@ router.get("/chats", authMiddleware, controllerWrapper(async (req, res) => {
         data: []
       };
     }
-
-    console.log(`Found ${chats.length} chats`);
-
-    // Filter chats to only include those with approved applications
-    const approvedChats = [];
-    
-    // If no chats found, return empty array
-    if (chats.length === 0) {
-      return {
-        message: "No chats found",
-        data: []
-      };
-    }
-
-    for (const chat of chats) {
-      try {
-        const jobApplication = await JobAppliers.findByPk(chat.job_application_id);
-        if (jobApplication && ['interviewing', 'hired'].includes(jobApplication.status)) {
-          approvedChats.push({
-            chat_id: chat.chat_id,
-            applier_id: chat.applier_id,
-            applier_name: chat.applier_name,
-            recruiter_id: chat.recruiter_id,
-            recruiter_name: chat.recruiter_name,
-            last_message: chat.last_message || "",
-            updated_at: chat.updated_at
-          });
-        }
-      } catch (err) {
-        console.error("Error checking job application:", err);
-        // Continue to next chat instead of failing
-      }
-    }
-
-    return {
-      message: "Chats retrieved successfully",
-      data: approvedChats
-    };
   } catch (error) {
-    console.error("Error in GET /chats:", error);
-    throw error; // controllerWrapper will handle this
+    console.error("Error getting chats:", error);
+    return {
+      message: "Error getting chats",
+      data: []
+    };
   }
+
+  console.log(`Found ${chats.length} chats`);
+
+  // If no chats found, return empty array
+  if (chats.length === 0) {
+    return {
+      message: "No chats found",
+      data: []
+    };
+  }
+
+  // Filter chats to only include those with approved applications
+  const approvedChats = [];
+
+  for (const chat of chats) {
+    try {
+      const jobApplication = await JobAppliers.findByPk(chat.job_application_id);
+      if (jobApplication && ['interviewing', 'hired'].includes(jobApplication.status)) {
+        approvedChats.push({
+          chat_id: chat.chat_id,
+          applier_id: chat.applier_id,
+          applier_name: chat.applier_name,
+          recruiter_id: chat.recruiter_id,
+          recruiter_name: chat.recruiter_name,
+          last_message: chat.last_message || "",
+          updated_at: chat.updated_at
+        });
+      }
+    } catch (err) {
+      console.error("Error checking job application:", err);
+      // Continue to next chat instead of failing
+    }
+  }
+
+  return {
+    message: "Chats retrieved successfully",
+    data: approvedChats
+  };
 }));
 
 // Get specific chat with messages
@@ -513,15 +524,15 @@ router.post("/create-chat", authMiddleware, controllerWrapper(async (req, res) =
 }));
 
 // Add route for sending message with attachment
-router.post("/chats/:chat_id/attachment", 
-  authMiddleware, 
+router.post("/chats/:chat_id/attachment",
+  authMiddleware,
   chatAccessMiddleware,
   uploadAttachment.single('file'),
   controllerWrapper(async (req, res) => {
     const userId = req.user?.id;
     const chatId = req.params.chat_id;
     const { file } = req;
-    
+
     if (!userId) {
       throw new Error("Unauthorized: User ID is required");
     }
@@ -529,19 +540,19 @@ router.post("/chats/:chat_id/attachment",
     if (!file) {
       throw new Error("File is required");
     }
-    
+
     const chat = req.chat;
 
     if (!chat) {
       throw new Error("Chat not found");
     }
-    
+
     // Get file stats
     const stats = await fs.stat(file.path);
-    
+
     // Determine if sender is recruiter or applier
     const isRecruiter = chat.recruiter_id === userId;
-    
+
     if (!req.attachmentId) {
       throw new Error("Attachment ID is missing");
     }
@@ -556,7 +567,7 @@ router.post("/chats/:chat_id/attachment",
       stats.size,
       file.mimetype
     );
-    
+
     return {
       message: "File sent successfully",
       data: newMessage
@@ -567,13 +578,13 @@ router.post("/chats/:chat_id/attachment",
 // Route for getting attachment
 router.get("/attachments/:attachmentId/:filename", authMiddleware, controllerWrapper(async (req, res) => {
   const { attachmentId, filename } = req.params;
-  
+
   const filePath = path.join(ATTACHMENTS_DIR, attachmentId, filename);
-  
+
   if (!await fs.pathExists(filePath)) {
     return res.status(404).json({ message: "Attachment not found" });
   }
-  
+
   res.sendFile(filePath);
 }));
 

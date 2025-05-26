@@ -4,9 +4,9 @@ import { Appliers } from '../../../models/appliers';
 import { Recruiters } from '../../../models/recruiters';
 import { Company } from '../../../models/company';
 import { appConfig } from '../../../config/app';
-import { v4, validate } from 'uuid';
+import { v4 } from 'uuid';
 import { controllerWrapper } from '../../../src/utils/controllerWrapper';
-import e from 'express';
+import { Op } from 'sequelize';
 import jwt from 'jsonwebtoken';
 
 const router = express.Router();
@@ -182,7 +182,7 @@ router.post('/register-recruiter', controllerWrapper(async (req: Request, res: R
 
   req.body.userType = 'recruiter';
 
-  const { email, password, name, ...additionalData } = req.body;
+  const { email, password, name, companyName, position, ...additionalData } = req.body;
 
   const existingUser = await Recruiters.findOne({ where: { email } });
 
@@ -192,11 +192,17 @@ router.post('/register-recruiter', controllerWrapper(async (req: Request, res: R
 
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
+  const company = await Company.findOne({
+    where: { company_name: { [Op.iLike]: companyName } },
+  })
+
   const newUser = await Recruiters.create({
     user_id: v4(),
     email,
     password: hashedPassword,
     name,
+    company_id: company ? company.company_id : null,
+    position
   });
 
   // Generate token
@@ -205,7 +211,6 @@ router.post('/register-recruiter', controllerWrapper(async (req: Request, res: R
     email: newUser.email,
     name: newUser.name,
   };
-
 
   const userResponse = { ...newUser.get() };
   delete userResponse.password;
@@ -259,8 +264,6 @@ router.post('/login-applier', controllerWrapper(async (req: Request, res: Respon
     { expiresIn: '1h' }
   );
 
-  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjVmNDI2MTNhLTMyOGYtNDhiZC1iZTk5LTVhNjZmMjZkNzcxNyIsImVtYWlsIjoieW9sYUBnbWFpbC5jb20iLCJuYW1lIjoieW9sYSIsImlhdCI6MTc0ODI0MjA5NiwiZXhwIjoxNzUxODQyMDk2fQ._vuAxzqkT74qEgUUpMliA-YC4Ko0u05kbJebPRRn_y0
-  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRkMzZhODBmLTdjYTctNDE3ZS05OTY1LWEzMGRkZDE3MWZmMCIsImVtYWlsIjoiYWxveUBnbWFpbC5jb20iLCJpYXQiOjE3NDgyNTc3NDQsImV4cCI6MTc0ODI2MTM0NH0.eSwZi154yofJB71xpHHsiZTol7gQBJIxKd0cI5uHbxQ
   console.log('Generated access token:', accessToken);
 
   // Remove password from response

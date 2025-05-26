@@ -47,7 +47,14 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "pm.collectionVariables.set('recruiterToken', json.data?.accessToken || json.accessToken);"
+              "if(json.data && json.data.accessToken) {",
+              "  pm.collectionVariables.set('recruiterToken', json.data.accessToken);",
+              "  console.log('Set recruiterToken from data.accessToken');",
+              "} else if(json.accessToken) {",
+              "  pm.collectionVariables.set('recruiterToken', json.accessToken);",
+              "  console.log('Set recruiterToken from root accessToken');",
+              "}",
+              "console.log('Response:', JSON.stringify(json));"
             ]
           }
         }
@@ -70,7 +77,18 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "pm.collectionVariables.set('jobId', json.data?.job_id || json.jobPost?.job_id);"
+              "console.log('Post job response:', JSON.stringify(json));",
+              "if(json.data && json.data.job_id) { ",
+              "  pm.collectionVariables.set('jobId', json.data.job_id);",
+              "  console.log('Set jobId from data.job_id:', json.data.job_id);",
+              "} else if(json.jobPost && json.jobPost.job_id) {",
+              "  pm.collectionVariables.set('jobId', json.jobPost.job_id);",
+              "  console.log('Set jobId from jobPost.job_id:', json.jobPost.job_id);",
+              "} else if(json.data && json.data.jobPost && json.data.jobPost.job_id) {",
+              "  pm.collectionVariables.set('jobId', json.data.jobPost.job_id);",
+              "  console.log('Set jobId from data.jobPost.job_id:', json.data.jobPost.job_id);",
+              "}"
+
             ]
           }
         }
@@ -96,7 +114,14 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "pm.collectionVariables.set('applierToken', json.data?.accessToken || json.accessToken);"
+              "if(json.data && json.data.accessToken) {",
+              "  pm.collectionVariables.set('applierToken', json.data.accessToken);",
+              "  console.log('Set applierToken from data.accessToken');",
+              "} else if(json.accessToken) {",
+              "  pm.collectionVariables.set('applierToken', json.accessToken);",
+              "  console.log('Set applierToken from root accessToken');",
+              "}",
+              "console.log('Response:', JSON.stringify(json));"
             ]
           }
         }
@@ -119,11 +144,18 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
+              "console.log('Apply job response:', JSON.stringify(json));",
               "// Extract ID using multiple possible paths",
-              "var id = json.data?.id;",
-              "if (!id) id = json.data?.application?.id;",
-              "if (!id) id = json.application?.id;",
-              "pm.collectionVariables.set('applicationId', id);"
+              "var id = null;",
+              "if(json.data && json.data.id) id = json.data.id;",
+              "else if(json.data && json.data.application && json.data.application.id) id = json.data.application.id;",
+              "else if(json.application && json.application.id) id = json.application.id;",
+              "else if(json.data && json.data.job_application_id) id = json.data.job_application_id;",
+              "",
+              "if(id) {",
+              "  pm.collectionVariables.set('applicationId', id);",
+              "  console.log('Set applicationId to:', id);",
+              "}"
             ]
           }
         }
@@ -149,7 +181,11 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "pm.collectionVariables.set('recruiterToken', json.data?.accessToken || json.accessToken);"
+              "if(json.data && json.data.accessToken) {",
+              "  pm.collectionVariables.set('recruiterToken', json.data.accessToken);",
+              "} else if(json.accessToken) {",
+              "  pm.collectionVariables.set('recruiterToken', json.accessToken);",
+              "}"
             ]
           }
         }
@@ -172,8 +208,11 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "console.log('Response:', JSON.stringify(json));",
-              "if(json.data && json.data.chat_id) { pm.collectionVariables.set('chatId', json.data.chat_id); }"
+              "console.log('Approve application response:', JSON.stringify(json));",
+              "if(json.data && json.data.chat_id) { ",
+              "  pm.collectionVariables.set('chatId', json.data.chat_id); ",
+              "  console.log('Set chatId to:', json.data.chat_id);",
+              "}"
             ]
           }
         }
@@ -199,6 +238,7 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
+              "console.log('Get chats response:', JSON.stringify(json));",
               "if(json.data && json.data.length > 0) {",
               "  pm.collectionVariables.set('chatId', json.data[0].chat_id);",
               "  console.log('Set chatId to:', json.data[0].chat_id);",
@@ -225,8 +265,14 @@
               "var json = pm.response.json();",
               "console.log('Create chat response:', JSON.stringify(json));",
               "// Different ways the chat_id might appear in response",
-              "if(json.data && json.data.chat_id) { pm.collectionVariables.set('chatId', json.data.chat_id); }",
-              "else if(json.data && json.data.chat && json.data.chat.chat_id) { pm.collectionVariables.set('chatId', json.data.chat.chat_id); }"
+              "if(json.data && json.data.chat_id) { ",
+              "  pm.collectionVariables.set('chatId', json.data.chat_id); ",
+              "  console.log('Set chatId to:', json.data.chat_id);",
+              "}",
+              "else if(json.data && json.data.chat && json.data.chat.chat_id) { ",
+              "  pm.collectionVariables.set('chatId', json.data.chat.chat_id); ",
+              "  console.log('Set chatId to:', json.data.chat.chat_id);",
+              "}"
             ]
           }
         }
@@ -270,6 +316,7 @@
               "console.log('Attachment response:', JSON.stringify(json));",
               "if(json.data && json.data.attachment && json.data.attachment.id) {",
               "  pm.collectionVariables.set('attachmentId', json.data.attachment.id);",
+              "  console.log('Set attachmentId to:', json.data.attachment.id);",
               "}"
             ]
           }
@@ -301,7 +348,11 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "pm.collectionVariables.set('applierToken', json.data?.accessToken || json.accessToken);"
+              "if(json.data && json.data.accessToken) {",
+              "  pm.collectionVariables.set('applierToken', json.data.accessToken);",
+              "} else if(json.accessToken) {",
+              "  pm.collectionVariables.set('applierToken', json.accessToken);",
+              "}"
             ]
           }
         }

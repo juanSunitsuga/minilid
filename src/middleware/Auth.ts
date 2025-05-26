@@ -2,7 +2,19 @@ import jwt from "jsonwebtoken";
 import { middlewareWrapper } from "../utils/middlewareWrapper";
 import { Request, Response, NextFunction } from "express";
 import { appConfig } from "../../config/app";
-import app from "../backend/app";
+
+console.log('JWT Secret:', appConfig.jwtSecret);
+
+// Test signing and verifying
+const testToken = jwt.sign({ test: 'data' }, appConfig.jwtSecret);
+console.log('Test token:', testToken);
+
+try {
+  const decoded = jwt.verify(testToken, appConfig.jwtSecret);
+  console.log('Verification successful:', decoded);
+} catch (err) {
+  console.error('Verification failed:', err);
+}
 
 const authMiddleware = middlewareWrapper(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -10,7 +22,6 @@ const authMiddleware = middlewareWrapper(
     const token = authHeader && authHeader.split(" ")[1];
 
     console.log("Received JWT token:", token);
-
     // Check which secret is being used
     console.log("Verifying JWT with secret:", appConfig.jwtSecret);
     // Also check appConfig secret

@@ -296,6 +296,40 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
     }
   }, [open]);
 
+  // Reset form data when modal opens or closes
+  useEffect(() => {
+    if (!open) {
+      // For LoginModal
+      setIndividualData({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        userType: 'applier',
+        company: '',
+        position: '',
+      });
+      setCompanyData({
+        companyName: '',
+        companyAddress: '',
+        companyWebsite: '',
+        accountEmail: '',
+        accountPassword: '',
+        confirmAccountPassword: '',
+      });
+      setCompanyData({
+        companyName: '',
+        companyAddress: '',
+        companyWebsite: '',
+        accountEmail: '',  
+        accountPassword: '',
+        confirmAccountPassword: '',
+      });
+      setShowPassword(false);
+      setShowConfirmPassword(false);
+    }
+  }, [open]);
+
   // Check if individual form is filled enough to enable register button
   useEffect(() => {
     if (userType === 'individual') {
@@ -376,16 +410,15 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
         name: individualData.name,
         email: individualData.email,
         password: individualData.password,
-        userType: individualData.userType
+        userType: individualData.userType,
+        companyName: individualData.company || null, // Optional for appliers
+        position: individualData.position || null, // Optional for appliers
       };
 
       // Choose the right endpoint based on user type
       const endpoint = individualData.userType === 'applier' 
         ? '/auth/register-applier' 
         : '/auth/register-recruiter';
-      
-      // Log the request for debugging
-      console.log(`Registering ${individualData.userType} with endpoint ${endpoint}`, registrationData);
 
       // Make the API call
       const response = await FetchEndpoint(endpoint, 'POST', null, registrationData);
@@ -404,6 +437,21 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
       const responseData = await response.json();
       const data = responseData.data || responseData;
       
+      // Reset form values
+      setIndividualData({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        userType: individualData.userType, // Keep the selected user type
+        company: '',
+        position: '',
+      });
+
+      // Reset password visibility
+      setShowPassword(false);
+      setShowConfirmPassword(false);
+
       // Success animation before closing modal
       await new Promise(resolve => setTimeout(resolve, 500));
       
@@ -509,6 +557,20 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
         localStorage.setItem('companyId', data.company.id);
         localStorage.setItem('companyName', data.company.name);
       }
+
+      // Reset form values
+      setCompanyData({
+        companyName: '',
+        companyAddress: '',
+        companyWebsite: '',
+        accountEmail: '',
+        accountPassword: '',
+        confirmAccountPassword: '',
+      });
+
+      // Reset password visibility
+      setShowPassword(false);
+      setShowConfirmPassword(false);
 
       // Success animation before closing modal
       await new Promise(resolve => setTimeout(resolve, 500));
