@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, ForeignKey, BelongsToMany } from "sequelize-typescript";
+import { Table, Column, Model, DataType, ForeignKey, BelongsToMany, BelongsTo } from "sequelize-typescript";
 import { JobCategories } from "./job_categories";
 import { JobTypes } from "./job_types";
 import { Skills } from "./skills";
@@ -58,4 +58,10 @@ export class JobPosts extends Model {
 
     @BelongsToMany(() => Skills, () => JobPostSkill)
     declare skills: Skills[];
+
+    @BelongsTo(() => JobTypes)
+    declare job_type: JobTypes;
+
+    @BelongsTo(() => JobCategories)
+    declare job_category: JobCategories;
 }

@@ -26,6 +26,7 @@ import createPostRoutes from './routes/createPostRoutes';
 import profileRoutes from './routes/profileRoutes';
 import chatRoutes from './routes/chatRoutes';
 import applyJobRoutes from './routes/applyJobRoutes';
+import getJobRoutes from './routes/jobController';
 
 // Import configuration
 import config from '../../config/config.json';
@@ -34,7 +35,7 @@ const app = express();
 
 // MIDDLEWARE - define only once
 app.use(cors({
-    origin: 'http://localhost:5174', 
+    origin: 'http://localhost:5173', 
     credentials: true,
 }));
 app.use(express.json());
@@ -75,6 +76,7 @@ app.use('/profile', profileRoutes);
 app.use('/job', createPostRoutes);
 app.use('/chat', chatRoutes);
 app.use('/job-applications', applyJobRoutes);
+app.use('/jobs', getJobRoutes);
 
 app.use((req, res) => {
     res.status(404).json({ message: 'Route not found' });

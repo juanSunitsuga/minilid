@@ -1,4 +1,5 @@
-import { Table, Column, Model, DataType } from "sequelize-typescript";
+import { Table, Column, Model, DataType, HasMany} from "sequelize-typescript";
+import { JobPosts } from "./job_posts";
 
 @Table({
     tableName: "job_categories",
@@ -17,4 +18,7 @@ export class JobCategories extends Model {
         allowNull: false,
     })
     declare category_name: string;
+
+    @HasMany(() => JobPosts)
+    declare job_posts: JobPosts[];
 }
