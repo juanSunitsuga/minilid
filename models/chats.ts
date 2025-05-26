@@ -1,5 +1,5 @@
 import { Table, Column, Model, DataType, ForeignKey, BelongsTo, HasMany } from "sequelize-typescript";
-import { JobAppliers } from "./job_applier";
+import { JobAppliers } from "./job_appliers";
 import { Appliers } from "./appliers";
 import { Recruiters } from "./recruiters";
 import { Messages } from "./messages";

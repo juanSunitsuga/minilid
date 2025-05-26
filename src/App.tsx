@@ -10,6 +10,7 @@ import Home from './view/Home';
 import Profile from './view/Profile/Profile';
 import Job from './view/Job';
 import Chat from './view/Chat';
+import CreateJob from './view/CreateJob';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
             <Route path="/jobs" element={<Job />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/create-job" element={<CreateJob />} />
           </Routes>
         </main>
       </ModalProvider>

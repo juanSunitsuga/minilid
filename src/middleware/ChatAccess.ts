@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { Chats } from '../../models/chats';
-import { JobAppliers } from '../../models/job_applier';
+import { JobAppliers } from '../../models/job_appliers';
 import { middlewareWrapper } from '../utils/middlewareWrapper';
 
 const chatAccessMiddleware = middlewareWrapper(
