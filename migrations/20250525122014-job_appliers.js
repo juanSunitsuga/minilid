@@ -31,7 +31,7 @@ export default {
         onDelete: 'CASCADE'
       },
       status: {
-        type: Sequelize.ENUM('applied', 'interviewing', 'hired', 'rejected'),
+        type: Sequelize.ENUM('applied', 'interviewing', 'rejected'),
         allowNull: false,
         defaultValue: 'applied'
       },
