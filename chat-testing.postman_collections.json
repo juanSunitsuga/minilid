@@ -46,7 +46,7 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "pm.collectionVariables.set('recruiterToken', json.accessToken);"
+              "pm.collectionVariables.set('recruiterToken', json.data.accessToken || json.accessToken);"
             ]
           }
         }
@@ -69,7 +69,7 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "pm.collectionVariables.set('jobId', json.jobPost.job_id);"
+              "pm.collectionVariables.set('jobId', json.data?.job_id || json.jobPost?.job_id);"
             ]
           }
         }
@@ -95,7 +95,7 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "pm.collectionVariables.set('applierToken', json.accessToken);"
+              "pm.collectionVariables.set('applierToken', json.data.accessToken || json.accessToken);"
             ]
           }
         }
@@ -118,7 +118,11 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "pm.collectionVariables.set('applicationId', json.data.id || json.data.application?.id || json.application?.id);"
+              "// Extract ID using multiple possible paths",
+              "var id = json.data?.id;",
+              "if (!id) id = json.data?.application?.id;",
+              "if (!id) id = json.application?.id;",
+              "pm.collectionVariables.set('applicationId', id);"
             ]
           }
         }
@@ -144,7 +148,7 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "pm.collectionVariables.set('recruiterToken', json.accessToken);"
+              "pm.collectionVariables.set('recruiterToken', json.data.accessToken || json.accessToken);"
             ]
           }
         }
@@ -167,7 +171,8 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "if(json.data && json.data.application && json.data.application.chat_id) { pm.collectionVariables.set('chatId', json.data.application.chat_id); }"
+              "console.log('Response:', JSON.stringify(json));",
+              "if(json.data && json.data.chat_id) { pm.collectionVariables.set('chatId', json.data.chat_id); }"
             ]
           }
         }
@@ -186,6 +191,30 @@
       }
     },
     {
+      "name": "Get All Chats",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "if(json.data && json.data.length > 0) {",
+              "  pm.collectionVariables.set('chatId', json.data[0].chat_id);",
+              "  console.log('Set chatId to:', json.data[0].chat_id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{recruiterToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/chat/chats", "host": ["{{baseUrl}}"], "path": ["chat", "chats"] }
+      }
+    },
+    {
       "name": "Create Chat (if needed)",
       "event": [
         {
@@ -193,8 +222,10 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
+              "console.log('Create chat response:', JSON.stringify(json));",
+              "// Different ways the chat_id might appear in response",
               "if(json.data && json.data.chat_id) { pm.collectionVariables.set('chatId', json.data.chat_id); }",
-              "if(json.data && json.data.chat && json.data.chat.chat_id) { pm.collectionVariables.set('chatId', json.data.chat.chat_id); }"
+              "else if(json.data && json.data.chat && json.data.chat.chat_id) { pm.collectionVariables.set('chatId', json.data.chat.chat_id); }"
             ]
           }
         }
@@ -235,7 +266,7 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "pm.collectionVariables.set('applierToken', json.accessToken);"
+              "pm.collectionVariables.set('applierToken', json.data.accessToken || json.accessToken);"
             ]
           }
         }
@@ -273,6 +304,16 @@
           { "key": "Authorization", "value": "Bearer {{applierToken}}" }
         ],
         "url": { "raw": "{{baseUrl}}/chat/chats/{{chatId}}", "host": ["{{baseUrl}}"], "path": ["chat", "chats", "{{chatId}}"] }
+      }
+    },
+    {
+      "name": "View My Applications (Applier)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{applierToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/job-applications/my-applications", "host": ["{{baseUrl}}"], "path": ["job-applications", "my-applications"] }
       }
     }
   ]
