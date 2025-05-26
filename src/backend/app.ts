@@ -18,7 +18,7 @@ import { Recruiters } from '../../models/recruiters';
 import { Skills } from '../../models/skills';
 import { JobPostSkill } from '../../models/job_post_skills';
 import { ApplierSkill } from '../../models/applier_skills';
-import { JobAppliers } from '../../models/job_applier';
+import { JobAppliers } from '../../models/job_appliers';
 
 // Import routes
 import registerLoginRoutes from './routes/registerLoginRoutes';

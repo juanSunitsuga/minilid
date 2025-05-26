@@ -2,7 +2,7 @@ import express from "express";
 import { v4 as uuidv4 } from "uuid";
 import authMiddleware from "../../middleware/Auth";
 import { controllerWrapper } from "../../utils/controllerWrapper";
-import { JobAppliers } from "../../../models/job_applier";
+import { JobAppliers } from "../../../models/job_appliers";
 import { Appliers } from "../../../models/appliers";
 import { Recruiters } from "../../../models/recruiters";
 import { JobPosts } from "../../../models/job_posts";
