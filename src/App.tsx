@@ -19,10 +19,10 @@ function App() {
   const [activePath, setActivePath] = useState('/');
   // Add state to track if user is logged in
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  
+
   useEffect(() => {
     setActivePath(location.pathname);
-    
+
     // Check if user is logged in by looking for token in localStorage
     const token = localStorage.getItem('accessToken');
     setIsLoggedIn(!!token);
@@ -34,10 +34,10 @@ function App() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('userType');
-    
+
     // Update login state
     setIsLoggedIn(false);
-    
+
     // Redirect to home page
     navigate('/');
   };
@@ -50,12 +50,12 @@ function App() {
             <div className="logo">
               <span className="logo-text">Mini<span className="highlight">Lid</span></span>
             </div>
-            
+
             <div className="search-container">
               <FaSearch className="search-icon" />
-              <input 
-                type="text" 
-                placeholder="Search for anything (Jobs)" 
+              <input
+                type="text"
+                placeholder="Search for anything (Jobs)"
                 className="search-input"
               />
             </div>
@@ -76,7 +76,7 @@ function App() {
               </div>
               <span className="nav-text">Chat</span>
             </Link>
-            
+
             {/* Conditional rendering based on authentication status */}
             {isLoggedIn ? (
               <>
@@ -84,8 +84,17 @@ function App() {
                   <FaUser className="nav-icon profile-icon" />
                   <span className="nav-text">Me</span>
                 </Link>
-                <button 
-                  onClick={handleLogout} 
+
+                {/* Tampilkan Create Job button hanya untuk recruiter */}
+                {localStorage.getItem('userType') === 'recruiter' && (
+                  <Link to="/create-job" className={`nav-item ${activePath === '/create-job' ? 'active' : ''}`}>
+                    <FaBriefcase className="nav-icon" />
+                    <span className="nav-text">Create Job</span>
+                  </Link>
+                )}
+
+                <button
+                  onClick={handleLogout}
                   className="nav-item logout-button"
                   aria-label="Logout"
                 >
