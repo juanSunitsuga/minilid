@@ -1,0 +1,279 @@
+{
+  "info": {
+    "name": "Job Chat Flow",
+    "_postman_id": "job-chat-flow-collection",
+    "description": "End-to-end test for job application and chat system",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "recruiterToken", "value": "" },
+    { "key": "applierToken", "value": "" },
+    { "key": "jobId", "value": "" },
+    { "key": "applicationId", "value": "" },
+    { "key": "chatId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Register Applier",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/auth/register-applier", "host": ["{{baseUrl}}"], "path": ["auth", "register-applier"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"applier1@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"Applier One\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Register Recruiter",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/auth/register-recruiter", "host": ["{{baseUrl}}"], "path": ["auth", "register-recruiter"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"recruiter1@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"Recruiter One\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Login Recruiter",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "pm.collectionVariables.set('recruiterToken', json.accessToken);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/auth/login-recruiter", "host": ["{{baseUrl}}"], "path": ["auth", "login-recruiter"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"recruiter1@example.com\",\n  \"password\": \"password123\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Post Job",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "pm.collectionVariables.set('jobId', json.jobPost.job_id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{recruiterToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/job/jobposts", "host": ["{{baseUrl}}"], "path": ["job", "jobposts"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Frontend Developer\",\n  \"description\": \"React developer needed\",\n  \"category_id\": 1,\n  \"type_id\": 1,\n  \"skills\": [\"React\", \"JavaScript\"]\n}"
+        }
+      }
+    },
+    {
+      "name": "Login Applier",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "pm.collectionVariables.set('applierToken', json.accessToken);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/auth/login-applier", "host": ["{{baseUrl}}"], "path": ["auth", "login-applier"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"applier1@example.com\",\n  \"password\": \"password123\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Apply Job",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "pm.collectionVariables.set('applicationId', json.data.id || json.data.application?.id || json.application?.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{applierToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/job-applications/apply", "host": ["{{baseUrl}}"], "path": ["job-applications", "apply"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"job_id\": \"{{jobId}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Login Recruiter Again",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "pm.collectionVariables.set('recruiterToken', json.accessToken);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/auth/login-recruiter", "host": ["{{baseUrl}}"], "path": ["auth", "login-recruiter"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"recruiter1@example.com\",\n  \"password\": \"password123\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Approve Application",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "if(json.data && json.data.application && json.data.application.chat_id) { pm.collectionVariables.set('chatId', json.data.application.chat_id); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{recruiterToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/job-applications/applications/{{applicationId}}/status", "host": ["{{baseUrl}}"], "path": ["job-applications", "applications", "{{applicationId}}", "status"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"interviewing\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Create Chat (if needed)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "if(json.data && json.data.chat_id) { pm.collectionVariables.set('chatId', json.data.chat_id); }",
+              "if(json.data && json.data.chat && json.data.chat.chat_id) { pm.collectionVariables.set('chatId', json.data.chat.chat_id); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{recruiterToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/chat/create-chat", "host": ["{{baseUrl}}"], "path": ["chat", "create-chat"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"job_application_id\": \"{{applicationId}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Send Message as Recruiter",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{recruiterToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/chat/chats/{{chatId}}/messages", "host": ["{{baseUrl}}"], "path": ["chat", "chats", "{{chatId}}", "messages"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"Hello, let's schedule an interview!\",\n  \"messageType\": \"TEXT\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Login Applier Again",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "pm.collectionVariables.set('applierToken', json.accessToken);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/auth/login-applier", "host": ["{{baseUrl}}"], "path": ["auth", "login-applier"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"applier1@example.com\",\n  \"password\": \"password123\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Reply as Applier",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{applierToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/chat/chats/{{chatId}}/messages", "host": ["{{baseUrl}}"], "path": ["chat", "chats", "{{chatId}}", "messages"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"Thank you! Looking forward to it.\",\n  \"messageType\": \"TEXT\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Get Chat Messages",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{applierToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/chat/chats/{{chatId}}", "host": ["{{baseUrl}}"], "path": ["chat", "chats", "{{chatId}}"] }
+      }
+    }
+  ]
+}
