@@ -5,17 +5,17 @@ export default {
   async up (queryInterface, Sequelize) {
     // Insert Job Types
     await queryInterface.bulkInsert('job_types', [
-      { type: 'Part Time' },
-      { type: 'Full Time' },
-      { type: 'Contract' },
-      { type: 'Internship' },
+      { type_name: 'Part Time' },
+      { type_name: 'Full Time' },
+      { type_name: 'Contract' },
+      { type_name: 'Internship' },
     ]);
 
     // Insert Job Categories
     await queryInterface.bulkInsert('job_categories', [
-      { category: 'Onsite' },
-      { category: 'Online' },
-      { category: 'Hybrid' },
+      { category_name: 'Onsite' },
+      { category_name: 'Online' },
+      { category_name: 'Hybrid' },
     ]);
   },
 
