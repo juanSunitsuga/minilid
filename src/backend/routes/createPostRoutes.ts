@@ -13,84 +13,83 @@ const router = express.Router();
 // Express route handler
 
 router.get('/job-types', async (req, res) => {
-  try {
-    const types = await JobTypes.findAll();
-    res.json(types);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch job types' });
-  }
+    try {
+        const types = await JobTypes.findAll();
+        res.json(types);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch job types' });
+    }
 });
 
 router.get('/job-categories', async (req, res) => {
-  try {
-    const categories = await JobCategories.findAll();
-    res.json(categories);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch job categories' });
-  }
+    try {
+        const categories = await JobCategories.findAll();
+        res.json(categories);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch job categories' });
+    }
 });
 
 router.get('/skills', async (req, res) => {
-  try {
-    const types = await Skills.findAll({
-      attributes: ['skill_id', 'name']
-    });
-    res.json(types);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch skills' });
-  }
+    try {
+        const types = await Skills.findAll({
+            attributes: ['skill_id', 'name']
+        });
+        res.json(types);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch skills' });
+    }
 });
 
 // POST endpoint untuk menambahkan skill baru
 router.post('/skills', controllerWrapper(async (req, res) => {
-  const { name } = req.body;
-  
-  if (!name || typeof name !== 'string' || name.trim() === '') {
-    return res.status(400).json({ error: 'Skill name is required' });
-  }
-  
-  // Cek apakah skill sudah ada
-  const existingSkill = await Skills.findOne({
-    where: {
-      name: name.trim()
+    const { name } = req.body;
+
+    if (!name || typeof name !== 'string' || name.trim() === '') {
+        return res.status(400).json({ error: 'Skill name is required' });
     }
-  });
-  
-  if (existingSkill) {
-    return res.status(409).json({ 
-      error: 'Skill already exists',
-      skill: {
-        skill_id: existingSkill.skill_id,
-        name: existingSkill.name
-      }
+
+    // Cek apakah skill sudah ada
+    const existingSkill = await Skills.findOne({
+        where: {
+            name: name.trim()
+        }
     });
-  }
-  
-  try {
-    // Buat skill baru
-    const newSkill = await Skills.create({
-      name: name.trim()
-    });
-    
-    return res.status(201).json({
-      message: 'Skill created successfully',
-      skill_id: newSkill.skill_id,
-      name: newSkill.name
-    });
-  } catch (error) {
-    console.error('Error creating skill:', error);
-    return res.status(500).json({ error: 'Failed to create skill' });
-  }
+
+    if (existingSkill) {
+        return res.status(409).json({
+            error: 'Skill already exists',
+            skill: {
+                skill_id: existingSkill.skill_id,
+                name: existingSkill.name
+            }
+        });
+    }
+
+    try {
+        // Buat skill baru
+        const newSkill = await Skills.create({
+            name: name.trim()
+        });
+
+        return res.status(201).json({
+            message: 'Skill created successfully',
+            skill_id: newSkill.skill_id,
+            name: newSkill.name
+        });
+    } catch (error) {
+        console.error('Error creating skill:', error);
+        return res.status(500).json({ error: 'Failed to create skill' });
+    }
 }));
 
 router.post("/jobposts", authMiddleware, controllerWrapper(async (req, res) => {
-    // Get the recruiter ID from the authenticated user
     const recruiterId = req.user?.id;
-    
+
     if (!recruiterId) {
         throw new Error("You must be logged in as a recruiter to create job posts");
     }
-    
+
     const {
         title,
         description,
@@ -98,6 +97,8 @@ router.post("/jobposts", authMiddleware, controllerWrapper(async (req, res) => {
         type_id,
         skills
     } = req.body;
+
+    console.log("Creating job post:", { title, category_id, type_id, recruiterId });
 
     // Improved validation
     if (!title || !category_id || !type_id) {
@@ -121,9 +122,9 @@ router.post("/jobposts", authMiddleware, controllerWrapper(async (req, res) => {
         description: description || '',
         category_id,
         type_id,
-        recruiter_id: recruiterId,  // Add the recruiter ID
-        posted_date: new Date(),  // Add current date
-        deleted: false            // Set default value
+        recruiter_id: recruiterId, 
+        posted_date: new Date(), 
+        deleted: false   
     });
 
     // Handle skills
@@ -143,7 +144,7 @@ router.post("/jobposts", authMiddleware, controllerWrapper(async (req, res) => {
             job_id: jobPost.job_id,
             skill_id: skillInstance.skill_id,
         }));
-        
+
         await JobPostSkill.bulkCreate(jobPostSkills, {
             ignoreDuplicates: true,
         });
