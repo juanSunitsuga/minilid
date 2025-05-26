@@ -22,7 +22,7 @@ router.post("/apply", authMiddleware, controllerWrapper(async (req, res) => {
     
     // Find applier
     const applier = await Appliers.findOne({ 
-        where: { user_id: userId }
+        where: { applier_id: userId }
     });
     
     if (!applier) {
