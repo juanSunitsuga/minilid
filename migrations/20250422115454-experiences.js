@@ -4,10 +4,18 @@
 export default {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('experiences', {
-      exp_id: {
+      experience_id: {
         type: Sequelize.UUID,
         primaryKey: true,
         allowNull: false
+      },
+      user_id: {
+        type: Sequelize.UUID,
+        allowNull: false,
+      },
+      user_type: {
+        type: Sequelize.ENUM('applier', 'recruiter'),
+        allowNull: false,
       },
       company_name: {
         type: Sequelize.STRING,
@@ -24,13 +32,12 @@ export default {
       },
       end_date: {
         type: Sequelize.DATE,
-        allowNull: true,
-        defaultValue: Sequelize.NOW
-      },
-      desc: {
-        type: Sequelize.TEXT,
         allowNull: true
       },
+      description: {
+        type: Sequelize.TEXT,
+        allowNull: true
+      }
     });
   },
 

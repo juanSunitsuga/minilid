@@ -37,4 +37,10 @@ export class Recruiters extends Model {
         allowNull: false,
     })
     declare password: string;
+
+    @Column({
+        type: DataType.TEXT,
+        allowNull: true,
+    })
+    declare about: string | null;
 }

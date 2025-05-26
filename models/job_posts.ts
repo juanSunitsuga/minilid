@@ -1,5 +1,8 @@
-import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
-import { Recruiters } from "./recruiters";
+import { Table, Column, Model, DataType, ForeignKey, BelongsToMany } from "sequelize-typescript";
+import { JobCategories } from "./job_categories";
+import { JobTypes } from "./job_types";
+import { Skills } from "./skills";
+import { JobPostSkill } from "./job_post_skills";
 
 @Table({
     tableName: "job_posts",
@@ -8,8 +11,8 @@ import { Recruiters } from "./recruiters";
 export class JobPosts extends Model {
     @Column({
         primaryKey: true,
-        type: DataType.INTEGER,
-        autoIncrement: true,
+        type: DataType.UUID,
+        defaultValue: DataType.UUIDV4,
     })
     declare job_id: string;
 
@@ -25,6 +28,20 @@ export class JobPosts extends Model {
     })
     declare description: string;
 
+    @ForeignKey(() => JobCategories)
+    @Column({ 
+        type: DataType.INTEGER,
+        allowNull: false
+    })
+    declare category_id: number;
+
+    @ForeignKey(() => JobTypes)
+    @Column({ 
+        type: DataType.INTEGER,
+        allowNull: false
+    })
+    declare type_id: number;
+
     @Column({
         type: DataType.DATE,
         allowNull: false,
@@ -39,14 +56,6 @@ export class JobPosts extends Model {
     })
     declare deleted: boolean;
 
-    @ForeignKey(() => Recruiters)
-    @Column({
-        type: DataType.UUID,
-        allowNull: false,
-        field: 'recruiter_id' // Keep field name the same for DB compatibility
-    })
-    declare recruiter_id: string;
-
-    @BelongsTo(() => Recruiters, { foreignKey: 'recruiter_id', constraints: false })
-    declare recruiter: Recruiters;
+    @BelongsToMany(() => Skills, () => JobPostSkill)
+    declare skills: Skills[];
 }

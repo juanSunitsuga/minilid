@@ -6,6 +6,7 @@ import { Company } from '../../../models/company';
 import { appConfig } from '../../../config/app';
 import { v4, validate } from 'uuid';
 import { controllerWrapper } from '../../../src/utils/controllerWrapper';
+import e from 'express';
 
 const router = express.Router();
 const SALT_ROUNDS = 10;
@@ -60,9 +61,9 @@ function validateCompanyRegistration(req: Request): string[] {
   return errors;
 }
 
-function validateLogin(req: Request): string[] {
+function validateUserLogin(req: Request): string[] {
   const errors: string[] = [];
-  const { email, password, userType } = req.body;
+  const { email, password } = req.body;
 
   if (!validateEmail(email)) {
     errors.push('Please enter a valid email');
@@ -72,10 +73,6 @@ function validateLogin(req: Request): string[] {
     errors.push('Password is required');
   }
 
-  if (userType !== 'applier' && userType !== 'recruiter') {
-    errors.push('User type must be applier or recruiter');
-  }
-
   return errors;
 }
 
@@ -83,7 +80,7 @@ function validateLogin(req: Request): string[] {
 router.post('/register-company', controllerWrapper(async (req: Request, res: Response, next: NextFunction) => {
   const errors = validateCompanyRegistration(req);
   if (errors.length > 0) {
-    return { status: 400, data: { errors } };
+    throw new Error(`Validation errors: ${errors.join(', ')}`);
   }
 
   const { companyName, companyAddress, companyWebsite, companyEmail, companyPassword } = req.body;
@@ -93,7 +90,7 @@ router.post('/register-company', controllerWrapper(async (req: Request, res: Res
   });
 
   if (existingCompany) {
-    return { status: 409, data: { message: 'Company with this email already exists' } };
+    throw new Error(`Company with this email already exists`);
   }
 
   const hashedPassword = await bcrypt.hash(companyPassword, SALT_ROUNDS);
@@ -107,11 +104,7 @@ router.post('/register-company', controllerWrapper(async (req: Request, res: Res
     website: companyWebsite || null,
   });
 
-  // Generate token
-  const accessToken = appConfig.generateAccessToken(newCompany.company_id);
-
   return {
-    status: 201,
     data: {
       message: 'Company registered successfully',
       company: {
@@ -120,8 +113,7 @@ router.post('/register-company', controllerWrapper(async (req: Request, res: Res
         address: newCompany.address,
         website: newCompany.website,
         email: newCompany.company_email,
-      },
-      accessToken
+      }
     }
   };
 }));
@@ -132,7 +124,7 @@ router.post('/register-applier', controllerWrapper(async (req: Request, res: Res
 
   const errors = validateRegistration(req);
   if (errors.length > 0) {
-    return { status: 400, data: { errors } };
+    throw new Error(`Validation errors: ${errors.join(', ')}`);
   }
   
   const { email, password, name, ...additionalData } = req.body;
@@ -142,7 +134,7 @@ router.post('/register-applier', controllerWrapper(async (req: Request, res: Res
   const existingUser = await Appliers.findOne({ where: { email } });
 
   if (existingUser) {
-    return { status: 409, data: { message: `User with this email already exists` } };
+    throw new Error(`User with this email already exists`);
   }
 
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
@@ -162,13 +154,10 @@ router.post('/register-applier', controllerWrapper(async (req: Request, res: Res
     name: newUser.name,
   };
 
-  const accessToken = appConfig.generateAccessToken(userData.id);
-
   const userResponse = { ...newUser.get() };
   delete userResponse.password;
 
   return {
-    status: 201,
     data: {
       message: `Applier registered successfully`,
       user: {
@@ -176,8 +165,7 @@ router.post('/register-applier', controllerWrapper(async (req: Request, res: Res
         name: userResponse.name,
         email: userResponse.email,
         usertype: userResponse.usertype
-      },
-      accessToken,
+      }
     }
   };
 }));
@@ -188,7 +176,7 @@ router.post('/register-recruiter', controllerWrapper(async (req: Request, res: R
   
   const errors = validateRegistration(req);
   if (errors.length > 0) {
-    return { status: 400, data: { errors } };
+    throw new Error(`Validation errors: ${errors.join(', ')}`);
   }
   
   req.body.userType = 'recruiter';
@@ -198,7 +186,7 @@ router.post('/register-recruiter', controllerWrapper(async (req: Request, res: R
   const existingUser = await Recruiters.findOne({ where: { email } });
 
   if (existingUser) {
-    return { status: 409, data: { message: `User with this email already exists` } };
+    throw new Error(`User with this email already exists`);
   }
 
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
@@ -217,13 +205,11 @@ router.post('/register-recruiter', controllerWrapper(async (req: Request, res: R
     name: newUser.name,
   };
 
-  const accessToken = appConfig.generateAccessToken(userData.id);
 
   const userResponse = { ...newUser.get() };
   delete userResponse.password;
 
   return {
-    status: 201,
     data: {
       message: `Recruiter registered successfully`,
       user: {
@@ -231,33 +217,18 @@ router.post('/register-recruiter', controllerWrapper(async (req: Request, res: R
         name: userResponse.name,
         email: userResponse.email,
         usertype: userResponse.usertype
-      },
-      accessToken,
+      }
     }
   };
 }));
 
-function validateUserLogin(req: Request): string[] {
-  const errors: string[] = [];
-  const { email, password } = req.body;
-
-  if (!validateEmail(email)) {
-    errors.push('Please enter a valid email');
-  }
-
-  if (!password) {
-    errors.push('Password is required');
-  }
-
-  return errors;
-}
 
 // Applier login route with wrapper
 router.post('/login-applier', controllerWrapper(async (req: Request, res: Response, next: NextFunction) => {
   // Validate request
   const errors = validateUserLogin(req);
   if (errors.length > 0) {
-    return { status: 400, data: { errors } };
+    throw new Error(`Validation errors: ${errors.join(', ')}`);
   }
 
   const { email, password } = req.body;
@@ -265,13 +236,13 @@ router.post('/login-applier', controllerWrapper(async (req: Request, res: Respon
   const user = await Appliers.findOne({ where: { email } });
 
   if (!user) {
-    return { status: 401, data: { message: 'Invalid email or password' } };
+    throw new Error('Invalid email or password');
   }
 
   const passwordMatch = await bcrypt.compare(password, user.password);
 
   if (!passwordMatch) {
-    return { status: 401, data: { message: 'Invalid email or password' } };
+    throw new Error('Invalid email or password');
   }
 
   // Generate token
@@ -288,7 +259,6 @@ router.post('/login-applier', controllerWrapper(async (req: Request, res: Respon
   delete userResponse.password;
 
   return {
-    status: 200,
     data: {
       message: 'Login successful',
       user: {
@@ -305,7 +275,7 @@ router.post('/login-applier', controllerWrapper(async (req: Request, res: Respon
 router.post('/login-recruiter', controllerWrapper(async (req: Request, res: Response, next: NextFunction) => {
   const errors = validateUserLogin(req);
   if (errors.length > 0) {
-    return { status: 400, data: { errors } };
+    throw new Error(`Validation errors: ${errors.join(', ')}`);
   }
 
   const { email, password } = req.body;
@@ -313,13 +283,13 @@ router.post('/login-recruiter', controllerWrapper(async (req: Request, res: Resp
   const user = await Recruiters.findOne({ where: { email } });
 
   if (!user) {
-    return { status: 401, data: { message: 'Invalid email or password' } };
+    throw new Error('Invalid email or password');
   }
 
   const passwordMatch = await bcrypt.compare(password, user.password);
 
   if (!passwordMatch) {
-    return { status: 401, data: { message: 'Invalid email or password' } };
+    throw new Error('Invalid email or password');
   }
 
   // Generate token
@@ -336,7 +306,6 @@ router.post('/login-recruiter', controllerWrapper(async (req: Request, res: Resp
   delete userResponse.password;
 
   return {
-    status: 200,
     data: {
       message: 'Login successful',
       user: {
@@ -358,20 +327,19 @@ router.post('/login-company', controllerWrapper(async (req: Request, res: Respon
   });
 
   if (!company) {
-    return { status: 401, data: { message: 'Invalid email or password' } };
+    throw new Error('Invalid email or password');
   }
 
   const validPassword = await bcrypt.compare(companyPassword, company.password);
 
   if (!validPassword) {
-    return { status: 401, data: { message: 'Invalid email or password' } };
+    throw new Error('Invalid email or password');
   }
 
   // Generate token
   const accessToken = appConfig.generateAccessToken(company.company_id);
 
   return {
-    status: 200,
     data: {
       message: 'Login successful',
       company: {

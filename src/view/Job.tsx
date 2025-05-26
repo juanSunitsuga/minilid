@@ -23,18 +23,8 @@ import {
   Slider,
   useTheme,
   Stack,
-  Chip,
   Grid,
-  Container,
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  SwipeableDrawer,
-  useMediaQuery,
-  AppBar,
-  Toolbar
+  Chip
 } from '@mui/material';
 import {
   Search as SearchIcon,
