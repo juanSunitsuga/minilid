@@ -2,17 +2,270 @@ import express from "express";
 import { v4 as uuidv4 } from "uuid";
 import authMiddleware from "../../middleware/Auth";
 import { controllerWrapper } from "../../utils/controllerWrapper";
-import { JobAppliers } from "../../../models/job_applier";
+import { JobAppliers } from "../../../models/job_appliers";
 import { Appliers } from "../../../models/appliers";
 import { Recruiters } from "../../../models/recruiters";
-import { Messages } from "../../../models/messages";
-import { Chats } from "../../../models/chats";
-import { JobAppliers } from "../../../models/job_appliers";
-import authMiddleware from "../../middleware/Auth";
-import chatAccessMiddleware from "../../middleware/ChatAccess";
-import { controllerWrapper } from "../../utils/controllerWrapper";
+import { JobPosts } from "../../../models/job_posts";
+import * as fs from 'fs-extra';
+import * as path from 'path';
+import multer from 'multer';
+import process from 'process';
+import { readdirSync } from 'fs';  // Import native fs module
 
-// Extend Express Request interface
+const PROJECT_ROOT = process.cwd();
+const BASE_DIR = path.join(PROJECT_ROOT, 'data');
+const CHATS_DIR = path.join(BASE_DIR, 'chats');
+const ATTACHMENTS_DIR = path.join(BASE_DIR, 'attachments');
+
+// Ensure directories exist
+fs.ensureDirSync(CHATS_DIR);
+fs.ensureDirSync(ATTACHMENTS_DIR);
+
+// Setup attachment storage
+const attachmentStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const attachmentId = uuidv4();
+    const dir = path.join(ATTACHMENTS_DIR, attachmentId);
+    fs.ensureDirSync(dir);
+    req.attachmentId = attachmentId; // Store ID for later use
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.originalname);
+  }
+});
+
+const uploadAttachment = multer({ storage: attachmentStorage });
+
+// Define interfaces for the chat data
+interface ChatMessage {
+  message_id: string;
+  sender_id: string;
+  is_recruiter: boolean;
+  content: string;
+  message_type: string;
+  timestamp: string;
+  status: string;
+  attachment?: {
+    id: string;
+    filename: string;
+    file_size: number;
+    mime_type: string;
+  };
+}
+
+interface ChatData {
+  chat_id: string;
+  job_application_id: string;
+  applier_id: string;
+  applier_name: string;
+  recruiter_id: string;
+  recruiter_name: string;
+  created_at: string;
+  updated_at: string;
+  last_message?: string;
+  messages: ChatMessage[];
+}
+
+// Get chat file path
+const getChatFilePath = (chatId: string): string => {
+  return path.join(CHATS_DIR, `chat_${chatId}.json`);
+};
+
+// Create a new chat
+export const createChatDocument = async (chatData: ChatData): Promise<void> => {
+  await fs.writeJSON(getChatFilePath(chatData.chat_id), chatData, { spaces: 2 });
+  // Update index for lookup by job application ID
+  await updateChatIndex(chatData.job_application_id, chatData.chat_id);
+};
+
+// Read chat from JSON file
+export const readChatJson = async (chatId: string): Promise<ChatData | null> => {
+  const filePath = getChatFilePath(chatId);
+
+  if (!await fs.pathExists(filePath)) {
+    return null;
+  }
+
+  return await fs.readJSON(filePath);
+};
+
+// Add a text message to a chat
+export const addTextMessage = async (chatId: string, userId: string, isRecruiter: boolean, content: string) => {
+  const chatPath = getChatFilePath(chatId);
+  const chat = await fs.readJSON(chatPath) as ChatData;
+
+  const messageId = uuidv4();
+  const newMessage: ChatMessage = {
+    message_id: messageId,
+    sender_id: userId,
+    is_recruiter: isRecruiter,
+    content: content,
+    message_type: 'TEXT',
+    timestamp: new Date().toISOString(),
+    status: 'SENT'
+  };
+
+  // Add new message
+  if (!chat.messages) {
+    chat.messages = [];
+  }
+  chat.messages.push(newMessage);
+
+  // Update metadata
+  chat.updated_at = new Date().toISOString();
+  chat.last_message = content;
+
+  // Write back to file
+  await fs.writeJSON(chatPath, chat, { spaces: 2 });
+
+  return newMessage;
+};
+
+// Add an attachment message
+export const addAttachmentMessage = async (
+  chatId: string,
+  userId: string,
+  isRecruiter: boolean,
+  attachmentId: string,
+  filename: string,
+  fileSize: number,
+  mimeType: string
+) => {
+  const chatPath = getChatFilePath(chatId);
+  const chat = await fs.readJSON(chatPath) as ChatData;
+
+  const messageId = uuidv4();
+  let messageType = 'FILE';
+
+  if (mimeType.startsWith('image/')) messageType = 'IMAGE';
+  if (mimeType.startsWith('video/')) messageType = 'VIDEO';
+
+  const newMessage: ChatMessage = {
+    message_id: messageId,
+    sender_id: userId,
+    is_recruiter: isRecruiter,
+    content: `attachment://${attachmentId}`,
+    message_type: messageType,
+    timestamp: new Date().toISOString(),
+    status: 'SENT',
+    attachment: {
+      id: attachmentId,
+      filename,
+      file_size: fileSize,
+      mime_type: mimeType
+    }
+  };
+
+  // Add new message
+  if (!chat.messages) {
+    chat.messages = [];
+  }
+  chat.messages.push(newMessage);
+
+  // Update metadata
+  chat.updated_at = new Date().toISOString();
+  chat.last_message = `[${messageType}] ${filename}`;
+
+  // Write back to file
+  await fs.writeJSON(chatPath, chat, { spaces: 2 });
+
+  return newMessage;
+};
+
+// Update chat index
+const updateChatIndex = async (applicationId: string, chatId: string) => {
+  const indexPath = path.join(CHATS_DIR, 'chat_index.json');
+  let index: Record<string, string> = {};
+
+  if (await fs.pathExists(indexPath)) {
+    index = await fs.readJSON(indexPath);
+  }
+
+  index[applicationId] = chatId;
+  await fs.writeJSON(indexPath, index, { spaces: 2 });
+};
+
+// Find chat by application ID
+export const findChatByApplicationId = async (applicationId: string): Promise<string | null> => {
+  try {
+    const indexPath = path.join(CHATS_DIR, 'chat_index.json');
+    if (await fs.pathExists(indexPath)) {
+      const index = await fs.readJSON(indexPath);
+      return index[applicationId] || null;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error finding chat by application ID:', error);
+    return null;
+  }
+};
+
+// Get chats for user
+export const getChatsForUser = async (userId: string, isRecruiter: boolean): Promise<ChatData[]> => {
+  try {
+    // First check if directory exists using fs-extra
+    if (!await fs.pathExists(CHATS_DIR)) {
+      console.log(`Chat directory doesn't exist: ${CHATS_DIR}`);
+      return [];
+    }
+    
+    // Use Node.js native fs module instead of fs-extra for directory reading
+    const files = readdirSync(CHATS_DIR);
+    console.log(`Found ${files.length} files in chat directory:`, files);
+
+    const chatIds = files
+      .filter(file => file.startsWith('chat_') && file.endsWith('.json'))
+      .map(file => file.replace('chat_', '').replace('.json', ''));
+
+    console.log(`Found ${chatIds.length} chat files`);
+
+    const chats: ChatData[] = [];
+
+    for (const chatId of chatIds) {
+      try {
+        const chat = await readChatJson(chatId);
+        if (chat) {
+          if ((isRecruiter && chat.recruiter_id === userId) ||
+            (!isRecruiter && chat.applier_id === userId)) {
+            chats.push(chat);
+          }
+        }
+      } catch (chatError) {
+        console.error(`Error reading chat ${chatId}:`, chatError);
+      }
+    }
+
+    return chats.sort((a, b) => {
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+    });
+  } catch (error) {
+    console.error('Error getting chats for user:', error);
+    return [];
+  }
+};
+
+// Add message to chat
+export const addMessageToChat = async (chatId: string, message: ChatMessage): Promise<void> => {
+  const chatPath = getChatFilePath(chatId);
+
+  if (!await fs.pathExists(chatPath)) {
+    throw new Error(`Chat file not found: ${chatId}`);
+  }
+
+  const chat = await fs.readJSON(chatPath) as ChatData;
+
+  if (!chat.messages) {
+    chat.messages = [];
+  }
+
+  chat.messages.push(message);
+  chat.updated_at = new Date().toISOString();
+  chat.last_message = message.content;
+
+  await fs.writeJSON(chatPath, chat, { spaces: 2 });
+};
+
 declare global {
   namespace Express {
     interface Request {

@@ -1,7 +1,7 @@
 import express from "express";
 import { JobPosts } from "../../../models/job_posts";
 import { Appliers } from "../../../models/appliers";
-import { JobAppliers } from "../../../models/job_applier";
+import { JobAppliers } from "../../../models/job_appliers";
 import authMiddleware from "../../middleware/Auth";
 import { controllerWrapper } from "../../utils/controllerWrapper";
 
