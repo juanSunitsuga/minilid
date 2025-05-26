@@ -364,6 +364,25 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
       }
     }, [initialData, loginType, open]);
 
+    // Reset form data when modal closes
+    useEffect(() => {
+      if (!open) {
+        // Reset form data for this LoginModal
+        setIndividualData({
+          email: '',
+          password: '',
+          userType: 'applier',
+        });
+        setCompanyData({
+          email: '',
+          password: '',
+        });
+        setShowPassword(false);
+        
+        // Note: The RegisterModal reset should be in RegisterModal.tsx, not here
+      }
+    }, [open]);
+
     const handleIndividualInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setIndividualData(prev => ({
@@ -456,6 +475,23 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onLoginSuccess, 
                 await refreshUserData();
                 console.log('Auth context refreshed successfully');
                 
+                // Reset form values
+                if (loginType === 'individual') {
+                  setIndividualData({
+                    email: '',
+                    password: '',
+                    userType: individualData.userType, // Keep the selected user type
+                  });
+                } else {
+                  setCompanyData({
+                    email: '',
+                    password: '',
+                  });
+                }
+
+                // Reset password visibility
+                setShowPassword(false);
+
                 // Success animation before closing
                 await new Promise(resolve => setTimeout(resolve, 500));
                 

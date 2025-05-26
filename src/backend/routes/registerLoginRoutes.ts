@@ -4,9 +4,10 @@ import { Appliers } from '../../../models/appliers';
 import { Recruiters } from '../../../models/recruiters';
 import { Company } from '../../../models/company';
 import { appConfig } from '../../../config/app';
-import { v4, validate } from 'uuid';
+import { v4 } from 'uuid';
 import { controllerWrapper } from '../../../src/utils/controllerWrapper';
-import e from 'express';
+import { Op } from 'sequelize';
+import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 const SALT_ROUNDS = 10;
@@ -126,9 +127,9 @@ router.post('/register-applier', controllerWrapper(async (req: Request, res: Res
   if (errors.length > 0) {
     throw new Error(`Validation errors: ${errors.join(', ')}`);
   }
-  
+
   const { email, password, name, ...additionalData } = req.body;
-  
+
   req.body.userType = 'applier';
 
   const existingUser = await Appliers.findOne({ where: { email } });
@@ -173,15 +174,15 @@ router.post('/register-applier', controllerWrapper(async (req: Request, res: Res
 // Recruiter registration route with wrapper
 router.post('/register-recruiter', controllerWrapper(async (req: Request, res: Response, next: NextFunction) => {
   console.log("registering recruiter", req.body);
-  
+
   const errors = validateRegistration(req);
   if (errors.length > 0) {
     throw new Error(`Validation errors: ${errors.join(', ')}`);
   }
-  
+
   req.body.userType = 'recruiter';
-  
-  const { email, password, name, ...additionalData } = req.body;
+
+  const { email, password, name, companyName, position, ...additionalData } = req.body;
 
   const existingUser = await Recruiters.findOne({ where: { email } });
 
@@ -191,11 +192,17 @@ router.post('/register-recruiter', controllerWrapper(async (req: Request, res: R
 
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
+  const company = await Company.findOne({
+    where: { company_name: { [Op.iLike]: companyName } },
+  })
+
   const newUser = await Recruiters.create({
     user_id: v4(),
     email,
     password: hashedPassword,
     name,
+    company_id: company ? company.company_id : null,
+    position
   });
 
   // Generate token
@@ -204,7 +211,6 @@ router.post('/register-recruiter', controllerWrapper(async (req: Request, res: R
     email: newUser.email,
     name: newUser.name,
   };
-
 
   const userResponse = { ...newUser.get() };
   delete userResponse.password;
@@ -252,7 +258,13 @@ router.post('/login-applier', controllerWrapper(async (req: Request, res: Respon
     name: user.name
   };
 
-  const accessToken = appConfig.generateAccessToken(userData.id);
+  const accessToken = jwt.sign(
+    { id: userData.id, email: userData.email },
+    appConfig.jwtSecret,
+    { expiresIn: '1h' }
+  );
+
+  console.log('Generated access token:', accessToken);
 
   // Remove password from response
   const userResponse = { ...user.get() };
@@ -262,7 +274,7 @@ router.post('/login-applier', controllerWrapper(async (req: Request, res: Respon
     data: {
       message: 'Login successful',
       user: {
-        user_id: userResponse.applier_id, 
+        user_id: userResponse.applier_id,
         name: userResponse.name,
         email: userResponse.email
       },
@@ -299,7 +311,11 @@ router.post('/login-recruiter', controllerWrapper(async (req: Request, res: Resp
     name: user.name
   };
 
-  const accessToken = appConfig.generateAccessToken(userData.id);
+  const accessToken = jwt.sign(
+    { id: userData.id, email: userData.email },
+    appConfig.jwtSecret,
+    { expiresIn: '1h' }
+  );
 
   // Remove password from response
   const userResponse = { ...user.get() };
@@ -309,7 +325,7 @@ router.post('/login-recruiter', controllerWrapper(async (req: Request, res: Resp
     data: {
       message: 'Login successful',
       user: {
-        user_id: userResponse.recruiter_id, 
+        user_id: userResponse.recruiter_id,
         name: userResponse.name,
         email: userResponse.email
       },
@@ -337,7 +353,11 @@ router.post('/login-company', controllerWrapper(async (req: Request, res: Respon
   }
 
   // Generate token
-  const accessToken = appConfig.generateAccessToken(company.company_id);
+  const accessToken = jwt.sign(
+    { id: company.company_id, email: company.company_email },
+    appConfig.jwtSecret,
+    { expiresIn: '1h' }
+  )
 
   return {
     data: {

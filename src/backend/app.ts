@@ -25,7 +25,7 @@ import registerLoginRoutes from './routes/registerLoginRoutes';
 import createPostRoutes from './routes/createPostRoutes';
 import profileRoutes from './routes/profileRoutes';
 import chatRoutes from './routes/chatRoutes';
-// import jobApplicationRoutes from './routes/jobApplicationRoutes';
+import applyJobRoutes from './routes/applyJobRoutes';
 
 // Import configuration
 import config from '../../config/config.json';
@@ -74,6 +74,7 @@ app.use('/auth', registerLoginRoutes);
 app.use('/profile', profileRoutes);
 app.use('/job', createPostRoutes);
 app.use('/chat', chatRoutes);
+app.use('/job-applications', applyJobRoutes);
 
 app.use((req, res) => {
     res.status(404).json({ message: 'Route not found' });
