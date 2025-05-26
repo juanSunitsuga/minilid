@@ -7,6 +7,7 @@ import { appConfig } from '../../../config/app';
 import { v4, validate } from 'uuid';
 import { controllerWrapper } from '../../../src/utils/controllerWrapper';
 import e from 'express';
+import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 const SALT_ROUNDS = 10;
@@ -126,9 +127,9 @@ router.post('/register-applier', controllerWrapper(async (req: Request, res: Res
   if (errors.length > 0) {
     throw new Error(`Validation errors: ${errors.join(', ')}`);
   }
-  
+
   const { email, password, name, ...additionalData } = req.body;
-  
+
   req.body.userType = 'applier';
 
   const existingUser = await Appliers.findOne({ where: { email } });
@@ -173,14 +174,14 @@ router.post('/register-applier', controllerWrapper(async (req: Request, res: Res
 // Recruiter registration route with wrapper
 router.post('/register-recruiter', controllerWrapper(async (req: Request, res: Response, next: NextFunction) => {
   console.log("registering recruiter", req.body);
-  
+
   const errors = validateRegistration(req);
   if (errors.length > 0) {
     throw new Error(`Validation errors: ${errors.join(', ')}`);
   }
-  
+
   req.body.userType = 'recruiter';
-  
+
   const { email, password, name, ...additionalData } = req.body;
 
   const existingUser = await Recruiters.findOne({ where: { email } });
@@ -252,7 +253,15 @@ router.post('/login-applier', controllerWrapper(async (req: Request, res: Respon
     name: user.name
   };
 
-  const accessToken = appConfig.generateAccessToken(userData.id);
+  const accessToken = jwt.sign(
+    { id: userData.id, email: userData.email },
+    appConfig.jwtSecret,
+    { expiresIn: '1h' }
+  );
+
+  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjVmNDI2MTNhLTMyOGYtNDhiZC1iZTk5LTVhNjZmMjZkNzcxNyIsImVtYWlsIjoieW9sYUBnbWFpbC5jb20iLCJuYW1lIjoieW9sYSIsImlhdCI6MTc0ODI0MjA5NiwiZXhwIjoxNzUxODQyMDk2fQ._vuAxzqkT74qEgUUpMliA-YC4Ko0u05kbJebPRRn_y0
+  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRkMzZhODBmLTdjYTctNDE3ZS05OTY1LWEzMGRkZDE3MWZmMCIsImVtYWlsIjoiYWxveUBnbWFpbC5jb20iLCJpYXQiOjE3NDgyNTc3NDQsImV4cCI6MTc0ODI2MTM0NH0.eSwZi154yofJB71xpHHsiZTol7gQBJIxKd0cI5uHbxQ
+  console.log('Generated access token:', accessToken);
 
   // Remove password from response
   const userResponse = { ...user.get() };
@@ -262,7 +271,7 @@ router.post('/login-applier', controllerWrapper(async (req: Request, res: Respon
     data: {
       message: 'Login successful',
       user: {
-        user_id: userResponse.applier_id, 
+        user_id: userResponse.applier_id,
         name: userResponse.name,
         email: userResponse.email
       },
@@ -299,7 +308,11 @@ router.post('/login-recruiter', controllerWrapper(async (req: Request, res: Resp
     name: user.name
   };
 
-  const accessToken = appConfig.generateAccessToken(userData.id);
+  const accessToken = jwt.sign(
+    { id: userData.id, email: userData.email },
+    appConfig.jwtSecret,
+    { expiresIn: '1h' }
+  );
 
   // Remove password from response
   const userResponse = { ...user.get() };
@@ -309,7 +322,7 @@ router.post('/login-recruiter', controllerWrapper(async (req: Request, res: Resp
     data: {
       message: 'Login successful',
       user: {
-        user_id: userResponse.recruiter_id, 
+        user_id: userResponse.recruiter_id,
         name: userResponse.name,
         email: userResponse.email
       },
@@ -337,7 +350,11 @@ router.post('/login-company', controllerWrapper(async (req: Request, res: Respon
   }
 
   // Generate token
-  const accessToken = appConfig.generateAccessToken(company.company_id);
+  const accessToken = jwt.sign(
+    { id: company.company_id, email: company.company_email },
+    appConfig.jwtSecret,
+    { expiresIn: '1h' }
+  )
 
   return {
     data: {

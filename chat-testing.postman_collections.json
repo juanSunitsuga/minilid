@@ -2,7 +2,7 @@
   "info": {
     "name": "Job Chat Flow",
     "_postman_id": "job-chat-flow-collection",
-    "description": "End-to-end test for job application and chat system",
+    "description": "End-to-end test for job application and chat system with JSON storage",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -11,7 +11,8 @@
     { "key": "applierToken", "value": "" },
     { "key": "jobId", "value": "" },
     { "key": "applicationId", "value": "" },
-    { "key": "chatId", "value": "" }
+    { "key": "chatId", "value": "" },
+    { "key": "attachmentId", "value": "" }
   ],
   "item": [
     {
@@ -46,7 +47,7 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "pm.collectionVariables.set('recruiterToken', json.data.accessToken || json.accessToken);"
+              "pm.collectionVariables.set('recruiterToken', json.data?.accessToken || json.accessToken);"
             ]
           }
         }
@@ -95,7 +96,7 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "pm.collectionVariables.set('applierToken', json.data.accessToken || json.accessToken);"
+              "pm.collectionVariables.set('applierToken', json.data?.accessToken || json.accessToken);"
             ]
           }
         }
@@ -148,7 +149,7 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "pm.collectionVariables.set('recruiterToken', json.data.accessToken || json.accessToken);"
+              "pm.collectionVariables.set('recruiterToken', json.data?.accessToken || json.accessToken);"
             ]
           }
         }
@@ -259,6 +260,40 @@
       }
     },
     {
+      "name": "Send File Attachment as Recruiter",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "console.log('Attachment response:', JSON.stringify(json));",
+              "if(json.data && json.data.attachment && json.data.attachment.id) {",
+              "  pm.collectionVariables.set('attachmentId', json.data.attachment.id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{recruiterToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/chat/chats/{{chatId}}/attachment", "host": ["{{baseUrl}}"], "path": ["chat", "chats", "{{chatId}}", "attachment"] },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "./test_files/interview_schedule.pdf"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "Login Applier Again",
       "event": [
         {
@@ -266,7 +301,7 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "pm.collectionVariables.set('applierToken', json.data.accessToken || json.accessToken);"
+              "pm.collectionVariables.set('applierToken', json.data?.accessToken || json.accessToken);"
             ]
           }
         }
@@ -304,6 +339,16 @@
           { "key": "Authorization", "value": "Bearer {{applierToken}}" }
         ],
         "url": { "raw": "{{baseUrl}}/chat/chats/{{chatId}}", "host": ["{{baseUrl}}"], "path": ["chat", "chats", "{{chatId}}"] }
+      }
+    },
+    {
+      "name": "Get Attachment",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{applierToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/chat/attachments/{{attachmentId}}/interview_schedule.pdf", "host": ["{{baseUrl}}"], "path": ["chat", "attachments", "{{attachmentId}}", "interview_schedule.pdf"] }
       }
     },
     {

@@ -34,7 +34,7 @@ const app = express();
 
 // MIDDLEWARE - define only once
 app.use(cors({
-    origin: 'http://localhost:5174', 
+    origin: 'http://localhost:5173', 
     credentials: true,
 }));
 app.use(express.json());
