@@ -5,9 +5,6 @@ import { JobPostSkill } from "../../../models/job_post_skills";
 import { controllerWrapper } from "../../utils/controllerWrapper";
 import { JobCategories } from "../../../models/job_categories";
 import { JobTypes } from "../../../models/job_types";
-import { JobCategories } from "../../../models/job_categories";
-import { JobTypes } from "../../../models/job_types";
-
 const router = express.Router();
 
 // Express route handler
