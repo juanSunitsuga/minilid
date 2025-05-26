@@ -24,7 +24,13 @@ import {
   useTheme,
   Stack,
   Grid,
-  Chip
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
+  Container
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -45,7 +51,6 @@ import {
   TuneOutlined as TuneIcon,
   SortOutlined as SortIcon
 } from '@mui/icons-material';
-import axios from 'axios';
 
 // Interface based on your JobPosts model
 interface JobPost {
@@ -78,7 +83,6 @@ interface JobCategory {
 
 const Job: React.FC = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   // State variables
   const [searchTerm, setSearchTerm] = useState("");
@@ -418,6 +422,9 @@ const Job: React.FC = () => {
       </Box>
     </>
   );
+
+  // State for showing mobile filters
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
