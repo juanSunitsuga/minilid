@@ -5,6 +5,8 @@ import { JobPostSkill } from "../../../models/job_post_skills";
 import { controllerWrapper } from "../../utils/controllerWrapper";
 import { JobCategories } from "../../../models/job_categories";
 import { JobTypes } from "../../../models/job_types";
+import { JobCategories } from "../../../models/job_categories";
+import { JobTypes } from "../../../models/job_types";
 
 const router = express.Router();
 
@@ -47,6 +49,7 @@ router.post('/skills', controllerWrapper(async (req, res) => {
     return res.status(400).json({ error: 'Skill name is required' });
   }
   
+  // Cek apakah skill sudah ada
   const existingSkill = await Skills.findOne({
     where: {
       name: name.trim()
