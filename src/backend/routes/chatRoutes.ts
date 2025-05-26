@@ -5,7 +5,7 @@ import { Appliers } from "../../../models/appliers";
 import { Recruiters } from "../../../models/recruiters";
 import { Messages } from "../../../models/messages";
 import { Chats } from "../../../models/chats";
-import { JobAppliers } from "../../../models/job_applier";
+import { JobAppliers } from "../../../models/job_appliers";
 import authMiddleware from "../../middleware/Auth";
 import chatAccessMiddleware from "../../middleware/ChatAccess";
 import { controllerWrapper } from "../../utils/controllerWrapper";
