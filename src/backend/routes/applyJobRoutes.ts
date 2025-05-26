@@ -136,4 +136,35 @@ router.delete("/cancel/:applicationId", authMiddleware, controllerWrapper(async 
     };
 }));
 
+router.put("/response/:id", authMiddleware, controllerWrapper(async (req, res) => {
+    const id = req.params.id;
+    const response = req.body;
+
+    const job_applier = await JobAppliers.findOne({
+        where: {
+            id: id,
+        }
+    });
+    
+    if (!job_applier) {
+        res.locals.errorCode = 404;
+        throw new Error("Applier for Job not found");
+    }
+    
+    if (response === "accept"){
+        job_applier.status = "interviewing";
+    }
+    else{
+        job_applier.status = "rejected";
+    }
+
+    job_applier.save();
+    
+    return {
+        message: "Job application submitted successfully",
+        data: job_applier
+    };
+}));
+
+
 export default router;
