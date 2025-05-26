@@ -5,6 +5,9 @@ import { JobPostSkill } from "../../../models/job_post_skills";
 import { controllerWrapper } from "../../utils/controllerWrapper";
 import { JobCategories } from "../../../models/job_categories";
 import { JobTypes } from "../../../models/job_types";
+// Import authMiddleware
+import authMiddleware from "../../middleware/Auth";
+
 const router = express.Router();
 
 // Express route handler
@@ -80,7 +83,14 @@ router.post('/skills', controllerWrapper(async (req, res) => {
   }
 }));
 
-router.post("/jobposts", controllerWrapper(async (req, res) => {
+router.post("/jobposts", authMiddleware, controllerWrapper(async (req, res) => {
+    // Get the recruiter ID from the authenticated user
+    const recruiterId = req.user?.id;
+    
+    if (!recruiterId) {
+        throw new Error("You must be logged in as a recruiter to create job posts");
+    }
+    
     const {
         title,
         description,
@@ -89,22 +99,40 @@ router.post("/jobposts", controllerWrapper(async (req, res) => {
         skills
     } = req.body;
 
+    // Improved validation
     if (!title || !category_id || !type_id) {
         throw new Error("Title, category_id, and type_id are required fields.");
     }
 
+    // Check if the category and type exist before creating the post
+    const categoryExists = await JobCategories.findByPk(category_id);
+    if (!categoryExists) {
+        throw new Error(`Category with ID ${category_id} does not exist.`);
+    }
+
+    const typeExists = await JobTypes.findByPk(type_id);
+    if (!typeExists) {
+        throw new Error(`Job type with ID ${type_id} does not exist.`);
+    }
+
+    // Create with all required fields
     const jobPost = await JobPosts.create({
         title,
-        description,
+        description: description || '',
         category_id,
         type_id,
+        recruiter_id: recruiterId,  // Add the recruiter ID
+        posted_date: new Date(),  // Add current date
+        deleted: false            // Set default value
     });
 
+    // Handle skills
     if (Array.isArray(skills) && skills.length > 0) {
         const skillInstances = await Promise.all(
-            skills.map(async (skill: string) => {
+            skills.map(async (skill) => {
                 const [skillInstance] = await Skills.findOrCreate({
                     where: { name: skill },
+                    defaults: { name: skill },
                     attributes: ["skill_id", "name"],
                 });
                 return skillInstance;
@@ -115,10 +143,12 @@ router.post("/jobposts", controllerWrapper(async (req, res) => {
             job_id: jobPost.job_id,
             skill_id: skillInstance.skill_id,
         }));
+        
         await JobPostSkill.bulkCreate(jobPostSkills, {
             ignoreDuplicates: true,
         });
     }
+
     return {
         message: "Job post created successfully",
         jobPost: {
@@ -127,10 +157,10 @@ router.post("/jobposts", controllerWrapper(async (req, res) => {
             description: jobPost.description,
             category_id: jobPost.category_id,
             type_id: jobPost.type_id,
+            posted_date: jobPost.posted_date,
             skills: skills || []
         }
-    }
-
+    };
 }));
 
 export default router;
