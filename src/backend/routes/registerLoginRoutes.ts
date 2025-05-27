@@ -2,10 +2,12 @@ import express, { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import { Appliers } from '../../../models/appliers';
 import { Recruiters } from '../../../models/recruiters';
-import { Company } from '../../../models/company';
+import { Companies } from '../../../models/companies';
 import { appConfig } from '../../../config/app';
-import { v4, validate } from 'uuid';
+import { v4 } from 'uuid';
 import { controllerWrapper } from '../../../src/utils/controllerWrapper';
+import { Op } from 'sequelize';
+import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 const SALT_ROUNDS = 10;
@@ -60,9 +62,9 @@ function validateCompanyRegistration(req: Request): string[] {
   return errors;
 }
 
-function validateLogin(req: Request): string[] {
+function validateUserLogin(req: Request): string[] {
   const errors: string[] = [];
-  const { email, password, userType } = req.body;
+  const { email, password } = req.body;
 
   if (!validateEmail(email)) {
     errors.push('Please enter a valid email');
@@ -72,10 +74,6 @@ function validateLogin(req: Request): string[] {
     errors.push('Password is required');
   }
 
-  if (userType !== 'applier' && userType !== 'recruiter') {
-    errors.push('User type must be applier or recruiter');
-  }
-
   return errors;
 }
 
@@ -83,22 +81,22 @@ function validateLogin(req: Request): string[] {
 router.post('/register-company', controllerWrapper(async (req: Request, res: Response, next: NextFunction) => {
   const errors = validateCompanyRegistration(req);
   if (errors.length > 0) {
-    return { status: 400, data: { errors } };
+    throw new Error(`Validation errors: ${errors.join(', ')}`);
   }
 
   const { companyName, companyAddress, companyWebsite, companyEmail, companyPassword } = req.body;
 
-  const existingCompany = await Company.findOne({
+  const existingCompany = await Companies.findOne({
     where: { company_email: companyEmail }
   });
 
   if (existingCompany) {
-    return { status: 409, data: { message: 'Company with this email already exists' } };
+    throw new Error(`Company with this email already exists`);
   }
 
   const hashedPassword = await bcrypt.hash(companyPassword, SALT_ROUNDS);
 
-  const newCompany = await Company.create({
+  const newCompany = await Companies.create({
     company_id: v4(),
     company_name: companyName,
     company_email: companyEmail,
@@ -107,11 +105,7 @@ router.post('/register-company', controllerWrapper(async (req: Request, res: Res
     website: companyWebsite || null,
   });
 
-  // Generate token
-  const accessToken = appConfig.generateAccessToken(newCompany.company_id);
-
   return {
-    status: 201,
     data: {
       message: 'Company registered successfully',
       company: {
@@ -120,8 +114,7 @@ router.post('/register-company', controllerWrapper(async (req: Request, res: Res
         address: newCompany.address,
         website: newCompany.website,
         email: newCompany.company_email,
-      },
-      accessToken
+      }
     }
   };
 }));
@@ -132,17 +125,17 @@ router.post('/register-applier', controllerWrapper(async (req: Request, res: Res
 
   const errors = validateRegistration(req);
   if (errors.length > 0) {
-    return { status: 400, data: { errors } };
+    throw new Error(`Validation errors: ${errors.join(', ')}`);
   }
-  
+
   const { email, password, name, ...additionalData } = req.body;
-  
+
   req.body.userType = 'applier';
 
   const existingUser = await Appliers.findOne({ where: { email } });
 
   if (existingUser) {
-    return { status: 409, data: { message: `User with this email already exists` } };
+    throw new Error(`User with this email already exists`);
   }
 
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
@@ -162,13 +155,10 @@ router.post('/register-applier', controllerWrapper(async (req: Request, res: Res
     name: newUser.name,
   };
 
-  const accessToken = appConfig.generateAccessToken(userData.id);
-
   const userResponse = { ...newUser.get() };
   delete userResponse.password;
 
   return {
-    status: 201,
     data: {
       message: `Applier registered successfully`,
       user: {
@@ -176,8 +166,7 @@ router.post('/register-applier', controllerWrapper(async (req: Request, res: Res
         name: userResponse.name,
         email: userResponse.email,
         usertype: userResponse.usertype
-      },
-      accessToken,
+      }
     }
   };
 }));
@@ -185,29 +174,35 @@ router.post('/register-applier', controllerWrapper(async (req: Request, res: Res
 // Recruiter registration route with wrapper
 router.post('/register-recruiter', controllerWrapper(async (req: Request, res: Response, next: NextFunction) => {
   console.log("registering recruiter", req.body);
-  
+
   const errors = validateRegistration(req);
   if (errors.length > 0) {
-    return { status: 400, data: { errors } };
+    throw new Error(`Validation errors: ${errors.join(', ')}`);
   }
-  
+
   req.body.userType = 'recruiter';
-  
-  const { email, password, name, ...additionalData } = req.body;
+
+  const { email, password, name, companyName, position, ...additionalData } = req.body;
 
   const existingUser = await Recruiters.findOne({ where: { email } });
 
   if (existingUser) {
-    return { status: 409, data: { message: `User with this email already exists` } };
+    throw new Error(`User with this email already exists`);
   }
 
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+  const company = await Companies.findOne({
+    where: { company_name: { [Op.iLike]: companyName } },
+  })
 
   const newUser = await Recruiters.create({
     user_id: v4(),
     email,
     password: hashedPassword,
     name,
+    company_id: company ? company.company_id : null,
+    position
   });
 
   // Generate token
@@ -217,13 +212,10 @@ router.post('/register-recruiter', controllerWrapper(async (req: Request, res: R
     name: newUser.name,
   };
 
-  const accessToken = appConfig.generateAccessToken(userData.id);
-
   const userResponse = { ...newUser.get() };
   delete userResponse.password;
 
   return {
-    status: 201,
     data: {
       message: `Recruiter registered successfully`,
       user: {
@@ -231,33 +223,18 @@ router.post('/register-recruiter', controllerWrapper(async (req: Request, res: R
         name: userResponse.name,
         email: userResponse.email,
         usertype: userResponse.usertype
-      },
-      accessToken,
+      }
     }
   };
 }));
 
-function validateUserLogin(req: Request): string[] {
-  const errors: string[] = [];
-  const { email, password } = req.body;
-
-  if (!validateEmail(email)) {
-    errors.push('Please enter a valid email');
-  }
-
-  if (!password) {
-    errors.push('Password is required');
-  }
-
-  return errors;
-}
 
 // Applier login route with wrapper
 router.post('/login-applier', controllerWrapper(async (req: Request, res: Response, next: NextFunction) => {
   // Validate request
   const errors = validateUserLogin(req);
   if (errors.length > 0) {
-    return { status: 400, data: { errors } };
+    throw new Error(`Validation errors: ${errors.join(', ')}`);
   }
 
   const { email, password } = req.body;
@@ -265,13 +242,13 @@ router.post('/login-applier', controllerWrapper(async (req: Request, res: Respon
   const user = await Appliers.findOne({ where: { email } });
 
   if (!user) {
-    return { status: 401, data: { message: 'Invalid email or password' } };
+    throw new Error('Invalid email or password');
   }
 
   const passwordMatch = await bcrypt.compare(password, user.password);
 
   if (!passwordMatch) {
-    return { status: 401, data: { message: 'Invalid email or password' } };
+    throw new Error('Invalid email or password');
   }
 
   // Generate token
@@ -281,18 +258,23 @@ router.post('/login-applier', controllerWrapper(async (req: Request, res: Respon
     name: user.name
   };
 
-  const accessToken = appConfig.generateAccessToken(userData.id);
+  const accessToken = jwt.sign(
+    { id: userData.id, email: userData.email },
+    appConfig.jwtSecret,
+    { expiresIn: '1h' }
+  );
+
+  console.log('Generated access token:', accessToken);
 
   // Remove password from response
   const userResponse = { ...user.get() };
   delete userResponse.password;
 
   return {
-    status: 200,
     data: {
       message: 'Login successful',
       user: {
-        user_id: userResponse.applier_id, 
+        user_id: userResponse.applier_id,
         name: userResponse.name,
         email: userResponse.email
       },
@@ -305,7 +287,7 @@ router.post('/login-applier', controllerWrapper(async (req: Request, res: Respon
 router.post('/login-recruiter', controllerWrapper(async (req: Request, res: Response, next: NextFunction) => {
   const errors = validateUserLogin(req);
   if (errors.length > 0) {
-    return { status: 400, data: { errors } };
+    throw new Error(`Validation errors: ${errors.join(', ')}`);
   }
 
   const { email, password } = req.body;
@@ -313,13 +295,13 @@ router.post('/login-recruiter', controllerWrapper(async (req: Request, res: Resp
   const user = await Recruiters.findOne({ where: { email } });
 
   if (!user) {
-    return { status: 401, data: { message: 'Invalid email or password' } };
+    throw new Error('Invalid email or password');
   }
 
   const passwordMatch = await bcrypt.compare(password, user.password);
 
   if (!passwordMatch) {
-    return { status: 401, data: { message: 'Invalid email or password' } };
+    throw new Error('Invalid email or password');
   }
 
   // Generate token
@@ -329,18 +311,21 @@ router.post('/login-recruiter', controllerWrapper(async (req: Request, res: Resp
     name: user.name
   };
 
-  const accessToken = appConfig.generateAccessToken(userData.id);
+  const accessToken = jwt.sign(
+    { id: userData.id, email: userData.email },
+    appConfig.jwtSecret,
+    { expiresIn: '1h' }
+  );
 
   // Remove password from response
   const userResponse = { ...user.get() };
   delete userResponse.password;
 
   return {
-    status: 200,
     data: {
       message: 'Login successful',
       user: {
-        user_id: userResponse.recruiter_id, 
+        user_id: userResponse.recruiter_id,
         name: userResponse.name,
         email: userResponse.email
       },
@@ -353,25 +338,28 @@ router.post('/login-recruiter', controllerWrapper(async (req: Request, res: Resp
 router.post('/login-company', controllerWrapper(async (req: Request, res: Response, next: NextFunction) => {
   const { companyEmail, companyPassword } = req.body;
 
-  const company = await Company.findOne({
+  const company = await Companies.findOne({
     where: { company_email: companyEmail }
   });
 
   if (!company) {
-    return { status: 401, data: { message: 'Invalid email or password' } };
+    throw new Error('Invalid email or password');
   }
 
   const validPassword = await bcrypt.compare(companyPassword, company.password);
 
   if (!validPassword) {
-    return { status: 401, data: { message: 'Invalid email or password' } };
+    throw new Error('Invalid email or password');
   }
 
   // Generate token
-  const accessToken = appConfig.generateAccessToken(company.company_id);
+  const accessToken = jwt.sign(
+    { id: company.company_id, email: company.company_email },
+    appConfig.jwtSecret,
+    { expiresIn: '1h' }
+  )
 
   return {
-    status: 200,
     data: {
       message: 'Login successful',
       company: {

@@ -32,6 +32,10 @@ export default {
         type: Sequelize.STRING,
         allowNull: false,
       },
+      about: {
+        type: Sequelize.TEXT,
+        allowNull: true,
+      },
     });
   },
 

@@ -10,7 +10,7 @@ export class JobTypes extends Model {
         type: DataType.INTEGER,
         autoIncrement: true,
     })
-    declare type_id: string;
+    declare type_id: number;
 
     @Column({
         type: DataType.STRING,

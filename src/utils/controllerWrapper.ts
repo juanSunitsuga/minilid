@@ -12,7 +12,7 @@ export function controllerWrapper<T>(routeHandler: ExpressRouteHandler<T>) {
       const result = await routeHandler(req, res, next);
       res.status(200).json(result);
     } catch (error) {
-      next(error);
+      next();
     }
   };
 }

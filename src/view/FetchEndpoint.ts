@@ -1,8 +1,11 @@
-export const FetchEndpoint = async (endpoint: string, method: string, token: string | null, body?: any) => {
-  // Replace process.env with a direct string
-  const baseUrl = 'http://localhost:3000'; 
+export const FetchEndpoint = async (endpoint: string, method: string, token: string | null, body: any) => {
+  // Make sure you're using the correct base URL
+  const BASE_URL = 'http://localhost:3000'; // Confirm this is the correct port
   
-  console.log(`${method} request to ${endpoint}:`, body);
+  // Add leading slash if missing
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  
+  console.log(`Making ${method} request to: ${BASE_URL}${path}`);
   
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -19,7 +22,17 @@ export const FetchEndpoint = async (endpoint: string, method: string, token: str
   };
   
   try {
-    const response = await fetch(`${baseUrl}${endpoint}`, options);
+    console.log('Request options:', options);
+    console.log('Request headers:', headers);
+    console.log('Request body:', body);
+    console.log('Request URL:', `${BASE_URL}${path}`);
+    console.log('Request method:', method);
+    console.log('Request token:', token);
+
+    const response = await fetch(`${BASE_URL}${path}`, options);
+
+    console.log('TEST');
+    console.log('Response:', response);
     
     // Log response status
     console.log(`Response status: ${response.status} ${response.statusText}`);

@@ -1,5 +1,6 @@
 import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
 import { Appliers } from "./appliers";
+import { Recruiters } from "./recruiters";
 
 @Table({
     tableName: "experiences",
@@ -12,16 +13,18 @@ export class Experiences extends Model {
     })
     declare experience_id: string;
 
-    @ForeignKey(() => Appliers)
     @Column({
         type: DataType.UUID,
         allowNull: false,
-        field: 'user_id' // Change from applier_id if your database schema is updated
+        field: 'user_id'
     })
     declare user_id: string;
 
-    @BelongsTo(() => Appliers)
-    declare user: Appliers;
+    @Column({
+        type: DataType.ENUM('applier', 'recruiter'),
+        allowNull: false,
+    })
+    declare user_type: 'applier' | 'recruiter';
 
     @Column({
         type: DataType.STRING,
@@ -33,7 +36,7 @@ export class Experiences extends Model {
         type: DataType.STRING,
         allowNull: false,
     })
-    declare position: string;
+    declare job_title: string;
 
     @Column({
         type: DataType.DATE,
@@ -45,5 +48,21 @@ export class Experiences extends Model {
         type: DataType.DATE,
         allowNull: true,
     })
-    declare end_date: Date;
+    declare end_date: Date | null;
+    
+    @Column({
+        type: DataType.TEXT,
+        allowNull: true,
+    })
+    declare description: string | null;
+
+    // Virtual getter methods to get the associated user
+    async getUser() {
+        if (this.user_type === 'applier') {
+            return await Appliers.findByPk(this.user_id);
+        } else if (this.user_type === 'recruiter') {
+            return await Recruiters.findByPk(this.user_id);
+        }
+        return null;
+    }
 }
