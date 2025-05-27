@@ -279,7 +279,12 @@ router.post('/login-recruiter', controllerWrapper(async (req: Request, res: Resp
   }
 
   const { email, password } = req.body;
+  const userType = req.body.userType || 'recruiter';
 
+  if (userType !== 'recruiter') {
+    throw new Error('Invalid user type for recruiter login');
+  }
+  
   const user = await Recruiters.findOne({ where: { email } });
 
   if (!user) {

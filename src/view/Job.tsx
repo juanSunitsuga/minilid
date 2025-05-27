@@ -30,7 +30,8 @@ import {
   DialogContent,
   DialogActions,
   Alert,
-  Container
+  Container,
+  Snackbar
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -51,34 +52,49 @@ import {
   TuneOutlined as TuneIcon,
   SortOutlined as SortIcon
 } from '@mui/icons-material';
+import { FetchEndpoint } from './FetchEndpoint'; // Import the FetchEndpoint utility
 
-// Interface based on your JobPosts model
+// Align interfaces with backend models
 interface JobPost {
-  id: number;
+  job_id: string;
   title: string;
-  company_name: string;
-  company_logo?: string;
-  location: string;
-  job_type: string;
-  category: string;
-  min_salary: number;
-  max_salary: number;
-  posted_date: string;
   description: string;
-  skills: string[];
-  is_featured: boolean;
+  category_id: number;
+  type_id: number;
+  posted_date: string;
+  company_name: string;  
+  company_logo?: string; 
+  location: string;      
+  min_salary: number;    
+  max_salary: number;    
+  is_featured: boolean;  
+  skills: Skill[];       
+  job_type: string;      
+  category: string;      
 }
 
-// Interface for job types based on your JobTypes model
 interface JobType {
-  id: number;
-  name: string;
+  type_id: number;
+  type_name: string;
 }
 
-// Interface for job categories based on your JobCategories model
 interface JobCategory {
+  category_id: number;
+  category_name: string;
+}
+
+interface Skill {
+  skill_id: number;
+  skill_name: string;
+}
+
+interface JobApplication {
   id: number;
-  name: string;
+  job_id: string;
+  applier_id: string;
+  status: 'applied' | 'interviewing' | 'hired' | 'rejected';
+  createdAt: string;
+  updatedAt: string;
 }
 
 const Job: React.FC = () => {
@@ -90,17 +106,23 @@ const Job: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedLocation, setSelectedLocation] = useState("All");
   const [sort, setSort] = useState("newest");
-  const [bookmarkedJobs, setBookmarkedJobs] = useState<number[]>([]);
+  const [bookmarkedJobs, setBookmarkedJobs] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [expandedJobId, setExpandedJobId] = useState<number | null>(null);
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [jobPosts, setJobPosts] = useState<JobPost[]>([]);
   const [jobTypes, setJobTypes] = useState<JobType[]>([]);
   const [jobCategories, setJobCategories] = useState<JobCategory[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [appliedJobs, setAppliedJobs] = useState<string[]>([]);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">("success");
   
   // Filter dialog/drawer state
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [sortDialogOpen, setSortDialogOpen] = useState(false);
+  const [applyDialogOpen, setApplyDialogOpen] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 
   // Temporary filter states (for applying only when user clicks "Apply")
   const [tempJobType, setTempJobType] = useState("All");
@@ -111,6 +133,18 @@ const Job: React.FC = () => {
   // Salary slider settings
   const [salaryRange, setSalaryRange] = useState<number[]>([5000000, 30000000]);
   const formatSalary = (value: number) => `Rp ${(value/1000000).toFixed(1)}M`;
+
+  // Show snackbar notification
+  const showNotification = (message: string, severity: "success" | "error") => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
+
+  // Handle snackbar close
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+  };
 
   // Handle opening filter dialog/drawer
   const openFilterDialog = () => {
@@ -141,97 +175,158 @@ const Job: React.FC = () => {
     setSortDialogOpen(!sortDialogOpen);
   };
 
-  // Load job data
+  // Handle applying to job
+  const openApplyDialog = (jobId: string) => {
+    setSelectedJobId(jobId);
+    setApplyDialogOpen(true);
+  };
+
+  // Handle apply job submission - Using FetchEndpoint instead of axios
+  const handleApplyJob = async () => {
+    if (!selectedJobId) return;
+
+    try {
+      setIsLoading(true);
+      
+      // Get token from localStorage (similar to LoginModal)
+      const token = localStorage.getItem('accessToken');
+      
+      if (!token) {
+        throw new Error("You need to login first to apply for this job");
+      }
+      
+      // Use FetchEndpoint utility instead of axios
+      const response = await FetchEndpoint('/job/apply', 'POST', token, { job_id: selectedJobId });
+      
+      // Process the response
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(
+          data.data?.message || 
+          data.message || 
+          'Failed to apply for job. Please try again.'
+        );
+      }
+
+      // Add to applied jobs
+      setAppliedJobs(prev => [...prev, selectedJobId]);
+      setApplyDialogOpen(false);
+      
+      // Show success notification
+      showNotification("Successfully applied for the job!", "success");
+    } catch (error: any) {
+      console.error('Error applying for job:', error);
+      
+      // Show error notification
+      showNotification(error.message || "Failed to apply for job. Please try again.", "error");
+      setError(error.message || "Failed to apply for job. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load job data - Using FetchEndpoint instead of axios
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // In a real app, replace with API calls
-        // Example: const response = await axios.get('/api/jobs');
+        // Get token from localStorage
+        const token = localStorage.getItem('accessToken');
         
-        // For now, use mock data aligned with your model structure
-        setJobPosts([
-          {
-            id: 1,
-            title: "Frontend Developer",
-            company_name: "MiniLid Inc.",
-            company_logo: "https://placehold.co/60",
-            location: "Jakarta, Indonesia",
-            job_type: "Full-time",
-            category: "IT & Software",
-            min_salary: 10000000,
-            max_salary: 15000000,
-            posted_date: "2023-05-24", // 2 days ago
-            description: "We're looking for an experienced Frontend Developer to join our team. You'll be responsible for building user interfaces using React and TypeScript. Must have 2+ years of experience with modern frontend frameworks.",
-            skills: ["React", "TypeScript", "CSS"],
-            is_featured: true
-          },
-          {
-            id: 2,
-            title: "UX Designer",
-            company_name: "Creative Solutions",
-            company_logo: "https://placehold.co/60",
-            location: "Remote",
-            job_type: "Full-time",
-            category: "Design",
-            min_salary: 12000000,
-            max_salary: 18000000,
-            posted_date: "2023-05-19", // 1 week ago
-            description: "Design user experiences for web and mobile applications. Create wireframes, prototypes, and collaborate with developers to implement designs. Must have experience with Figma and user research methodologies.",
-            skills: ["Figma", "User Research", "Prototyping"],
-            is_featured: false
-          },
-          {
-            id: 3,
-            title: "Data Analyst",
-            company_name: "TechGrowth",
-            company_logo: "https://placehold.co/60",
-            location: "Bandung, Indonesia",
-            job_type: "Contract",
-            category: "Data Science",
-            min_salary: 8000000,
-            max_salary: 12000000,
-            posted_date: "2023-05-23", // 3 days ago
-            description: "Analyze large datasets to identify trends and insights. Create reports and dashboards to visualize data. Must be proficient in SQL, Excel, and data visualization tools.",
-            skills: ["SQL", "Excel", "Data Visualization"],
-            is_featured: false
-          },
-          {
-            id: 4,
-            title: "Backend Engineer",
-            company_name: "Startup Hub",
-            company_logo: "https://placehold.co/60",
-            location: "Yogyakarta, Indonesia",
-            job_type: "Full-time",
-            category: "IT & Software",
-            min_salary: 15000000,
-            max_salary: 25000000,
-            posted_date: "2023-05-26", // just now
-            description: "Develop and maintain server-side logic and APIs. Work with databases and cloud infrastructure. Must have experience with Node.js, MongoDB, and Express.",
-            skills: ["Node.js", "MongoDB", "Express"],
-            is_featured: true
+        // Fetch job posts
+        const jobsResponse = await FetchEndpoint('/job', 'GET', token);
+        const jobsData = await jobsResponse.json();
+        
+        if (!jobsResponse.ok) {
+          throw new Error(
+            jobsData.data?.message || 
+            jobsData.message || 
+            'Failed to fetch jobs data'
+          );
+        }
+        
+        // Fetch job types
+        const typesResponse = await FetchEndpoint('/job-types', 'GET', token);
+        const typesData = await typesResponse.json();
+        
+        if (!typesResponse.ok) {
+          throw new Error(
+            typesData.data?.message || 
+            typesData.message || 
+            'Failed to fetch job types'
+          );
+        }
+        
+        // Fetch job categories
+        const categoriesResponse = await FetchEndpoint('/job-categories', 'GET', token);
+        const categoriesData = await categoriesResponse.json();
+        
+        if (!categoriesResponse.ok) {
+          throw new Error(
+            categoriesData.data?.message || 
+            categoriesData.message || 
+            'Failed to fetch job categories'
+          );
+        }
+        
+        // Fetch user's applied jobs (only if logged in)
+        let appliedJobIds: string[] = [];
+        if (token) {
+          try {
+            const applicationsResponse = await FetchEndpoint('/job/my-applications', 'GET', token);
+            const applicationsData = await applicationsResponse.json();
+            
+            if (applicationsResponse.ok) {
+              // Extract job IDs from applications
+              appliedJobIds = applicationsData.data.map((app: JobApplication) => app.job_id);
+            }
+          } catch (err) {
+            console.error("Error fetching applied jobs:", err);
+            // Non-critical error, continue without applied jobs data
           }
-        ]);
+        }
         
-        setJobTypes([
-          { id: 1, name: "Full-time" },
-          { id: 2, name: "Part-time" },
-          { id: 3, name: "Contract" },
-          { id: 4, name: "Internship" },
-          { id: 5, name: "Freelance" }
-        ]);
+        // Process job data to match our interface
+        const jobData = jobsData.data || [];
+        const typeData = typesData.data || [];
+        const categoryData = categoriesData.data || [];
         
-        setJobCategories([
-          { id: 1, name: "IT & Software" },
-          { id: 2, name: "Design" },
-          { id: 3, name: "Marketing" },
-          { id: 4, name: "Data Science" },
-          { id: 5, name: "Business" }
-        ]);
-        
+        // Map job data from response to our JobPost interface
+        const processedJobs: JobPost[] = jobData.map((job: any) => {
+          // Look up the job type and category names from their IDs
+          const jobType = typeData.find((type: JobType) => type.type_id === job.type_id);
+          const jobCategory = categoryData.find((cat: JobCategory) => cat.category_id === job.category_id);
+          
+          // Map database fields to frontend model
+          return {
+            job_id: job.job_id,
+            title: job.title,
+            description: job.description || "",
+            category_id: job.category_id,
+            type_id: job.type_id,
+            posted_date: job.posted_date,
+            company_name: job.company_name || "Company", // Use actual company data if available
+            company_logo: job.company_logo || "https://placehold.co/60",
+            location: job.location || "Location not specified",
+            min_salary: job.min_salary || 5000000,
+            max_salary: job.max_salary || 30000000,
+            is_featured: job.is_featured || false,
+            skills: job.skills || [],
+            job_type: jobType ? jobType.type_name : "Unknown",
+            category: jobCategory ? jobCategory.category_name : "Unknown"
+          };
+        });
+
+        // Update state with fetched data
+        setJobPosts(processedJobs);
+        setJobTypes(typeData);
+        setJobCategories(categoryData);
+        setAppliedJobs(appliedJobIds);
         setIsLoading(false);
-      } catch (error) {
-        setError("Failed to load job data. Please try again later.");
+      } catch (error: any) {
+        console.error("Error fetching job data:", error);
+        setError(error.message || "Failed to load job data. Please try again later.");
         setIsLoading(false);
       }
     };
@@ -251,7 +346,7 @@ const Job: React.FC = () => {
   }, [bookmarkedJobs]);
   
   // Toggle job bookmark
-  const toggleBookmark = (jobId: number, e?: React.MouseEvent) => {
+  const toggleBookmark = (jobId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     
     setBookmarkedJobs(prev => 
@@ -262,7 +357,7 @@ const Job: React.FC = () => {
   };
   
   // Toggle expanded job details
-  const toggleJobExpand = (jobId: number) => {
+  const toggleJobExpand = (jobId: string) => {
     setExpandedJobId(expandedJobId === jobId ? null : jobId);
   };
 
@@ -297,7 +392,7 @@ const Job: React.FC = () => {
     const matchesSearch = 
       job.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
       job.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()));
+      job.skills.some(skill => skill.skill_name.toLowerCase().includes(searchTerm.toLowerCase()));
       
     const matchesJobType = selectedJobType === "All" || job.job_type === selectedJobType;
     const matchesCategory = selectedCategory === "All" || job.category === selectedCategory;
@@ -353,7 +448,7 @@ const Job: React.FC = () => {
         >
           <MenuItem value="All">All Types</MenuItem>
           {jobTypes.map(type => (
-            <MenuItem key={type.id} value={type.name}>{type.name}</MenuItem>
+            <MenuItem key={type.type_id} value={type.type_name}>{type.type_name}</MenuItem>
           ))}
         </Select>
       </FormControl>
@@ -369,7 +464,7 @@ const Job: React.FC = () => {
         >
           <MenuItem value="All">All Categories</MenuItem>
           {jobCategories.map(category => (
-            <MenuItem key={category.id} value={category.name}>{category.name}</MenuItem>
+            <MenuItem key={category.category_id} value={category.category_name}>{category.category_name}</MenuItem>
           ))}
         </Select>
       </FormControl>
@@ -425,6 +520,36 @@ const Job: React.FC = () => {
 
   // State for showing mobile filters
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+  // Handle search submit
+  const handleSearch = () => {
+    // The filtering is already handled by the filteredJobs variable
+    // This function is just a placeholder for any additional search logic
+    console.log("Searching for:", searchTerm);
+  };
+
+  // Load more jobs (pagination)
+  const loadMoreJobs = async () => {
+    showNotification("Loading more jobs...", "success");
+    
+    try {
+      const token = localStorage.getItem('accessToken');
+      const currentPage = Math.ceil(jobPosts.length / 10); // Assuming 10 jobs per page
+      
+      const response = await FetchEndpoint(`/jobs?page=${currentPage + 1}`, 'GET', token);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to load more jobs');
+      }
+      
+      // Add new jobs to existing ones
+      setJobPosts(prev => [...prev, ...data.data]);
+      
+    } catch (error: any) {
+      showNotification("Failed to load more jobs: " + (error.message || "Unknown error"), "error");
+    }
+  };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -503,13 +628,14 @@ const Job: React.FC = () => {
             }}
             onKeyPress={(e) => {
               if (e.key === 'Enter') {
-                // Handle search
+                handleSearch();
               }
             }}
           />
           <Button 
             variant="contained" 
             color="primary"
+            onClick={handleSearch}
             sx={{ 
               borderRadius: 2,
               px: 3,
@@ -654,7 +780,7 @@ const Job: React.FC = () => {
           <Grid item xs={12}>
             <Stack spacing={3}>
               {sortedJobs.map((job, index) => (
-                <Grow in={true} timeout={(index + 1) * 200} key={job.id}>
+                <Grow in={true} timeout={(index + 1) * 200} key={job.job_id}>
                   <Card
                     sx={{
                       borderRadius: 3,
@@ -708,22 +834,22 @@ const Job: React.FC = () => {
                               {job.title}
                             </Typography>
                             
-                            <Tooltip title={bookmarkedJobs.includes(job.id) ? "Remove from saved jobs" : "Save job"}>
+                            <Tooltip title={bookmarkedJobs.includes(job.job_id) ? "Remove from saved jobs" : "Save job"}>
                               <IconButton 
                                 size="medium"
-                                onClick={(e) => toggleBookmark(job.id, e)}
+                                onClick={(e) => toggleBookmark(job.job_id, e)}
                                 sx={{
-                                  backgroundColor: bookmarkedJobs.includes(job.id) 
+                                  backgroundColor: bookmarkedJobs.includes(job.job_id) 
                                     ? 'rgba(3, 169, 244, 0.15)' 
                                     : 'transparent',
                                   '&:hover': {
-                                    backgroundColor: bookmarkedJobs.includes(job.id) 
+                                    backgroundColor: bookmarkedJobs.includes(job.job_id) 
                                       ? 'rgba(3, 169, 244, 0.25)' 
                                       : 'rgba(0, 0, 0, 0.05)'
                                   }
                                 }}
                               >
-                                {bookmarkedJobs.includes(job.id) ? (
+                                {bookmarkedJobs.includes(job.job_id) ? (
                                   <BookmarkIcon color="primary" />
                                 ) : (
                                   <BookmarkBorder/>
@@ -784,13 +910,13 @@ const Job: React.FC = () => {
                       <Divider sx={{ my: 2 }} />
                       
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>
-                        {job.description.length > 180 && expandedJobId !== job.id
+                        {job.description.length > 180 && expandedJobId !== job.job_id
                           ? `${job.description.substring(0, 180)}...` 
                           : job.description}
                       </Typography>
                       
-                      {expandedJobId === job.id && (
-                        <Fade in={expandedJobId === job.id}>
+                      {expandedJobId === job.job_id && (
+                        <Fade in={expandedJobId === job.job_id}>
                           <Box>
                             <Box sx={{ mb: 2 }}>
                               <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
@@ -799,8 +925,8 @@ const Job: React.FC = () => {
                               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8 }}>
                                 {job.skills.map(skill => (
                                   <Chip 
-                                    key={skill} 
-                                    label={skill} 
+                                    key={skill.skill_id} 
+                                    label={skill.skill_name} 
                                     size="small" 
                                     sx={{ 
                                       backgroundColor: 'rgba(3, 169, 244, 0.1)',
@@ -826,11 +952,11 @@ const Job: React.FC = () => {
                         <Button 
                           variant="text" 
                           size="small"
-                          onClick={() => toggleJobExpand(job.id)}
-                          endIcon={expandedJobId === job.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                          onClick={() => toggleJobExpand(job.job_id)}
+                          endIcon={expandedJobId === job.job_id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                           sx={{ textTransform: 'none', fontWeight: 500 }}
                         >
-                          {expandedJobId === job.id ? 'Show less' : 'Show more'}
+                          {expandedJobId === job.job_id ? 'Show less' : 'Show more'}
                         </Button>
                         
                         <Box>
@@ -849,6 +975,8 @@ const Job: React.FC = () => {
                             variant="contained" 
                             color="primary" 
                             size="small"
+                            disabled={appliedJobs.includes(job.job_id)}
+                            onClick={() => openApplyDialog(job.job_id)}
                             sx={{
                               boxShadow: 'none',
                               borderRadius: '8px',
@@ -859,7 +987,7 @@ const Job: React.FC = () => {
                               }
                             }}
                           >
-                            Apply Now
+                            {appliedJobs.includes(job.job_id) ? 'Applied' : 'Apply Now'}
                           </Button>
                         </Box>
                       </Box>
@@ -942,6 +1070,7 @@ const Job: React.FC = () => {
           <Button 
             variant="outlined" 
             color="primary"
+            onClick={loadMoreJobs}
             sx={{ 
               px: 5,
               py: 1.2,
@@ -1092,6 +1221,57 @@ const Job: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Apply Job Dialog */}
+      <Dialog
+        open={applyDialogOpen}
+        onClose={() => setApplyDialogOpen(false)}
+        fullWidth
+        maxWidth="xs"
+        sx={{ '& .MuiDialog-paper': { borderRadius: 3, p: 3 } }}
+      >
+        <DialogTitle sx={{ 
+          p: 2,
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
+        }}>
+          <Typography variant="h6" fontWeight="600">
+            Apply for this job
+          </Typography>
+        </DialogTitle>
+        
+        <DialogContent sx={{ pt: 3, pb: 1 }}>
+          <Typography variant="body1">
+            Are you sure you want to apply for this job? Your profile information will be shared with the employer.
+          </Typography>
+        </DialogContent>
+        
+        <DialogActions sx={{ pt: 0, pb: 2, justifyContent: 'space-between' }}>
+          <Button 
+            variant="outlined"
+            onClick={() => setApplyDialogOpen(false)}
+          >
+            Cancel
+          </Button>
+          
+          <Button 
+            variant="contained" 
+            color="primary"
+            onClick={handleApplyJob}
+            disabled={isLoading}
+            sx={{ 
+              borderRadius: 2,
+              px: 3,
+              fontWeight: 600
+            }}
+          >
+            {isLoading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              'Apply'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
       
       {/* Mobile action button for filters */}
       <Box 
@@ -1113,7 +1293,7 @@ const Job: React.FC = () => {
               p: 2.5,
               boxShadow: '0 6px 16px rgba(3, 169, 244, 0.5)'
             }}
-            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            onClick={openFilterDialog}
           >
             <Badge 
               badgeContent={
@@ -1130,6 +1310,22 @@ const Job: React.FC = () => {
           </Button>
         </Tooltip>
       </Box>
+
+      {/* Success/Error notification */}
+      <Snackbar 
+        open={snackbarOpen} 
+        autoHideDuration={6000} 
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleSnackbarClose} 
+          severity={snackbarSeverity} 
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

@@ -1,5 +1,6 @@
-import { Table, Column, Model, DataType, HasMany } from "sequelize-typescript";
+import { Table, Column, Model, DataType, BelongsToMany } from "sequelize-typescript";
 import { Skills } from "./skills";
+import { ApplierSkill } from "./applier_skills";
 
 @Table({
     tableName: "appliers",
@@ -37,8 +38,11 @@ export class Appliers extends Model {
     })
     declare about: string | null;
     
-    @HasMany(() => Skills, {
-        foreignKey: "job_id",
+    @BelongsToMany(() => Skills, {
+        through: () => ApplierSkill,
+        foreignKey: "applier_id",
+        otherKey: "skill_id",
+        as: "skills"
     })
     declare skills: Skills[];
 }
