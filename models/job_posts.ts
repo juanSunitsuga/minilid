@@ -54,6 +54,13 @@ export class JobPosts extends Model {
     })
     declare type_id: number;
 
+    @ForeignKey(() => Recruiters)
+    @Column({ 
+        type: DataType.UUID,
+        allowNull: false
+    })
+    declare recruiter_id: string;
+
     @Column({
         type: DataType.DATE,
         allowNull: false,

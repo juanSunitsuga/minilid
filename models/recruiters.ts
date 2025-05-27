@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, ForeignKey } from "sequelize-typescript";
+import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
 import { Companies } from "./companies";
 
 @Table({
@@ -20,6 +20,11 @@ export class Recruiters extends Model {
     })
     declare company_id: string;
 
+    @BelongsTo(() => Companies, {
+        foreignKey: 'company_id',
+        as: 'company'
+    })
+    
     @Column({
         type: DataType.STRING,
         allowNull: false,
