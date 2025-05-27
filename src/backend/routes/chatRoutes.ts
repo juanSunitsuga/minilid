@@ -444,12 +444,10 @@ router.post("/chats/:chat_id/messages", authMiddleware, chatAccessMiddleware, co
 
   console.log("POST /chats/:chat_id/messages - User:", req.user, "Chat ID:", chatId, "Body:", req.body);
 
-  console.log(1)
   if (!message) {
     throw new Error("Message content is required");
   }
 
-  console.log(2)
   const chat = req.chat;
   if (!chat) {
     throw new Error("Chat not found");
@@ -469,7 +467,6 @@ router.post("/chats/:chat_id/messages", authMiddleware, chatAccessMiddleware, co
     status: "SENT"
   };
 
-  console.log(3)
   // Add message to JSON file
   try {
     await addMessageToChat(chatId, newMessage);
@@ -478,7 +475,6 @@ router.post("/chats/:chat_id/messages", authMiddleware, chatAccessMiddleware, co
     throw new Error(`Failed to add message: ${error}`);
   }
 
-  console.log(4)
   return {
     message: "Message sent successfully",
     data: newMessage
@@ -588,21 +584,21 @@ router.post("/chats/:chat_id/attachment",
     }
 
     const chat = req.chat;
-
+    
     if (!chat) {
       throw new Error("Chat not found");
     }
 
     // Get file stats
     const stats = await fs.stat(file.path);
-
+    
     // Determine if sender is recruiter or applier
     const isRecruiter = chat.recruiter_id === userId;
-
+    
     if (!req.attachmentId) {
       throw new Error("Attachment ID is missing");
     }
-
+    
     // Add attachment message to JSON
     const newMessage = await addAttachmentMessage(
       chatId,
@@ -622,15 +618,38 @@ router.post("/chats/:chat_id/attachment",
 );
 
 // Route for getting attachment
-router.get("/attachments/:attachmentId/:filename", authMiddleware, controllerWrapper(async (req, res) => {
+router.get("/attachments/:attachmentId/:filename", controllerWrapper(async (req, res) => {
   const { attachmentId, filename } = req.params;
-
   const filePath = path.join(ATTACHMENTS_DIR, attachmentId, filename);
 
-  if (!await fs.pathExists(filePath)) {
+  if (!await fsExtra.pathExists(filePath)) {
     return res.status(404).json({ message: "Attachment not found" });
   }
 
+  // Set proper content-type based on file extension
+  const ext = path.extname(filename).toLowerCase();
+  switch (ext) {
+    case '.pdf':
+      res.setHeader('Content-Type', 'application/pdf');
+      break;
+    case '.png':
+      res.setHeader('Content-Type', 'image/png');
+      break;
+    case '.jpg':
+    case '.jpeg':
+      res.setHeader('Content-Type', 'image/jpeg');
+      break;
+    case '.gif':
+      res.setHeader('Content-Type', 'image/gif');
+      break;
+    // Add more types as needed
+    default:
+      // Use a generic content type for unknown file types
+      res.setHeader('Content-Type', 'application/octet-stream');
+  }
+
+  // Set appropriate caching and disposition
+  res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
   res.sendFile(filePath);
 }));
 

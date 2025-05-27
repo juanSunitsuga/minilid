@@ -74,7 +74,16 @@ const Navbar: React.FC = () => {
 
               <button
                 onClick={logout}
-                className="nav-item logout-button"
+                className={`nav-item ${activePath === '/logout' ? 'active' : ''}`}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  padding: 0,
+                  minWidth: '80px',
+                  color: 'rgba(0, 0, 0, 0.6)',
+                  height: '52px'
+                }}
                 aria-label="Logout"
               >
                 <FaSignOutAlt className="nav-icon" />

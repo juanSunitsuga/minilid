@@ -1,4 +1,5 @@
 import { FetchEndpoint } from "../view/FetchEndpoint";
+import { uploadEndpoint } from '../view/UploadEndpoint';
 
 // Get all chats for current user
 export const getChats = async () => {
@@ -75,29 +76,28 @@ interface AttachmentResponse {
 
 // Function to send an attachment
 export const sendAttachment = async (chatId: string, file: File): Promise<AttachmentResponse> => {
-    try {
-        const token = localStorage.getItem('accessToken');;
-
-        // For file uploads, we need to use FormData
-        // If FetchEndpoint doesn't support FormData directly, you'll need to modify it
-        const formData = new FormData();
-        formData.append('file', file);
-
-        // Note: Using FetchEndpoint for file uploads - make sure it handles FormData correctly
-        const response = await FetchEndpoint(
-            `/chat/chats/${chatId}/attachment`,
-            'POST',
-            token,
-            formData
-        );
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch chats: ${response.status}`);
-        }
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error sending attachment:', error);
-        throw error;
+  try {
+    const token = localStorage.getItem('accessToken') || '';
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Use uploadEndpoint utility instead of direct fetch
+    const response = await uploadEndpoint(
+      `/chat/chats/${chatId}/attachment`,
+      token,
+      formData
+    );
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ 
+        message: `Server returned ${response.status}: ${response.statusText}` 
+      }));
+      throw new Error(errorData.message || `Upload failed with status ${response.status}`);
     }
+    
+    return await response.json();
+  } catch (error: any) {
+    console.error('Error sending attachment:', error);
+    throw new Error(`Failed to upload file: ${error.message}`);
+  }
 };

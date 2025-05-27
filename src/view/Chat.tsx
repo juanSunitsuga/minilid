@@ -20,7 +20,9 @@ import {
   Fade,
   Zoom,
   Grow,
-  CircularProgress
+  CircularProgress,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -32,7 +34,8 @@ import {
   Image as ImageIcon,
   Videocam as VideoIcon,
   CheckCircle as CheckCircleIcon,
-  ErrorOutline as ErrorIcon
+  ErrorOutline as ErrorIcon,
+  PictureAsPdf as PdfIcon
 } from '@mui/icons-material';
 import { getChats, getChatById, sendMessage, sendAttachment } from '../services/chatService';
 
@@ -263,6 +266,13 @@ const Chat: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
+  const prevMessagesLength = useRef(0);
+
+  // New state variables for upload feedback
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   // Format date for chat list
   const formatChatDate = (dateString: string) => {
@@ -341,10 +351,29 @@ const Chat: React.FC = () => {
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    // Only auto-scroll in these cases:
+    // 1. Initial load (when messages length changes from 0)
+    // 2. User sends a new message (we sent a message)
+    // 3. User was already at the bottom before new message arrived
+
+    if (messages.length > prevMessagesLength.current && shouldScrollToBottom) {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
     }
-  }, [messages]);
+
+    prevMessagesLength.current = messages.length;
+  }, [messages, shouldScrollToBottom]);
+
+  // Add this function to detect scroll position
+  const handleMessagesScroll = () => {
+    if (messagesContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+      // Consider "at bottom" if within 100px of bottom
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setShouldScrollToBottom(isAtBottom);
+    }
+  };
 
   // Filter chats based on search query
   useEffect(() => {
@@ -366,7 +395,7 @@ const Chat: React.FC = () => {
 
     try {
       setSendingMessage(true);
-      
+
       // Get user type directly from localStorage
       const userType = localStorage.getItem('userType');
       const isRecruiter = userType === 'recruiter';
@@ -382,10 +411,10 @@ const Chat: React.FC = () => {
           ...response.data,
           is_recruiter: isRecruiter
         };
-        
+
         console.log("Sending message as recruiter:", isRecruiter);
         console.log("New message:", newMessage);
-        
+
         setMessages(prev => [...prev, newMessage]);
 
         // Update the chat list with new last message
@@ -413,30 +442,52 @@ const Chat: React.FC = () => {
     }
   };
 
-  // Function to handle file uploads
+  // Replace your current handleFileUpload function with this improved version
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || !event.target.files[0] || !selectedChat) return;
+    if (!event.target.files || !event.target.files[0] || !selectedChat) {
+      console.log("No file selected or no chat selected");
+      return;
+    }
 
     const file = event.target.files[0];
+    console.log("File selected:", file.name, "Size:", file.size, "Type:", file.type);
+
     try {
       setUploadingFile(true);
+      setUploadError(null);
+
+      // Determine file type for better UI feedback
+      const userType = localStorage.getItem('userType');
+      const isRecruiter = userType === 'recruiter';
+
+      console.log("Sending file as:", userType);
+
+      // Call the API to send the attachment
       const response = await sendAttachment(selectedChat.chat_id, file);
+      console.log("Upload response:", response);
 
       if ((response as any).data) {
         const newMessage: Message = {
           ...(response as any).data,
-          // Force is_recruiter to match the current user role
-          is_recruiter: isUserRecruiter === true
+          is_recruiter: isRecruiter
         };
-        
+
+        console.log("New message with attachment:", newMessage);
+
+        // Update messages state with new message
         setMessages(prev => [...prev, newMessage]);
 
-        // Update the chat list with new last message
+        // Get message type based on file mime type
+        let messageTypePrefix = '[FILE]';
+        if (file.type.startsWith('image/')) messageTypePrefix = '[IMAGE]';
+        if (file.type.startsWith('video/')) messageTypePrefix = '[VIDEO]';
+
+        // Update the chat list with the new message
         const updatedChats = chats.map(chat => {
           if (chat.chat_id === selectedChat.chat_id) {
             return {
               ...chat,
-              last_message: `[${newMessage.message_type}] ${file.name}`,
+              last_message: `${messageTypePrefix} ${file.name}`,
               updated_at: new Date().toISOString()
             };
           }
@@ -445,23 +496,46 @@ const Chat: React.FC = () => {
 
         setChats(updatedChats);
         setFilteredChats(updatedChats);
+        setUploadSuccess(true);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to upload file');
+      console.error("File upload error:", err);
+      setUploadError(err.message || 'Failed to upload file');
     } finally {
       setUploadingFile(false);
+      // Clear the file input value so the same file can be selected again
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     }
   };
 
-  // Function to get file size display
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / 1048576).toFixed(1) + ' MB';
+  // Add this to improve the sendAttachment function in your services/chatService.ts file
+  // if you have access to modify it:
+
+  /*
+  export const sendAttachment = async (chatId: string, file: File): Promise<AttachmentResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const token = localStorage.getItem('accessToken');
+    
+    const response = await fetch(`http://localhost:3000/chat/chats/${chatId}/attachment`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to upload file');
+    }
+    
+    return response.json();
   };
+  */
 
   // Handle chat selection
   const handleChatSelect = (chat: ChatItem) => {
@@ -473,19 +547,19 @@ const Chat: React.FC = () => {
   const isMyMessage = (message: Message) => {
     // Get user type directly from localStorage for consistent results
     const userType = localStorage.getItem('userType');
-    
+
     console.log(`Message ${message.message_id}: isRecruiter=${message.is_recruiter}, userType=${userType}`);
-    
+
     // Compare directly against localStorage values for consistency
     if (userType === 'recruiter') {
       return message.is_recruiter === true;
     } else if (userType === 'applier') {
       return message.is_recruiter === false;
     }
-    
+
     // Fallback to the previous logic if localStorage isn't available
-    return (isUserRecruiter && message.is_recruiter) || 
-           (!isUserRecruiter && !message.is_recruiter);
+    return (isUserRecruiter && message.is_recruiter) ||
+      (!isUserRecruiter && !message.is_recruiter);
   };
 
   // Format message time
@@ -500,15 +574,15 @@ const Chat: React.FC = () => {
 
   // Get display name based on whether user is recruiter or applier
   const getDisplayName = (chat: ChatItem) => {
-  // Get user type directly from localStorage for consistent results
-  const userType = localStorage.getItem('userType');
-  
-  if (userType === 'recruiter') {
-    return chat.applier_name; // Show applier name when user is recruiter
-  } else {
-    return chat.recruiter_name; // Show recruiter name when user is applier
-  }
-};
+    // Get user type directly from localStorage for consistent results
+    const userType = localStorage.getItem('userType');
+
+    if (userType === 'recruiter') {
+      return chat.applier_name; // Show applier name when user is recruiter
+    } else {
+      return chat.recruiter_name; // Show recruiter name when user is applier
+    }
+  };
 
   // Determine which avatar to show
   const getAvatar = (chat: ChatItem) => {
@@ -540,8 +614,19 @@ const Chat: React.FC = () => {
   }, [selectedChat]);
 
   // Add this function to the Chat component
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   const renderMessageContent = (msg: Message) => {
     const API_URL = 'http://localhost:3000';
+    const isCurrentUserMessage = isMyMessage(msg);
 
     if (msg.message_type === 'TEXT') {
       return (
@@ -551,6 +636,7 @@ const Chat: React.FC = () => {
       );
     } else if (msg.message_type === 'IMAGE' && msg.attachment) {
       const attachmentUrl = `${API_URL}/chat/attachments/${msg.attachment.id}/${encodeURIComponent(msg.attachment.filename)}`;
+      console.log("Image attachment URL:", attachmentUrl);
       return (
         <Box>
           <Box sx={{ mt: 1, mb: 1 }}>
@@ -565,47 +651,69 @@ const Chat: React.FC = () => {
               }}
             />
           </Box>
-          <Typography variant="caption" color="text.secondary">
-            {msg.attachment.filename} ({formatFileSize(msg.attachment.file_size)})
-          </Typography>
-        </Box>
-      );
-    } else if (msg.message_type === 'VIDEO' && msg.attachment) {
-      const attachmentUrl = `${API_URL}/chat/attachments/${msg.attachment.id}/${encodeURIComponent(msg.attachment.filename)}`;
-      return (
-        <Box>
-          <Box sx={{ mt: 1, mb: 1 }}>
-            <video
-              src={attachmentUrl}
-              controls
-              style={{
-                maxWidth: '100%',
-                maxHeight: '200px',
-                borderRadius: '8px'
-              }}
-            />
-          </Box>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            color={isCurrentUserMessage ? "rgba(255, 255, 255, 0.8)" : "text.secondary"}
+          >
             {msg.attachment.filename} ({formatFileSize(msg.attachment.file_size)})
           </Typography>
         </Box>
       );
     } else if (msg.message_type === 'FILE' && msg.attachment) {
       const attachmentUrl = `${API_URL}/chat/attachments/${msg.attachment.id}/${encodeURIComponent(msg.attachment.filename)}`;
+      const isPdf = msg.attachment.mime_type === 'application/pdf' ||
+        msg.attachment.filename.toLowerCase().endsWith('.pdf');
+
       return (
         <Box>
-          <Button
-            variant="outlined"
-            startIcon={<FileIcon />}
-            size="small"
-            href={attachmentUrl}
-            target="_blank"
-            sx={{ mt: 1, mb: 1, textTransform: 'none' }}
+          {isPdf ? (
+            <Box sx={{ mt: 1, mb: 1 }}>
+              <Button
+                variant="contained"
+                startIcon={<PdfIcon />}
+                size="small"
+                href={attachmentUrl}
+                target="_blank"
+                sx={{
+                  backgroundColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.2)' : '#f5f5f5',
+                  color: isCurrentUserMessage ? 'white' : 'primary.main',
+                  '&:hover': {
+                    backgroundColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.3)' : '#e0e0e0',
+                  }
+                }}
+              >
+                View PDF
+              </Button>
+            </Box>
+          ) : (
+            <Button
+              variant={isCurrentUserMessage ? "contained" : "outlined"}
+              startIcon={<FileIcon />}
+              size="small"
+              href={attachmentUrl}
+              target="_blank"
+              download={msg.attachment.filename}
+              sx={{
+                mt: 1,
+                mb: 1,
+                textTransform: 'none',
+                backgroundColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.2)' : undefined,
+                color: isCurrentUserMessage ? 'white' : undefined,
+                borderColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.5)' : undefined,
+                '&:hover': {
+                  backgroundColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.3)' : undefined,
+                }
+              }}
+            >
+              Download {msg.attachment.filename.split('.').pop()?.toUpperCase()}
+            </Button>
+          )}
+          <Typography
+            variant="caption"
+            display="block"
+            color={isCurrentUserMessage ? "rgba(255, 255, 255, 0.8)" : "text.secondary"}
           >
-            {msg.attachment.filename}
-          </Button>
-          <Typography variant="caption" display="block" color="text.secondary">
-            {formatFileSize(msg.attachment.file_size)}
+            {msg.attachment.filename} ({formatFileSize(msg.attachment.file_size)})
           </Typography>
         </Box>
       );
@@ -772,7 +880,10 @@ const Chat: React.FC = () => {
                 </Box>
               </ChatHeader>
 
-              <ChatMessages>
+              <ChatMessages
+                ref={messagesContainerRef}
+                onScroll={handleMessagesScroll}
+              >
                 {loading ? (
                   <Box display="flex" justifyContent="center" alignItems="center" height="100%">
                     <CircularProgress />
@@ -878,6 +989,29 @@ const Chat: React.FC = () => {
           )}
         </ChatWindowSection>
       </ChatContainer>
+
+      {/* Snackbar for upload feedback */}
+      <Snackbar
+        open={uploadSuccess}
+        autoHideDuration={3000}
+        onClose={() => setUploadSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setUploadSuccess(false)} severity="success">
+          File uploaded successfully!
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={!!uploadError}
+        autoHideDuration={5000}
+        onClose={() => setUploadError(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setUploadError(null)} severity="error">
+          {uploadError}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
