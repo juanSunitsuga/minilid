@@ -3,6 +3,7 @@ import { JobCategories } from "./job_categories";
 import { JobTypes } from "./job_types";
 import { Skills } from "./skills";
 import { JobPostSkill } from "./job_post_skills";
+import { Recruiters } from "./recruiters";
 
 @Table({
     tableName: "job_posts",
@@ -36,6 +37,9 @@ export class JobPosts extends Model {
     @BelongsTo(() => JobTypes)
     declare type: JobTypes;
 
+    @BelongsTo(() => Recruiters)
+    declare recruiter: Recruiters;
+
     @ForeignKey(() => JobCategories)
     @Column({ 
         type: DataType.INTEGER,
@@ -56,6 +60,13 @@ export class JobPosts extends Model {
         defaultValue: DataType.NOW,
     })
     declare posted_date: Date;
+
+    @Column({
+        type: DataType.DATE,
+        allowNull: false,
+        defaultValue: DataType.NOW,
+    })
+    declare edit_date: Date;
 
     @Column({
         type: DataType.BOOLEAN,

@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import { Appliers } from '../../../models/appliers';
 import { Recruiters } from '../../../models/recruiters';
-import { Company } from '../../../models/company';
+import { Companies } from '../../../models/companies';
 import { appConfig } from '../../../config/app';
 import { v4 } from 'uuid';
 import { controllerWrapper } from '../../../src/utils/controllerWrapper';
@@ -86,7 +86,7 @@ router.post('/register-company', controllerWrapper(async (req: Request, res: Res
 
   const { companyName, companyAddress, companyWebsite, companyEmail, companyPassword } = req.body;
 
-  const existingCompany = await Company.findOne({
+  const existingCompany = await Companies.findOne({
     where: { company_email: companyEmail }
   });
 
@@ -96,7 +96,7 @@ router.post('/register-company', controllerWrapper(async (req: Request, res: Res
 
   const hashedPassword = await bcrypt.hash(companyPassword, SALT_ROUNDS);
 
-  const newCompany = await Company.create({
+  const newCompany = await Companies.create({
     company_id: v4(),
     company_name: companyName,
     company_email: companyEmail,
@@ -192,7 +192,7 @@ router.post('/register-recruiter', controllerWrapper(async (req: Request, res: R
 
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-  const company = await Company.findOne({
+  const company = await Companies.findOne({
     where: { company_name: { [Op.iLike]: companyName } },
   })
 
@@ -338,7 +338,7 @@ router.post('/login-recruiter', controllerWrapper(async (req: Request, res: Resp
 router.post('/login-company', controllerWrapper(async (req: Request, res: Response, next: NextFunction) => {
   const { companyEmail, companyPassword } = req.body;
 
-  const company = await Company.findOne({
+  const company = await Companies.findOne({
     where: { company_email: companyEmail }
   });
 

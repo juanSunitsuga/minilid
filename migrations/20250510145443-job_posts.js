@@ -28,6 +28,16 @@ export default {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
+      recruiter_id: {
+        type: Sequelize.UUID,
+        allowNull: false,
+        references: {
+          model: 'recruiters',
+          key: 'recruiter_id'     
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+      },
       title: {
         type: Sequelize.STRING,
         allowNull: false,
@@ -37,6 +47,11 @@ export default {
         allowNull: true,
       },
       posted_date: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.NOW,
+      },
+      edit_date: {
         type: Sequelize.DATE,
         allowNull: false,
         defaultValue: Sequelize.NOW,

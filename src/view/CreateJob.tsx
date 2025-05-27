@@ -35,7 +35,7 @@ const PreviewBox = styled(Paper)(({ theme }) => ({
 
 const CreateJob: React.FC = () => {
   const theme = useTheme();
-  
+
   // Form data state
   const [jobData, setJobData] = useState({
     title: '',
@@ -50,7 +50,7 @@ const CreateJob: React.FC = () => {
   const [jobCategories, setJobCategories] = useState<{ category_id: number, name: string }[]>([]);
   const [availableSkills, setAvailableSkills] = useState<{ skill_id: number, name: string }[]>([]);
   const [jobTypes, setJobTypes] = useState<{ type_id: number, name: string }[]>([]);
-  
+
   // UI states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -138,7 +138,7 @@ const CreateJob: React.FC = () => {
               category_id: formattedCategories[0].category_id.toString()
             }));
           }
-        } 
+        }
 
         // Process job types data if available
         if (typesData) {
@@ -157,7 +157,7 @@ const CreateJob: React.FC = () => {
               type_id: formattedTypes[0].type_id.toString()
             }));
           }
-        } 
+        }
 
         // Process skills data if available
         if (skillsData) {
@@ -168,7 +168,7 @@ const CreateJob: React.FC = () => {
             })) : [];
 
           setAvailableSkills(formattedSkills);
-        } 
+        }
 
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -204,31 +204,31 @@ const CreateJob: React.FC = () => {
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate form
     if (!jobData.title || !jobData.description || !jobData.category_id || !jobData.type_id || skills.length === 0) {
       setError('Please fill in all required fields and select at least one skill');
       return;
     }
-    
+
     setLoading(true);
     setError('');
 
     try {
       // Get authentication token
       const token = localStorage.getItem('accessToken');
-      
+
       if (!token) {
         setError('Authentication token not found');
         return;
       }
-      
+
       // Send job post data to API
       const response = await FetchEndpoint('/job/jobposts', 'POST', token, {
         ...jobData,
         skills
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(errorText || 'Failed to create job post');
@@ -481,7 +481,7 @@ const CreateJob: React.FC = () => {
                 </Grid>
 
                 {/* Submit Button */}
-                <Grid item xs={12} sx={{ mt: 2 } }>
+                <Grid item xs={12} sx={{ mt: 2 }}>
                   <Button
                     type="submit"
                     variant="contained"
@@ -504,7 +504,7 @@ const CreateJob: React.FC = () => {
         </Grid>
 
         {/* Preview Section */}
-        <Grid item xs={12} md={4} gutterBottom sx={{ mt: -90.5, mb: 40, ml: 65, minWidth: '48.2%'  }}>
+        <Grid item xs={12} md={4} gutterBottom sx={{ mt: -90.5, mb: 40, ml: 65, minWidth: '48.2%' }}>
           <PreviewBox elevation={3}>
             <Typography variant="h5" gutterBottom color="primary" sx={{ fontWeight: 'bold', mb: 2 }}>
               Job Post Preview
@@ -518,16 +518,26 @@ const CreateJob: React.FC = () => {
             <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               {jobData.category_id && jobCategories.length > 0 && (
                 <Chip
-                  label={jobCategories.find(cat => cat.category_id.toString() === jobData.category_id)?.name || 'Category'}
+                  label={
+                    // Pastikan perbandingan menggunakan String di kedua sisi
+                    jobCategories.find(cat =>
+                      String(cat.category_id) === String(jobData.category_id)
+                    )?.name || 'Category'
+                  }
                   size="small"
                   color="primary"
                   variant="outlined"
                 />
               )}
 
+              {/* Job Type chip juga bisa diperbaiki dengan cara yang sama */}
               {jobData.type_id && jobTypes.length > 0 && (
                 <Chip
-                  label={jobTypes.find(type => type.type_id.toString() === jobData.type_id)?.name || 'Type'}
+                  label={
+                    jobTypes.find(type =>
+                      String(type.type_id) === String(jobData.type_id)
+                    )?.name || 'Type'
+                  }
                   size="small"
                   color="secondary"
                   variant="outlined"

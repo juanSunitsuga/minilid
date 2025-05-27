@@ -1,5 +1,5 @@
 import { Table, Column, Model, DataType, ForeignKey } from "sequelize-typescript";
-import { Company } from "./company";
+import { Companies } from "./companies";
 
 @Table({
     tableName: "recruiters",
@@ -13,7 +13,7 @@ export class Recruiters extends Model {
     })
     declare recruiter_id: string;
 
-    @ForeignKey(() => Company)
+    @ForeignKey(() => Companies)
     @Column({
         type: DataType.UUID,
         allowNull: true,

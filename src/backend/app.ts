@@ -7,7 +7,7 @@ import { Appliers } from '../../models/appliers';
 import { Attachments } from '../../models/attachments';
 import { Branch } from '../../models/branch';
 import { Chats } from '../../models/chats';
-import { Company } from '../../models/company';
+import { Companies } from '../../models/companies';
 import { Experiences } from '../../models/experiences';
 import { InterviewSchedules } from '../../models/interview_schedules';
 import { JobCategories } from '../../models/job_categories';
@@ -45,7 +45,7 @@ const sequelize = new Sequelize({
     ...config.development,
     models: [
         Appliers, Attachments, Branch, Chats, 
-        Company, Experiences, InterviewSchedules, 
+        Companies, Experiences, InterviewSchedules, 
         JobCategories, JobPosts, JobTypes, 
         Messages, Recruiters, Skills, 
         JobPostSkill, ApplierSkill, JobAppliers
