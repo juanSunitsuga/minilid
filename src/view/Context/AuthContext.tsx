@@ -291,7 +291,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCompanyData(null);
         setUserType(null);
         setIsAuthenticated(false);
-        navigate('/'); // Redirect to home page after logout
+        navigate('/'); 
     };
 
     // Load user data when the app initializes
