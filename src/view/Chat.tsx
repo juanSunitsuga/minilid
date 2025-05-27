@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { parseISO, format, isToday, isYesterday } from 'date-fns';
 import {
   Box,
   Paper,
@@ -18,74 +19,58 @@ import {
   Tooltip,
   Fade,
   Zoom,
-  Grow
+  Grow,
+  CircularProgress
 } from '@mui/material';
-import { 
-  Search as SearchIcon, 
+import {
+  Search as SearchIcon,
   Send as SendIcon,
   FilterList as FilterIcon,
   Clear as ClearIcon,
-  MoreVert as MoreVertIcon,
-  Circle as CircleIcon,
-  CheckCircle as CheckCircleIcon
+  AttachFile as AttachFileIcon,
+  InsertDriveFile as FileIcon,
+  Image as ImageIcon,
+  Videocam as VideoIcon,
+  CheckCircle as CheckCircleIcon,
+  ErrorOutline as ErrorIcon
 } from '@mui/icons-material';
+import { getChats, getChatById, sendMessage, sendAttachment } from '../services/chatService';
 
+// Types for API responses
 interface Message {
-  sender: string;
-  text: string;
-  time: string;
-  isRead?: boolean;
+  message_id: string;
+  sender_id: string;
+  is_recruiter: boolean;
+  content: string;
+  message_type: string;
+  timestamp: string;
+  status: string;
+  attachment?: {
+    id: string;
+    filename: string;
+    file_size: number;
+    mime_type: string;
+  };
 }
 
 interface ChatItem {
-  id: number;
-  name: string;
-  title: string;
-  lastMessage: string;
-  date: string;
-  avatar: string;
-  messages: Message[];
-  unread?: number;
-  online?: boolean;
+  chat_id: string;
+  applier_id: string;
+  applier_name: string;
+  recruiter_id: string;
+  recruiter_name: string;
+  last_message?: string;
+  updated_at: string;
+  messages?: Message[];
 }
 
-const chatData: ChatItem[] = [
-  {
-    id: 1,
-    name: 'Kristen J.',
-    title: 'Director of Premium Support @ LinkedIn',
-    lastMessage: 'Are you currently exploring new job opportunities?',
-    date: 'May 4',
-    avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
-    messages: [
-      {
-        sender: 'Kristen J.',
-        text: 'Hi Aloysius, are you currently exploring new job opportunities?',
-        time: '5:43 PM',
-        isRead: true
-      },
-    ],
-    unread: 1,
-    online: true
-  },
-  {
-    id: 2,
-    name: 'Luis M.',
-    title: 'Developer',
-    lastMessage: 'Okay',
-    date: 'Apr 10',
-    avatar: 'https://randomuser.me/api/portraits/men/44.jpg',
-    messages: [
-      {
-        sender: 'Dionisius Pratama',
-        text: 'Okay',
-        time: '3:15 PM',
-        isRead: true
-      },
-    ],
-    online: false
-  },
-];
+// Define or update your AttachmentResponse interface
+interface AttachmentResponse {
+  data: Message;
+  // Add other properties if needed
+  success?: boolean;
+  message?: string;
+}
 
 // Styled components with enhanced visuals
 const ChatContainer = styled(Box)(({ theme }) => ({
@@ -107,8 +92,8 @@ const ChatListSection = styled(Paper)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   transition: 'all 0.3s ease',
-  background: theme.palette.mode === 'light' 
-    ? '#f8f9fa' 
+  background: theme.palette.mode === 'light'
+    ? '#f8f9fa'
     : theme.palette.background.paper,
 }));
 
@@ -134,23 +119,23 @@ const ChatMessages = styled(Box)(({ theme }) => ({
   overflowY: 'auto',
   display: 'flex',
   flexDirection: 'column',
-  background: theme.palette.mode === 'light' 
-    ? 'linear-gradient(180deg, rgba(240,242,245,0.6) 0%, rgba(240,242,245,0.9) 100%)' 
+  background: theme.palette.mode === 'light'
+    ? 'linear-gradient(180deg, rgba(240,242,245,0.6) 0%, rgba(240,242,245,0.9) 100%)'
     : theme.palette.background.default,
 }));
 
 const ChatBubble = styled(Box)<{ ismine?: string }>(({ theme, ismine }) => ({
   maxWidth: '70%',
   padding: theme.spacing(1.5, 2),
-  borderRadius: ismine === 'true' 
+  borderRadius: ismine === 'true'
     ? theme.shape.borderRadius * 2 + ' ' + theme.shape.borderRadius * 2 + ' 4px ' + theme.shape.borderRadius * 2
     : theme.shape.borderRadius * 2 + ' ' + theme.shape.borderRadius * 2 + ' ' + theme.shape.borderRadius * 2 + ' 4px',
   marginBottom: theme.spacing(2),
-  background: ismine === 'true' 
-    ? theme.palette.primary.main 
+  background: ismine === 'true'
+    ? theme.palette.primary.main
     : theme.palette.mode === 'light' ? '#ffffff' : theme.palette.action.hover,
-  color: ismine === 'true' 
-    ? theme.palette.primary.contrastText 
+  color: ismine === 'true'
+    ? theme.palette.primary.contrastText
     : theme.palette.text.primary,
   alignSelf: ismine === 'true' ? 'flex-end' : 'flex-start',
   boxShadow: ismine === 'true'
@@ -212,12 +197,12 @@ const ChatListItem = styled(ListItem)<{ selected?: string }>(({ theme, selected 
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   borderLeft: selected === 'true' ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent',
-  backgroundColor: selected === 'true' 
+  backgroundColor: selected === 'true'
     ? theme.palette.mode === 'light' ? 'rgba(25, 118, 210, 0.08)' : theme.palette.action.selected
     : 'transparent',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'light' 
-      ? 'rgba(0, 0, 0, 0.04)' 
+    backgroundColor: theme.palette.mode === 'light'
+      ? 'rgba(0, 0, 0, 0.04)'
       : theme.palette.action.hover
   },
 }));
@@ -262,84 +247,380 @@ const OnlineBadge = styled(Badge)(({ theme }) => ({
 }));
 
 const Chat: React.FC = () => {
-  const [selectedChat, setSelectedChat] = useState(chatData[0]);
+  const [chats, setChats] = useState<ChatItem[]>([]);
+  const [selectedChat, setSelectedChat] = useState<ChatItem | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredChats, setFilteredChats] = useState(chatData);
+  const [filteredChats, setFilteredChats] = useState<ChatItem[]>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [isUserRecruiter, setIsUserRecruiter] = useState<boolean | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+
+  // Format date for chat list
+  const formatChatDate = (dateString: string) => {
+    try {
+      const date = parseISO(dateString);
+      if (isToday(date)) {
+        return format(date, 'h:mm a');
+      } else if (isYesterday(date)) {
+        return 'Yesterday';
+      } else {
+        return format(date, 'MMM d');
+      }
+    } catch (e) {
+      return dateString;
+    }
+  };
+
+  // Check if the current user is a recruiter
+  // useEffect(() => {
+  //   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  //   console.log("User data:", user); // Debug user data
+  //   setUserId(user.id);
+  //   setIsUserRecruiter(user.role === 'recruiter');
+  //   console.log("Is user recruiter:", user.role === 'recruiter'); 
+  // }, []);
+
+  // Fetch all chats on component mount
+  useEffect(() => {
+    const fetchChats = async () => {
+      try {
+        setLoading(true);
+        const response = await getChats();
+
+        if (response.data && Array.isArray(response.data)) {
+          setChats(response.data);
+          setFilteredChats(response.data);
+
+          // If we have chats, select the first one
+          if (response.data.length > 0) {
+            setSelectedChat(response.data[0]);
+          }
+        }
+        setLoading(false);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load chats');
+        setLoading(false);
+      }
+    };
+
+    fetchChats();
+  }, []);
+
+  // When a chat is selected, fetch its messages
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!selectedChat) return;
+
+      try {
+        setLoading(true);
+        const response = await getChatById(selectedChat.chat_id);
+
+        if (response.data && response.data.messages) {
+          setMessages(response.data.messages);
+        } else {
+          setMessages([]);
+        }
+        setLoading(false);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load messages');
+        setLoading(false);
+      }
+    };
+
+    fetchMessages();
+  }, [selectedChat?.chat_id]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
   // Filter chats based on search query
   useEffect(() => {
     if (searchQuery) {
-      const filtered = chatData.filter(chat => 
-        chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+      const filtered = chats.filter(chat =>
+        chat.applier_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        chat.recruiter_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (chat.last_message && chat.last_message.toLowerCase().includes(searchQuery.toLowerCase()))
       );
       setFilteredChats(filtered);
     } else {
-      setFilteredChats(chatData);
+      setFilteredChats(chats);
     }
-  }, [searchQuery]);
+  }, [searchQuery, chats]);
 
-  // Send a message function
-  const handleSendMessage = () => {
-    if (messageText.trim()) {
-      // Create a copy of the selected chat to modify
-      const updatedChat = {
-        ...selectedChat,
-        messages: [
-          ...selectedChat.messages,
-          {
-            sender: 'You',
-            text: messageText,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            isRead: false
-          }
-        ],
-        lastMessage: messageText,
-        date: 'Just now'
-      };
+  // Send a message
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !selectedChat) return;
+
+    try {
+      setSendingMessage(true);
       
-      // Update the selected chat
-      setSelectedChat(updatedChat);
-      
-      // Update the chat in the filteredChats array
-      const updatedChats = filteredChats.map(chat => 
-        chat.id === selectedChat.id ? updatedChat : chat
+      // Get user type directly from localStorage
+      const userType = localStorage.getItem('userType');
+      const isRecruiter = userType === 'recruiter';
+
+      const response = await sendMessage(
+        selectedChat.chat_id,
+        messageText
       );
-      setFilteredChats(updatedChats);
-      
-      // Clear the message input
-      setMessageText('');
 
-      // Simulate a reply after 2 seconds
-      setTimeout(() => {
-        const replyMessage = {
-          sender: selectedChat.name,
-          text: `Thanks for your message. I'll get back to you shortly.`,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          isRead: true
+      if (response.data) {
+        // Force is_recruiter based on the localStorage value
+        const newMessage: Message = {
+          ...response.data,
+          is_recruiter: isRecruiter
         };
         
-        const chatWithReply = {
-          ...updatedChat,
-          messages: [...updatedChat.messages, replyMessage],
-          lastMessage: replyMessage.text,
-          date: 'Just now'
-        };
+        console.log("Sending message as recruiter:", isRecruiter);
+        console.log("New message:", newMessage);
         
-        setSelectedChat(chatWithReply);
-        
-        const chatsWithReply = filteredChats.map(chat => 
-          chat.id === selectedChat.id ? chatWithReply : chat
-        );
-        setFilteredChats(chatsWithReply);
-      }, 2000);
+        setMessages(prev => [...prev, newMessage]);
+
+        // Update the chat list with new last message
+        const updatedChats = chats.map(chat => {
+          if (chat.chat_id === selectedChat.chat_id) {
+            return {
+              ...chat,
+              last_message: messageText,
+              updated_at: new Date().toISOString()
+            };
+          }
+          return chat;
+        });
+
+        setChats(updatedChats);
+        setFilteredChats(updatedChats);
+
+        // Clear the message input
+        setMessageText('');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to send message');
+    } finally {
+      setSendingMessage(false);
     }
   };
 
+  // Function to handle file uploads
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || !event.target.files[0] || !selectedChat) return;
+
+    const file = event.target.files[0];
+    try {
+      setUploadingFile(true);
+      const response = await sendAttachment(selectedChat.chat_id, file);
+
+      if ((response as any).data) {
+        const newMessage: Message = {
+          ...(response as any).data,
+          // Force is_recruiter to match the current user role
+          is_recruiter: isUserRecruiter === true
+        };
+        
+        setMessages(prev => [...prev, newMessage]);
+
+        // Update the chat list with new last message
+        const updatedChats = chats.map(chat => {
+          if (chat.chat_id === selectedChat.chat_id) {
+            return {
+              ...chat,
+              last_message: `[${newMessage.message_type}] ${file.name}`,
+              updated_at: new Date().toISOString()
+            };
+          }
+          return chat;
+        });
+
+        setChats(updatedChats);
+        setFilteredChats(updatedChats);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload file');
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Function to get file size display
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  };
+
+  // Handle chat selection
+  const handleChatSelect = (chat: ChatItem) => {
+    setSelectedChat(chat);
+    setError(null);
+  };
+
+  // Check if a message is from current user
+  const isMyMessage = (message: Message) => {
+    // Get user type directly from localStorage for consistent results
+    const userType = localStorage.getItem('userType');
+    
+    console.log(`Message ${message.message_id}: isRecruiter=${message.is_recruiter}, userType=${userType}`);
+    
+    // Compare directly against localStorage values for consistency
+    if (userType === 'recruiter') {
+      return message.is_recruiter === true;
+    } else if (userType === 'applier') {
+      return message.is_recruiter === false;
+    }
+    
+    // Fallback to the previous logic if localStorage isn't available
+    return (isUserRecruiter && message.is_recruiter) || 
+           (!isUserRecruiter && !message.is_recruiter);
+  };
+
+  // Format message time
+  const formatMessageTime = (timestamp: string) => {
+    try {
+      const date = parseISO(timestamp);
+      return format(date, 'h:mm a');
+    } catch (e) {
+      return 'Unknown time';
+    }
+  };
+
+  // Get display name based on whether user is recruiter or applier
+  const getDisplayName = (chat: ChatItem) => {
+  // Get user type directly from localStorage for consistent results
+  const userType = localStorage.getItem('userType');
+  
+  if (userType === 'recruiter') {
+    return chat.applier_name; // Show applier name when user is recruiter
+  } else {
+    return chat.recruiter_name; // Show recruiter name when user is applier
+  }
+};
+
+  // Determine which avatar to show
+  const getAvatar = (chat: ChatItem) => {
+    const name = isUserRecruiter ? chat.applier_name : chat.recruiter_name;
+    // Placeholder avatar based on first letter of name
+    return name.charAt(0).toUpperCase();
+  };
+
+  // Poll for new messages every 5 seconds
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (selectedChat) {
+      interval = setInterval(async () => {
+        try {
+          const response = await getChatById(selectedChat.chat_id);
+          if (response.data && response.data.messages) {
+            setMessages(response.data.messages);
+          }
+        } catch (err) {
+          console.error('Error polling for messages:', err);
+        }
+      }, 5000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [selectedChat]);
+
+  // Add this function to the Chat component
+  const renderMessageContent = (msg: Message) => {
+    const API_URL = 'http://localhost:3000';
+
+    if (msg.message_type === 'TEXT') {
+      return (
+        <Typography variant="body1">
+          {msg.content}
+        </Typography>
+      );
+    } else if (msg.message_type === 'IMAGE' && msg.attachment) {
+      const attachmentUrl = `${API_URL}/chat/attachments/${msg.attachment.id}/${encodeURIComponent(msg.attachment.filename)}`;
+      return (
+        <Box>
+          <Box sx={{ mt: 1, mb: 1 }}>
+            <img
+              src={attachmentUrl}
+              alt={msg.attachment.filename}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '200px',
+                borderRadius: '8px',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+              }}
+            />
+          </Box>
+          <Typography variant="caption" color="text.secondary">
+            {msg.attachment.filename} ({formatFileSize(msg.attachment.file_size)})
+          </Typography>
+        </Box>
+      );
+    } else if (msg.message_type === 'VIDEO' && msg.attachment) {
+      const attachmentUrl = `${API_URL}/chat/attachments/${msg.attachment.id}/${encodeURIComponent(msg.attachment.filename)}`;
+      return (
+        <Box>
+          <Box sx={{ mt: 1, mb: 1 }}>
+            <video
+              src={attachmentUrl}
+              controls
+              style={{
+                maxWidth: '100%',
+                maxHeight: '200px',
+                borderRadius: '8px'
+              }}
+            />
+          </Box>
+          <Typography variant="caption" color="text.secondary">
+            {msg.attachment.filename} ({formatFileSize(msg.attachment.file_size)})
+          </Typography>
+        </Box>
+      );
+    } else if (msg.message_type === 'FILE' && msg.attachment) {
+      const attachmentUrl = `${API_URL}/chat/attachments/${msg.attachment.id}/${encodeURIComponent(msg.attachment.filename)}`;
+      return (
+        <Box>
+          <Button
+            variant="outlined"
+            startIcon={<FileIcon />}
+            size="small"
+            href={attachmentUrl}
+            target="_blank"
+            sx={{ mt: 1, mb: 1, textTransform: 'none' }}
+          >
+            {msg.attachment.filename}
+          </Button>
+          <Typography variant="caption" display="block" color="text.secondary">
+            {formatFileSize(msg.attachment.file_size)}
+          </Typography>
+        </Box>
+      );
+    }
+
+    // Fallback for unknown message types
+    return (
+      <Typography variant="body1">
+        {msg.content}
+      </Typography>
+    );
+  };
+
   return (
-    <Box sx={{ 
+    <Box sx={{
       padding: '20px',
       display: 'flex',
       justifyContent: 'center',
@@ -354,7 +635,7 @@ const Chat: React.FC = () => {
               <FilterIcon fontSize="small" />
             </IconButton>
           </ChatHeader>
-          
+
           <Box p={2} sx={{ position: 'relative' }}>
             <SearchField
               variant="outlined"
@@ -373,8 +654,8 @@ const Chat: React.FC = () => {
                 ),
                 endAdornment: searchQuery ? (
                   <InputAdornment position="end">
-                    <IconButton 
-                      size="small" 
+                    <IconButton
+                      size="small"
                       onClick={() => setSearchQuery('')}
                       edge="end"
                     >
@@ -391,9 +672,9 @@ const Chat: React.FC = () => {
             />
           </Box>
 
-          <List sx={{ 
-            flex: 1, 
-            overflow: 'auto', 
+          <List sx={{
+            flex: 1,
+            overflow: 'auto',
             p: 0,
             '&::-webkit-scrollbar': {
               width: '6px',
@@ -404,194 +685,197 @@ const Chat: React.FC = () => {
               borderRadius: '10px'
             }
           }}>
-            {filteredChats.length > 0 ? filteredChats.map((chat, index) => (
-              <Fade in={true} key={chat.id} timeout={300} style={{ transitionDelay: `${index * 50}ms` }}>
-                <Box>
-                  <ChatListItem
-                    onClick={() => setSelectedChat(chat)}
-                    selected={chat.id === selectedChat.id ? 'true' : 'false'}
-                  >
-                    <ListItemAvatar>
-                      {chat.online ? (
-                        <OnlineBadge
-                          overlap="circular"
-                          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                          variant="dot"
-                        >
-                          <Avatar src={chat.avatar} alt={chat.name} />
-                        </OnlineBadge>
-                      ) : (
-                        <Avatar src={chat.avatar} alt={chat.name} />
-                      )}
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Box display="flex" justifyContent="space-between" alignItems="center">
-                          <Typography 
-                            variant="subtitle2" 
-                            component="span"
-                            sx={{
-                              fontWeight: chat.unread ? 600 : 400,
-                              color: chat.unread ? 'text.primary' : 'inherit'
-                            }}
-                          >
-                            {chat.name}
-                          </Typography>
-                          <Typography 
-                            variant="caption" 
-                            color={chat.unread ? "primary" : "text.secondary"}
-                            sx={{ fontWeight: chat.unread ? 500 : 400 }}
-                          >
-                            {chat.date}
-                          </Typography>
-                        </Box>
-                      }
-                      secondary={
-                        <Box display="flex" justifyContent="space-between" alignItems="center">
+            {loading && filteredChats.length === 0 ? (
+              <Box p={4} textAlign="center">
+                <CircularProgress size={30} />
+              </Box>
+            ) : filteredChats.length > 0 ? (
+              filteredChats.map((chat, index) => (
+                <Fade in={true} key={chat.chat_id} timeout={300} style={{ transitionDelay: `${index * 50}ms` }}>
+                  <Box>
+                    <ChatListItem
+                      onClick={() => handleChatSelect(chat)}
+                      selected={selectedChat?.chat_id === chat.chat_id ? 'true' : 'false'}
+                    >
+                      <ListItemAvatar>
+                        <Avatar>
+                          {getAvatar(chat)}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Box display="flex" justifyContent="space-between" alignItems="center">
+                            <Typography
+                              variant="subtitle2"
+                              component="span"
+                            >
+                              {getDisplayName(chat)}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {formatChatDate(chat.updated_at)}
+                            </Typography>
+                          </Box>
+                        }
+                        secondary={
                           <Typography
                             variant="body2"
-                            sx={{ 
-                              maxWidth: chat.unread ? 160 : 180,
-                              color: chat.unread ? 'text.primary' : 'text.secondary',
-                              fontWeight: chat.unread ? 500 : 400,
+                            color="text.secondary"
+                            sx={{
+                              maxWidth: 180,
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
-                              textOverflow: 'ellipsis'
+                              textOverflow: 'ellipsis',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.5
                             }}
                           >
-                            {chat.lastMessage}
+                            {chat.last_message?.startsWith('[IMAGE]') && <ImageIcon fontSize="small" />}
+                            {chat.last_message?.startsWith('[VIDEO]') && <VideoIcon fontSize="small" />}
+                            {chat.last_message?.startsWith('[FILE]') && <FileIcon fontSize="small" />}
+                            {chat.last_message || 'No messages yet'}
                           </Typography>
-                          {chat.unread && (
-                            <Zoom in={true}>
-                              <Badge 
-                                badgeContent={chat.unread} 
-                                color="primary" 
-                                sx={{ ml: 1 }}
-                              />
-                            </Zoom>
-                          )}
-                        </Box>
-                      }
-                    />
-                  </ChatListItem>
-                  {index < filteredChats.length - 1 && <Divider component="li" />}
-                </Box>
-              </Fade>
-            )) : (
+                        }
+                      />
+                    </ChatListItem>
+                    {index < filteredChats.length - 1 && <Divider component="li" />}
+                  </Box>
+                </Fade>
+              ))
+            ) : (
               <Box p={4} textAlign="center">
-                <Typography color="text.secondary">No conversations found</Typography>
+                <Typography color="text.secondary">
+                  {error ? 'Error loading chats' : 'No conversations found'}
+                </Typography>
+                {error && <Typography color="error" variant="caption">{error}</Typography>}
               </Box>
             )}
           </List>
         </ChatListSection>
 
         <ChatWindowSection elevation={0}>
-          <ChatHeader>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              {selectedChat.online ? (
-                <OnlineBadge
-                  overlap="circular"
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                  variant="dot"
-                >
-                  <Avatar src={selectedChat.avatar} alt={selectedChat.name} sx={{ mr: 2 }} />
-                </OnlineBadge>
-              ) : (
-                <Avatar src={selectedChat.avatar} alt={selectedChat.name} sx={{ mr: 2 }} />
-              )}
-              <Box>
-                <Box display="flex" alignItems="center">
-                  <Typography variant="subtitle1" fontWeight={600}>
-                    {selectedChat.name}
-                  </Typography>
-                  {selectedChat.online && (
-                    <Typography 
-                      variant="caption" 
-                      color="success.main" 
-                      sx={{ ml: 1, display: 'flex', alignItems: 'center' }}
-                    >
-                      <CircleIcon sx={{ fontSize: 8, mr: 0.5 }} /> Online
+          {selectedChat ? (
+            <>
+              <ChatHeader>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Avatar sx={{ mr: 2 }}>
+                    {getAvatar(selectedChat)}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      {getDisplayName(selectedChat)}
                     </Typography>
-                  )}
-                </Box>
-                <Typography variant="body2" color="text.secondary">
-                  {selectedChat.title}
-                </Typography>
-              </Box>
-            </Box>
-            <Box>
-              <Tooltip title="More options">
-                <IconButton size="small">
-                  <MoreVertIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </ChatHeader>
-
-          <ChatMessages>
-            {selectedChat.messages.map((msg, index) => (
-              <Grow 
-                in={true} 
-                key={index} 
-                timeout={300} 
-                style={{ transformOrigin: msg.sender === 'You' ? 'right' : 'left' }}
-              >
-                <ChatBubble ismine={msg.sender === 'You' ? 'true' : 'false'}>
-                  {msg.sender !== 'You' && (
-                    <Typography variant="subtitle2" fontWeight={500} sx={{ mb: 0.5 }}>
-                      {msg.sender}
-                    </Typography>
-                  )}
-                  <Typography variant="body1">
-                    {msg.text}
-                  </Typography>
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                    <MessageTime variant="caption">
-                      {msg.time}
-                    </MessageTime>
-                    {msg.sender === 'You' && (
-                      <CheckCircleIcon 
-                        sx={{ 
-                          fontSize: 14, 
-                          color: msg.isRead ? 'success.main' : 'text.disabled',
-                          marginLeft: '2px'
-                        }} 
-                      />
-                    )}
                   </Box>
-                </ChatBubble>
-              </Grow>
-            ))}
-          </ChatMessages>
+                </Box>
+              </ChatHeader>
 
-          <ChatReply>
-            <StyledTextField
-              fullWidth
-              placeholder="Type your message..."
-              variant="outlined"
-              size="small"
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              InputProps={{
-                sx: { pr: 1 }
-              }}
-            />
-            <SendButton
-              variant="contained"
-              color="primary"
-              disableElevation
-              onClick={handleSendMessage}
-              disabled={!messageText.trim()}
-            >
-              <SendIcon />
-            </SendButton>
-          </ChatReply>
+              <ChatMessages>
+                {loading ? (
+                  <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                    <CircularProgress />
+                  </Box>
+                ) : messages.length > 0 ? (
+                  <>
+                    {messages.map((msg, index) => (
+                      <Grow
+                        in={true}
+                        key={msg.message_id}
+                        timeout={300}
+                        style={{ transformOrigin: isMyMessage(msg) ? 'right' : 'left' }}
+                      >
+                        <ChatBubble ismine={isMyMessage(msg) ? 'true' : 'false'}>
+                          {/* Render message content based on type */}
+                          {renderMessageContent(msg)}
+
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                            <MessageTime variant="caption">
+                              {formatMessageTime(msg.timestamp)}
+                            </MessageTime>
+                            {isMyMessage(msg) && (
+                              <CheckCircleIcon
+                                sx={{
+                                  fontSize: 14,
+                                  color: msg.status === 'READ' ? 'success.main' : 'text.disabled',
+                                  marginLeft: '2px'
+                                }}
+                              />
+                            )}
+                          </Box>
+                        </ChatBubble>
+                      </Grow>
+                    ))}
+                    <div ref={messagesEndRef} />
+                  </>
+                ) : (
+                  <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100%">
+                    <Typography color="text.secondary">No messages yet</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      Start the conversation by sending a message
+                    </Typography>
+                  </Box>
+                )}
+              </ChatMessages>
+
+              <ChatReply>
+                {/* Hidden file input */}
+                <input
+                  type="file"
+                  id="file-upload"
+                  style={{ display: 'none' }}
+                  onChange={handleFileUpload}
+                  ref={fileInputRef}
+                />
+
+                <IconButton
+                  color="primary"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingFile || sendingMessage}
+                  sx={{ mr: 1 }}
+                >
+                  {uploadingFile ? <CircularProgress size={24} /> : <AttachFileIcon />}
+                </IconButton>
+
+                <StyledTextField
+                  fullWidth
+                  placeholder="Type your message..."
+                  variant="outlined"
+                  size="small"
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  disabled={sendingMessage || uploadingFile}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  InputProps={{
+                    sx: { pr: 1 }
+                  }}
+                />
+
+                <SendButton
+                  variant="contained"
+                  color="primary"
+                  disableElevation
+                  onClick={handleSendMessage}
+                  disabled={(!messageText.trim() && !uploadingFile) || sendingMessage}
+                >
+                  {sendingMessage ? <CircularProgress size={24} color="inherit" /> : <SendIcon />}
+                </SendButton>
+              </ChatReply>
+            </>
+          ) : (
+            <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100%">
+              <Typography variant="h6" color="text.secondary">No chat selected</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Select a conversation from the list
+              </Typography>
+            </Box>
+          )}
         </ChatWindowSection>
       </ChatContainer>
     </Box>

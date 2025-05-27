@@ -4,7 +4,7 @@
 export default {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('job_categories', {
-      jobcategory_id: {
+      category_id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
         autoIncrement: true,

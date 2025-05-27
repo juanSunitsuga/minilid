@@ -6,8 +6,37 @@ export default {
     await queryInterface.createTable('job_posts', {
       job_id: {
         type: Sequelize.UUID,
-        primaryKey: true,
-        allowNull: false
+        primaryKey: true
+      },
+      type_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'job_types',
+          key: 'type_id'     
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+      },
+      category_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'job_categories',
+          key: 'category_id'     
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+      },
+      recruiter_id: {
+        type: Sequelize.UUID,
+        allowNull: false,
+        references: {
+          model: 'recruiters',
+          key: 'recruiter_id'     
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
       },
       title: {
         type: Sequelize.STRING,
@@ -17,27 +46,12 @@ export default {
         type: Sequelize.TEXT,
         allowNull: true,
       },
-      jobtype_id: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'job_types',
-          key: 'jobtype_id'     
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
-      },
-      jobcategory_id: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'job_categories',
-          key: 'jobcategory_id'     
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
-      },
       posted_date: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.NOW,
+      },
+      edit_date: {
         type: Sequelize.DATE,
         allowNull: false,
         defaultValue: Sequelize.NOW,

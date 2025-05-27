@@ -6,7 +6,7 @@ import { Table, Column, Model, DataType } from "sequelize-typescript";
   createdAt: 'created_at',
   updatedAt: 'updated_at',
 })
-export class Company extends Model {
+export class Companies extends Model {
   @Column({
     primaryKey: true,
     type: DataType.UUID,

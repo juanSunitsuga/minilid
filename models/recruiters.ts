@@ -1,5 +1,5 @@
-import { Table, Column, Model, DataType, ForeignKey } from "sequelize-typescript";
-import { Company } from "./company";
+import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
+import { Companies } from "./companies";
 
 @Table({
     tableName: "recruiters",
@@ -13,13 +13,18 @@ export class Recruiters extends Model {
     })
     declare recruiter_id: string;
 
-    @ForeignKey(() => Company)
+    @ForeignKey(() => Companies)
     @Column({
         type: DataType.UUID,
         allowNull: true,
     })
     declare company_id: string;
 
+    @BelongsTo(() => Companies, {
+        foreignKey: 'company_id',
+        as: 'company'
+    })
+    
     @Column({
         type: DataType.STRING,
         allowNull: false,
@@ -37,4 +42,10 @@ export class Recruiters extends Model {
         allowNull: false,
     })
     declare password: string;
+
+    @Column({
+        type: DataType.TEXT,
+        allowNull: true,
+    })
+    declare about: string | null;
 }

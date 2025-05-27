@@ -1,17 +1,16 @@
-import { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { FaHome, FaBriefcase, FaSearch, FaUser, FaBell, FaSignInAlt, FaSignOutAlt } from 'react-icons/fa';
-import { BsChatDotsFill } from 'react-icons/bs';
-import { Link, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import './App.css';
+import { AuthProvider } from './view/Context/AuthContext';
+import { ModalProvider } from './view/Context/ModalContext';
+import Navbar from './view/Components/Navbar';
 
 // Import views
 import Home from './view/Home';
-import Profile from './view/Profile';
+import Profile from './view/Profile/Profile';
 import Job from './view/Job';
 import Chat from './view/Chat';
-import Login from './view/Login';
-import Register from './view/Register';
+import CreateJob from './view/CreateJob';
 
 function App() {
   const location = useLocation();
@@ -43,86 +42,21 @@ function App() {
   };
 
   return (
-    <>
-      <header className="minilid-header">
-        <div className="header-content">
-          <div className="logo-search">
-            <div className="logo">
-              <span className="logo-text">Mini<span className="highlight">Lid</span></span>
-            </div>
+    <AuthProvider>
+      <ModalProvider>
+        <Navbar />
 
-            <div className="search-container">
-              <FaSearch className="search-icon" />
-              <input
-                type="text"
-                placeholder="Search for anything (Jobs)"
-                className="search-input"
-              />
-            </div>
-          </div>
-          <nav className="main-nav">
-            <Link to="/" className={`nav-item ${activePath === '/' ? 'active' : ''}`}>
-              <FaHome className="nav-icon" />
-              <span className="nav-text">Home</span>
-            </Link>
-            <Link to="/jobs" className={`nav-item ${activePath === '/jobs' ? 'active' : ''}`}>
-              <FaBriefcase className="nav-icon" />
-              <span className="nav-text">Jobs</span>
-            </Link>
-            <Link to="/chat" className={`nav-item ${activePath === '/chat' ? 'active' : ''}`}>
-              <div className="notification-wrapper">
-                <BsChatDotsFill className="nav-icon" />
-                {/* <span className="notification-badge">6</span> */}
-              </div>
-              <span className="nav-text">Chat</span>
-            </Link>
-
-            {/* Conditional rendering based on authentication status */}
-            {isLoggedIn ? (
-              <>
-                <Link to="/profile" className={`nav-item ${activePath === '/profile' ? 'active' : ''}`}>
-                  <FaUser className="nav-icon profile-icon" />
-                  <span className="nav-text">Me</span>
-                </Link>
-
-                {/* Tampilkan Create Job button hanya untuk recruiter */}
-                {localStorage.getItem('userType') === 'recruiter' && (
-                  <Link to="/create-job" className={`nav-item ${activePath === '/create-job' ? 'active' : ''}`}>
-                    <FaBriefcase className="nav-icon" />
-                    <span className="nav-text">Create Job</span>
-                  </Link>
-                )}
-
-                <button
-                  onClick={handleLogout}
-                  className="nav-item logout-button"
-                  aria-label="Logout"
-                >
-                  <FaSignOutAlt className="nav-icon" />
-                  <span className="nav-text">Logout</span>
-                </button>
-              </>
-            ) : (
-              <Link to="/login" className={`nav-item ${activePath === '/login' ? 'active' : ''}`}>
-                <FaSignInAlt className="nav-icon" />
-                <span className="nav-text">Login</span>
-              </Link>
-            )}
-          </nav>
-        </div>
-      </header>
-
-      <main className="content">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/jobs" element={<Job />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-        </Routes>
-      </main>
-    </>
+        <main className="content">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/jobs" element={<Job />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/create-job" element={<CreateJob />} />
+          </Routes>
+        </main>
+      </ModalProvider>
+    </AuthProvider>
   );
 }
 
