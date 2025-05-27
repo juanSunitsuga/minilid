@@ -618,39 +618,45 @@ router.post("/chats/:chat_id/attachment",
 );
 
 // Route for getting attachment
-router.get("/attachments/:attachmentId/:filename", controllerWrapper(async (req, res) => {
-  const { attachmentId, filename } = req.params;
-  const filePath = path.join(ATTACHMENTS_DIR, attachmentId, filename);
+router.get("/attachments/:attachmentId/:filename", async (req, res) => {
+  try {
+    const { attachmentId, filename } = req.params;
+    const filePath = path.join(ATTACHMENTS_DIR, attachmentId, filename);
 
-  if (!await fsExtra.pathExists(filePath)) {
-    return res.status(404).json({ message: "Attachment not found" });
-  }
+    // Check if file exists
+    if (!await fsExtra.pathExists(filePath)) {
+      return res.status(404).json({ message: "Attachment not found" });
+    }
 
-  // Set proper content-type based on file extension
-  const ext = path.extname(filename).toLowerCase();
-  switch (ext) {
-    case '.pdf':
+    // Set proper content-type based on file extension
+    const ext = path.extname(filename).toLowerCase();
+    
+    // Important: Set the correct Content-Type for PDFs
+    if (ext === '.pdf') {
       res.setHeader('Content-Type', 'application/pdf');
-      break;
-    case '.png':
+    } else if (ext === '.png') {
       res.setHeader('Content-Type', 'image/png');
-      break;
-    case '.jpg':
-    case '.jpeg':
+    } else if (ext === '.jpg' || ext === '.jpeg') {
       res.setHeader('Content-Type', 'image/jpeg');
-      break;
-    case '.gif':
+    } else if (ext === '.gif') {
       res.setHeader('Content-Type', 'image/gif');
-      break;
-    // Add more types as needed
-    default:
-      // Use a generic content type for unknown file types
+    } else {
       res.setHeader('Content-Type', 'application/octet-stream');
-  }
+    }
 
-  // Set appropriate caching and disposition
-  res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
-  res.sendFile(filePath);
-}));
+    // For download vs viewing in browser
+    if (ext === '.pdf') {
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
+    } else {
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    }
+
+    // Send file directly without going through the wrapper
+    return res.sendFile(filePath);
+  } catch (error) {
+    console.error("Error serving attachment:", error);
+    return res.status(500).json({ message: "Failed to serve attachment" });
+  }
+});
 
 export default router;

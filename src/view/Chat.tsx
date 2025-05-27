@@ -30,12 +30,12 @@ import {
   FilterList as FilterIcon,
   Clear as ClearIcon,
   AttachFile as AttachFileIcon,
+  PictureAsPdf as PdfIcon,
   InsertDriveFile as FileIcon,
   Image as ImageIcon,
   Videocam as VideoIcon,
   CheckCircle as CheckCircleIcon,
-  ErrorOutline as ErrorIcon,
-  PictureAsPdf as PdfIcon
+  ErrorOutline as ErrorIcon
 } from '@mui/icons-material';
 import { getChats, getChatById, sendMessage, sendAttachment } from '../services/chatService';
 
@@ -74,6 +74,16 @@ interface AttachmentResponse {
   success?: boolean;
   message?: string;
 }
+
+// Utility function to format file size
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  
+  return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
+};
 
 // Styled components with enhanced visuals
 const ChatContainer = styled(Box)(({ theme }) => ({
@@ -613,15 +623,55 @@ const Chat: React.FC = () => {
     };
   }, [selectedChat]);
 
-  // Add this function to the Chat component
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
+  // Add this function to your Chat component
 
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  const downloadFile = async (url: string, filename: string) => {
+    try {
+      // Notify user download is starting
+      console.log(`Downloading ${filename}...`);
+      
+      // Get the token
+      const token = localStorage.getItem('accessToken');
+      
+      // Fetch the file with authorization
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      }
+      
+      // Get the blob data from response
+      const blob = await response.blob();
+      
+      // Create a blob URL
+      const blobUrl = URL.createObjectURL(blob);
+      
+      // Create download link
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      a.style.display = 'none';
+      
+      // Add to document, click, and remove
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+        document.body.removeChild(a);
+      }, 100);
+      
+      return true;
+    } catch (error) {
+      console.error(`Download error for ${filename}:`, error);
+      setUploadError(`Failed to download ${filename}. ${error}`);
+      return false;
+    }
   };
 
   const renderMessageContent = (msg: Message) => {
@@ -631,23 +681,30 @@ const Chat: React.FC = () => {
     if (msg.message_type === 'TEXT') {
       return (
         <Typography variant="body1">
-          {msg.content}
+          {msg.content || ""}
         </Typography>
       );
     } else if (msg.message_type === 'IMAGE' && msg.attachment) {
       const attachmentUrl = `${API_URL}/chat/attachments/${msg.attachment.id}/${encodeURIComponent(msg.attachment.filename)}`;
-      console.log("Image attachment URL:", attachmentUrl);
       return (
         <Box>
           <Box sx={{ mt: 1, mb: 1 }}>
             <img
               src={attachmentUrl}
-              alt={msg.attachment.filename}
+              alt={msg.attachment.filename || "Image"}
               style={{
                 maxWidth: '100%',
                 maxHeight: '200px',
                 borderRadius: '8px',
-                boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+                boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+                cursor: 'pointer'
+              }}
+              onClick={() => downloadFile(
+                attachmentUrl, 
+                msg.attachment?.filename || 'image'
+              )}
+              onError={(e) => {
+                console.error(`Failed to load image: ${attachmentUrl}`);
               }}
             />
           </Box>
@@ -655,15 +712,15 @@ const Chat: React.FC = () => {
             variant="caption"
             color={isCurrentUserMessage ? "rgba(255, 255, 255, 0.8)" : "text.secondary"}
           >
-            {msg.attachment.filename} ({formatFileSize(msg.attachment.file_size)})
+            {msg.attachment.filename || "Image"} ({formatFileSize(msg.attachment?.file_size || 0)})
           </Typography>
         </Box>
       );
-    } else if (msg.message_type === 'FILE' && msg.attachment) {
-      const attachmentUrl = `${API_URL}/chat/attachments/${msg.attachment.id}/${encodeURIComponent(msg.attachment.filename)}`;
-      const isPdf = msg.attachment.mime_type === 'application/pdf' ||
-        msg.attachment.filename.toLowerCase().endsWith('.pdf');
-
+        } else if (msg.message_type === 'FILE' && msg.attachment) {
+    const attachmentUrl = `${API_URL}/chat/attachments/${msg.attachment.id}/${encodeURIComponent(msg.attachment.filename || '')}`;
+    const isPdf = (msg.attachment.mime_type === 'application/pdf' ||
+      (msg.attachment.filename && msg.attachment.filename.toLowerCase().endsWith('.pdf')));
+      
       return (
         <Box>
           {isPdf ? (
@@ -672,8 +729,11 @@ const Chat: React.FC = () => {
                 variant="contained"
                 startIcon={<PdfIcon />}
                 size="small"
-                href={attachmentUrl}
-                target="_blank"
+                onClick={() => {
+                  // Open PDF in new tab instead of downloading
+                  const attachmentUrl = `${API_URL}/chat/attachments/${msg.attachment?.id}/${encodeURIComponent(msg.attachment?.filename || '')}`;
+                  window.open(attachmentUrl, '_blank');
+                }}
                 sx={{
                   backgroundColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.2)' : '#f5f5f5',
                   color: isCurrentUserMessage ? 'white' : 'primary.main',
@@ -690,9 +750,10 @@ const Chat: React.FC = () => {
               variant={isCurrentUserMessage ? "contained" : "outlined"}
               startIcon={<FileIcon />}
               size="small"
-              href={attachmentUrl}
-              target="_blank"
-              download={msg.attachment.filename}
+              onClick={() => downloadFile(
+                attachmentUrl, 
+                msg.attachment?.filename || 'file'
+              )}
               sx={{
                 mt: 1,
                 mb: 1,
@@ -705,7 +766,7 @@ const Chat: React.FC = () => {
                 }
               }}
             >
-              Download {msg.attachment.filename.split('.').pop()?.toUpperCase()}
+              Download {msg.attachment.filename ? msg.attachment.filename.split('.').pop()?.toUpperCase() : 'FILE'}
             </Button>
           )}
           <Typography
@@ -713,7 +774,7 @@ const Chat: React.FC = () => {
             display="block"
             color={isCurrentUserMessage ? "rgba(255, 255, 255, 0.8)" : "text.secondary"}
           >
-            {msg.attachment.filename} ({formatFileSize(msg.attachment.file_size)})
+            {msg.attachment.filename || "File"} ({formatFileSize(msg.attachment?.file_size || 0)})
           </Typography>
         </Box>
       );
@@ -722,7 +783,7 @@ const Chat: React.FC = () => {
     // Fallback for unknown message types
     return (
       <Typography variant="body1">
-        {msg.content}
+        {msg.content || ""}
       </Typography>
     );
   };
