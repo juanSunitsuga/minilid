@@ -13,39 +13,10 @@ import Chat from './view/Chat';
 import CreateJob from './view/CreateJob';
 
 function App() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [activePath, setActivePath] = useState('/');
-  // Add state to track if user is logged in
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    setActivePath(location.pathname);
-
-    // Check if user is logged in by looking for token in localStorage
-    const token = localStorage.getItem('accessToken');
-    setIsLoggedIn(!!token);
-  }, [location]);
-
-  // Logout function to clear user session
-  const handleLogout = () => {
-    // Remove all tokens from localStorage
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('userType');
-
-    // Update login state
-    setIsLoggedIn(false);
-
-    // Redirect to home page
-    navigate('/');
-  };
-
   return (
     <AuthProvider>
       <ModalProvider>
         <Navbar />
-
         <main className="content">
           <Routes>
             <Route path="/" element={<Home />} />
