@@ -510,7 +510,7 @@ const Chat: React.FC = () => {
 
   // Add this function to the Chat component
   const renderMessageContent = (msg: Message) => {
-    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+    const API_URL = 'http://localhost:3000';
     
     if (msg.message_type === 'TEXT') {
       return (
