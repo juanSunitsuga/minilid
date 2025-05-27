@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, ForeignKey, BelongsToMany } from "sequelize-typescript";
+import { Table, Column, Model, DataType, ForeignKey, BelongsToMany, BelongsTo } from "sequelize-typescript";
 import { JobCategories } from "./job_categories";
 import { JobTypes } from "./job_types";
 import { Skills } from "./skills";
@@ -27,6 +27,14 @@ export class JobPosts extends Model {
         allowNull: true,
     })
     declare description: string;
+
+    // Tambahkan BelongsTo untuk category
+    @BelongsTo(() => JobCategories)
+    declare category: JobCategories;
+
+    // Tambahkan BelongsTo untuk type
+    @BelongsTo(() => JobTypes)
+    declare type: JobTypes;
 
     @ForeignKey(() => JobCategories)
     @Column({ 

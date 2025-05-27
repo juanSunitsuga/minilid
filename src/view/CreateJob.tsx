@@ -504,7 +504,7 @@ const CreateJob: React.FC = () => {
         </Grid>
 
         {/* Preview Section */}
-        <Grid item xs={12} md={4} gutterBottom sx={{ mt: -90.5, ml: 65, minWidth: '48.2%'  }}>
+        <Grid item xs={12} md={4} gutterBottom sx={{ mt: -90.5, mb: 40, ml: 65, minWidth: '48.2%'  }}>
           <PreviewBox elevation={3}>
             <Typography variant="h5" gutterBottom color="primary" sx={{ fontWeight: 'bold', mb: 2 }}>
               Job Post Preview
