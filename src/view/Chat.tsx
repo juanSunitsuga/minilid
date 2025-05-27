@@ -22,14 +22,14 @@ import {
   Grow,
   CircularProgress
 } from '@mui/material';
-import { 
-  Search as SearchIcon, 
+import {
+  Search as SearchIcon,
   Send as SendIcon,
   FilterList as FilterIcon,
   Clear as ClearIcon,
   AttachFile as AttachFileIcon,
   InsertDriveFile as FileIcon,
-  Image as ImageIcon,         
+  Image as ImageIcon,
   Videocam as VideoIcon,
   CheckCircle as CheckCircleIcon,
   ErrorOutline as ErrorIcon
@@ -92,8 +92,8 @@ const ChatListSection = styled(Paper)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   transition: 'all 0.3s ease',
-  background: theme.palette.mode === 'light' 
-    ? '#f8f9fa' 
+  background: theme.palette.mode === 'light'
+    ? '#f8f9fa'
     : theme.palette.background.paper,
 }));
 
@@ -119,23 +119,23 @@ const ChatMessages = styled(Box)(({ theme }) => ({
   overflowY: 'auto',
   display: 'flex',
   flexDirection: 'column',
-  background: theme.palette.mode === 'light' 
-    ? 'linear-gradient(180deg, rgba(240,242,245,0.6) 0%, rgba(240,242,245,0.9) 100%)' 
+  background: theme.palette.mode === 'light'
+    ? 'linear-gradient(180deg, rgba(240,242,245,0.6) 0%, rgba(240,242,245,0.9) 100%)'
     : theme.palette.background.default,
 }));
 
 const ChatBubble = styled(Box)<{ ismine?: string }>(({ theme, ismine }) => ({
   maxWidth: '70%',
   padding: theme.spacing(1.5, 2),
-  borderRadius: ismine === 'true' 
+  borderRadius: ismine === 'true'
     ? theme.shape.borderRadius * 2 + ' ' + theme.shape.borderRadius * 2 + ' 4px ' + theme.shape.borderRadius * 2
     : theme.shape.borderRadius * 2 + ' ' + theme.shape.borderRadius * 2 + ' ' + theme.shape.borderRadius * 2 + ' 4px',
   marginBottom: theme.spacing(2),
-  background: ismine === 'true' 
-    ? theme.palette.primary.main 
+  background: ismine === 'true'
+    ? theme.palette.primary.main
     : theme.palette.mode === 'light' ? '#ffffff' : theme.palette.action.hover,
-  color: ismine === 'true' 
-    ? theme.palette.primary.contrastText 
+  color: ismine === 'true'
+    ? theme.palette.primary.contrastText
     : theme.palette.text.primary,
   alignSelf: ismine === 'true' ? 'flex-end' : 'flex-start',
   boxShadow: ismine === 'true'
@@ -197,12 +197,12 @@ const ChatListItem = styled(ListItem)<{ selected?: string }>(({ theme, selected 
   cursor: 'pointer',
   transition: 'all 0.2s ease',
   borderLeft: selected === 'true' ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent',
-  backgroundColor: selected === 'true' 
+  backgroundColor: selected === 'true'
     ? theme.palette.mode === 'light' ? 'rgba(25, 118, 210, 0.08)' : theme.palette.action.selected
     : 'transparent',
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'light' 
-      ? 'rgba(0, 0, 0, 0.04)' 
+    backgroundColor: theme.palette.mode === 'light'
+      ? 'rgba(0, 0, 0, 0.04)'
       : theme.palette.action.hover
   },
 }));
@@ -259,7 +259,7 @@ const Chat: React.FC = () => {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isUserRecruiter, setIsUserRecruiter] = useState<boolean | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
@@ -281,11 +281,13 @@ const Chat: React.FC = () => {
   };
 
   // Check if the current user is a recruiter
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    setUserId(user.id);
-    setIsUserRecruiter(user.role === 'recruiter');
-  }, []);
+  // useEffect(() => {
+  //   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  //   console.log("User data:", user); // Debug user data
+  //   setUserId(user.id);
+  //   setIsUserRecruiter(user.role === 'recruiter');
+  //   console.log("Is user recruiter:", user.role === 'recruiter'); 
+  // }, []);
 
   // Fetch all chats on component mount
   useEffect(() => {
@@ -293,11 +295,11 @@ const Chat: React.FC = () => {
       try {
         setLoading(true);
         const response = await getChats();
-        
+
         if (response.data && Array.isArray(response.data)) {
           setChats(response.data);
           setFilteredChats(response.data);
-          
+
           // If we have chats, select the first one
           if (response.data.length > 0) {
             setSelectedChat(response.data[0]);
@@ -317,11 +319,11 @@ const Chat: React.FC = () => {
   useEffect(() => {
     const fetchMessages = async () => {
       if (!selectedChat) return;
-      
+
       try {
         setLoading(true);
         const response = await getChatById(selectedChat.chat_id);
-        
+
         if (response.data && response.data.messages) {
           setMessages(response.data.messages);
         } else {
@@ -347,7 +349,7 @@ const Chat: React.FC = () => {
   // Filter chats based on search query
   useEffect(() => {
     if (searchQuery) {
-      const filtered = chats.filter(chat => 
+      const filtered = chats.filter(chat =>
         chat.applier_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         chat.recruiter_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (chat.last_message && chat.last_message.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -361,20 +363,31 @@ const Chat: React.FC = () => {
   // Send a message
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedChat) return;
-    
+
     try {
       setSendingMessage(true);
       
+      // Get user type directly from localStorage
+      const userType = localStorage.getItem('userType');
+      const isRecruiter = userType === 'recruiter';
+
       const response = await sendMessage(
         selectedChat.chat_id,
         messageText
       );
-      
+
       if (response.data) {
-        // Optimistically update UI
-        const newMessage: Message = response.data;
-        setMessages(prev => [...prev, newMessage]);
+        // Force is_recruiter based on the localStorage value
+        const newMessage: Message = {
+          ...response.data,
+          is_recruiter: isRecruiter
+        };
         
+        console.log("Sending message as recruiter:", isRecruiter);
+        console.log("New message:", newMessage);
+        
+        setMessages(prev => [...prev, newMessage]);
+
         // Update the chat list with new last message
         const updatedChats = chats.map(chat => {
           if (chat.chat_id === selectedChat.chat_id) {
@@ -386,10 +399,10 @@ const Chat: React.FC = () => {
           }
           return chat;
         });
-        
+
         setChats(updatedChats);
         setFilteredChats(updatedChats);
-        
+
         // Clear the message input
         setMessageText('');
       }
@@ -403,17 +416,21 @@ const Chat: React.FC = () => {
   // Function to handle file uploads
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || !event.target.files[0] || !selectedChat) return;
-    
+
     const file = event.target.files[0];
     try {
       setUploadingFile(true);
       const response = await sendAttachment(selectedChat.chat_id, file);
-      
-      // Using type assertion
+
       if ((response as any).data) {
-        const newMessage: Message = (response as any).data;
-        setMessages(prev => [...prev, newMessage]);
+        const newMessage: Message = {
+          ...(response as any).data,
+          // Force is_recruiter to match the current user role
+          is_recruiter: isUserRecruiter === true
+        };
         
+        setMessages(prev => [...prev, newMessage]);
+
         // Update the chat list with new last message
         const updatedChats = chats.map(chat => {
           if (chat.chat_id === selectedChat.chat_id) {
@@ -425,7 +442,7 @@ const Chat: React.FC = () => {
           }
           return chat;
         });
-        
+
         setChats(updatedChats);
         setFilteredChats(updatedChats);
       }
@@ -433,7 +450,6 @@ const Chat: React.FC = () => {
       setError(err.message || 'Failed to upload file');
     } finally {
       setUploadingFile(false);
-      // Clear the file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -455,7 +471,19 @@ const Chat: React.FC = () => {
 
   // Check if a message is from current user
   const isMyMessage = (message: Message) => {
-    if (isUserRecruiter === null || userId === null) return false;
+    // Get user type directly from localStorage for consistent results
+    const userType = localStorage.getItem('userType');
+    
+    console.log(`Message ${message.message_id}: isRecruiter=${message.is_recruiter}, userType=${userType}`);
+    
+    // Compare directly against localStorage values for consistency
+    if (userType === 'recruiter') {
+      return message.is_recruiter === true;
+    } else if (userType === 'applier') {
+      return message.is_recruiter === false;
+    }
+    
+    // Fallback to the previous logic if localStorage isn't available
     return (isUserRecruiter && message.is_recruiter) || 
            (!isUserRecruiter && !message.is_recruiter);
   };
@@ -472,12 +500,15 @@ const Chat: React.FC = () => {
 
   // Get display name based on whether user is recruiter or applier
   const getDisplayName = (chat: ChatItem) => {
-    if (isUserRecruiter) {
-      return chat.applier_name;
-    } else {
-      return chat.recruiter_name;
-    }
-  };
+  // Get user type directly from localStorage for consistent results
+  const userType = localStorage.getItem('userType');
+  
+  if (userType === 'recruiter') {
+    return chat.applier_name; // Show applier name when user is recruiter
+  } else {
+    return chat.recruiter_name; // Show recruiter name when user is applier
+  }
+};
 
   // Determine which avatar to show
   const getAvatar = (chat: ChatItem) => {
@@ -489,7 +520,7 @@ const Chat: React.FC = () => {
   // Poll for new messages every 5 seconds
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
+
     if (selectedChat) {
       interval = setInterval(async () => {
         try {
@@ -502,7 +533,7 @@ const Chat: React.FC = () => {
         }
       }, 5000);
     }
-    
+
     return () => {
       if (interval) clearInterval(interval);
     };
@@ -510,8 +541,8 @@ const Chat: React.FC = () => {
 
   // Add this function to the Chat component
   const renderMessageContent = (msg: Message) => {
-    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
-    
+    const API_URL = 'http://localhost:3000';
+
     if (msg.message_type === 'TEXT') {
       return (
         <Typography variant="body1">
@@ -523,15 +554,15 @@ const Chat: React.FC = () => {
       return (
         <Box>
           <Box sx={{ mt: 1, mb: 1 }}>
-            <img 
-              src={attachmentUrl} 
-              alt={msg.attachment.filename} 
-              style={{ 
-                maxWidth: '100%', 
-                maxHeight: '200px', 
+            <img
+              src={attachmentUrl}
+              alt={msg.attachment.filename}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '200px',
                 borderRadius: '8px',
                 boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-              }} 
+              }}
             />
           </Box>
           <Typography variant="caption" color="text.secondary">
@@ -544,14 +575,14 @@ const Chat: React.FC = () => {
       return (
         <Box>
           <Box sx={{ mt: 1, mb: 1 }}>
-            <video 
-              src={attachmentUrl} 
-              controls 
-              style={{ 
-                maxWidth: '100%', 
+            <video
+              src={attachmentUrl}
+              controls
+              style={{
+                maxWidth: '100%',
                 maxHeight: '200px',
-                borderRadius: '8px' 
-              }} 
+                borderRadius: '8px'
+              }}
             />
           </Box>
           <Typography variant="caption" color="text.secondary">
@@ -579,7 +610,7 @@ const Chat: React.FC = () => {
         </Box>
       );
     }
-    
+
     // Fallback for unknown message types
     return (
       <Typography variant="body1">
@@ -589,7 +620,7 @@ const Chat: React.FC = () => {
   };
 
   return (
-    <Box sx={{ 
+    <Box sx={{
       padding: '20px',
       display: 'flex',
       justifyContent: 'center',
@@ -604,7 +635,7 @@ const Chat: React.FC = () => {
               <FilterIcon fontSize="small" />
             </IconButton>
           </ChatHeader>
-          
+
           <Box p={2} sx={{ position: 'relative' }}>
             <SearchField
               variant="outlined"
@@ -623,8 +654,8 @@ const Chat: React.FC = () => {
                 ),
                 endAdornment: searchQuery ? (
                   <InputAdornment position="end">
-                    <IconButton 
-                      size="small" 
+                    <IconButton
+                      size="small"
                       onClick={() => setSearchQuery('')}
                       edge="end"
                     >
@@ -641,9 +672,9 @@ const Chat: React.FC = () => {
             />
           </Box>
 
-          <List sx={{ 
-            flex: 1, 
-            overflow: 'auto', 
+          <List sx={{
+            flex: 1,
+            overflow: 'auto',
             p: 0,
             '&::-webkit-scrollbar': {
               width: '6px',
@@ -674,14 +705,14 @@ const Chat: React.FC = () => {
                       <ListItemText
                         primary={
                           <Box display="flex" justifyContent="space-between" alignItems="center">
-                            <Typography 
-                              variant="subtitle2" 
+                            <Typography
+                              variant="subtitle2"
                               component="span"
                             >
                               {getDisplayName(chat)}
                             </Typography>
-                            <Typography 
-                              variant="caption" 
+                            <Typography
+                              variant="caption"
                               color="text.secondary"
                             >
                               {formatChatDate(chat.updated_at)}
@@ -692,7 +723,7 @@ const Chat: React.FC = () => {
                           <Typography
                             variant="body2"
                             color="text.secondary"
-                            sx={{ 
+                            sx={{
                               maxWidth: 180,
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
@@ -749,33 +780,27 @@ const Chat: React.FC = () => {
                 ) : messages.length > 0 ? (
                   <>
                     {messages.map((msg, index) => (
-                      <Grow 
-                        in={true} 
-                        key={msg.message_id} 
-                        timeout={300} 
+                      <Grow
+                        in={true}
+                        key={msg.message_id}
+                        timeout={300}
                         style={{ transformOrigin: isMyMessage(msg) ? 'right' : 'left' }}
                       >
                         <ChatBubble ismine={isMyMessage(msg) ? 'true' : 'false'}>
-                          {!isMyMessage(msg) && (
-                            <Typography variant="subtitle2" fontWeight={500} sx={{ mb: 0.5 }}>
-                              {isMyMessage(msg) ? 'You' : (isUserRecruiter ? selectedChat.applier_name : selectedChat.recruiter_name)}
-                            </Typography>
-                          )}
-                          
                           {/* Render message content based on type */}
                           {renderMessageContent(msg)}
-                          
+
                           <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
                             <MessageTime variant="caption">
                               {formatMessageTime(msg.timestamp)}
                             </MessageTime>
                             {isMyMessage(msg) && (
-                              <CheckCircleIcon 
-                                sx={{ 
-                                  fontSize: 14, 
+                              <CheckCircleIcon
+                                sx={{
+                                  fontSize: 14,
                                   color: msg.status === 'READ' ? 'success.main' : 'text.disabled',
                                   marginLeft: '2px'
-                                }} 
+                                }}
                               />
                             )}
                           </Box>
@@ -803,7 +828,7 @@ const Chat: React.FC = () => {
                   onChange={handleFileUpload}
                   ref={fileInputRef}
                 />
-                
+
                 <IconButton
                   color="primary"
                   onClick={() => fileInputRef.current?.click()}
@@ -812,7 +837,7 @@ const Chat: React.FC = () => {
                 >
                   {uploadingFile ? <CircularProgress size={24} /> : <AttachFileIcon />}
                 </IconButton>
-                
+
                 <StyledTextField
                   fullWidth
                   placeholder="Type your message..."
@@ -831,7 +856,7 @@ const Chat: React.FC = () => {
                     sx: { pr: 1 }
                   }}
                 />
-                
+
                 <SendButton
                   variant="contained"
                   color="primary"
