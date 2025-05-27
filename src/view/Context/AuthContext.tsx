@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { FetchEndpoint } from '../FetchEndpoint';
+import { useNavigate } from 'react-router-dom';
 
 interface BaseUserData {
   email: string;
@@ -59,6 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [userType, setUserType] = useState<'applier' | 'recruiter' | 'company' | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const navigate = useNavigate();
 
     // Function to refresh user data from tokens in localStorage
     const refreshUserData = async () => {
@@ -289,6 +291,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCompanyData(null);
         setUserType(null);
         setIsAuthenticated(false);
+        navigate('/'); // Redirect to home page after logout
     };
 
     // Load user data when the app initializes
