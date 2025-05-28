@@ -54,6 +54,7 @@ import {
 import { getChats, getChatById, sendMessage, sendAttachment } from '../services/chatService';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker, TimePicker } from '@mui/x-date-pickers';
+import { FetchEndpoint } from './FetchEndpoint';
 
 // Types for API responses
 interface Message {
@@ -95,10 +96,10 @@ interface AttachmentResponse {
 // Utility function to format file size
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
-  
+
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  
+
   return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
@@ -523,7 +524,6 @@ const Chat: React.FC = () => {
   const handleChatSelect = (chat: ChatItem) => {
     setSelectedChat(chat);
     localStorage.setItem('currentChatId', chat.chat_id);
-    console.log("Selected chat ID:", chat.chat_id);
     setError(null);
   };
 
@@ -575,109 +575,125 @@ const Chat: React.FC = () => {
 
   // Poll for new messages every 5 seconds
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: NodeJS.Timeout | null = null;
 
-    if (selectedChat && !interviewDialogOpen) { // Don't poll when dialog is open
-      interval = setInterval(async () => {
-        try {
-          const response = await getChatById(selectedChat.chat_id);
-          if (response.data && response.data.messages) {
-            // Smart merge of messages instead of complete replacement
-            setMessages(prevMessages => {
-              // If no previous messages, just use the new ones
-              if (prevMessages.length === 0) {
-                return response.data.messages;
-              }
-              
-              // Create a map of existing messages by ID for quick lookup
-              const existingMsgMap = new Map(
-                prevMessages.map(msg => [msg.message_id, msg])
-              );
-              
-              // Create a new array with merged messages
-              const mergedMessages = [...prevMessages];
-              
-              // Add any new messages that don't exist in our current state
-              response.data.messages.forEach((newMsg: Message) => {
-                const existingMsg = existingMsgMap.get(newMsg.message_id);
-                
-                if (!existingMsg) {
-                  // This is a new message, add it
-                  mergedMessages.push(newMsg);
-                } else if (existingMsg.content !== newMsg.content || 
-                           existingMsg.status !== newMsg.status) {
-                  // Update changed message but preserve local UI state for messages
-                  // that might have pending local changes
-                  const isLocallyModified = existingMsg.isLocallyModified;
-                  if (!isLocallyModified) {
-                    // Replace the existing message at its index
-                    const index = mergedMessages.findIndex(
-                      msg => msg.message_id === newMsg.message_id
-                    );
-                    if (index !== -1) {
-                      mergedMessages[index] = newMsg;
-                    }
+    const pollMessages = async () => {
+      if (!selectedChat) return;
+      
+      try {
+        const response = await getChatById(selectedChat.chat_id);
+        if (response.data && response.data.messages) {
+          // Smart merge of messages instead of complete replacement
+          setMessages(prevMessages => {
+            // If no previous messages, just use the new ones
+            if (prevMessages.length === 0) {
+              return response.data.messages;
+            }
+
+            // Create a map of existing messages by ID for quick lookup
+            const existingMsgMap = new Map(
+              prevMessages.map(msg => [msg.message_id, msg])
+            );
+
+            // Create a new array with merged messages
+            const mergedMessages = [...prevMessages];
+
+            // Add any new messages that don't exist in our current state
+            response.data.messages.forEach((newMsg: Message) => {
+              const existingMsg = existingMsgMap.get(newMsg.message_id);
+
+              if (!existingMsg) {
+                // This is a new message, add it
+                mergedMessages.push(newMsg);
+              } else if (existingMsg.content !== newMsg.content ||
+                existingMsg.status !== newMsg.status) {
+                // Update changed message but preserve local UI state for messages
+                // that might have pending local changes
+                const isLocallyModified = existingMsg.isLocallyModified;
+                if (!isLocallyModified) {
+                  // Replace the existing message at its index
+                  const index = mergedMessages.findIndex(
+                    msg => msg.message_id === newMsg.message_id
+                  );
+                  if (index !== -1) {
+                    mergedMessages[index] = newMsg;
                   }
                 }
-              });
-              
-              // Sort by timestamp to ensure proper order
-              return mergedMessages.sort(
-                (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-              );
+              }
             });
-          }
-        } catch (err) {
-          console.error('Error polling for messages:', err);
+
+            // Sort by timestamp to ensure proper order
+            return mergedMessages.sort(
+              (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            );
+          });
         }
-      }, 5000);
+      } catch (err) {
+        console.error('Error polling for messages:', err);
+      }
+    };
+
+    // Only set up polling if we have a selected chat and aren't showing the dialog
+    if (selectedChat && !interviewDialogOpen) {
+      // Initial poll when component mounts or dependencies change
+      pollMessages();
+      
+      // Set up interval
+      interval = setInterval(pollMessages, 5000);
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [selectedChat, interviewDialogOpen]); // Add interviewDialogOpen to dependencies
+  }, [selectedChat]); // Remove interviewDialogOpen from dependencies
 
   // Add this function to your Chat component
 
   const downloadFile = async (url: string, filename: string) => {
-    try {      
+    try {
+      console.log("Downloading from URL:", url); // Debug log
+      
       // Get the token
       const token = localStorage.getItem('accessToken');
       
+      // Check if the URL already has a token parameter
+      const hasToken = url.includes('token=');
+      const finalUrl = hasToken ? url : `${url}${url.includes('?') ? '&' : '?'}token=${token}`;
+
       // Fetch the file with authorization
-      const response = await fetch(url, {
+      const response = await fetch(finalUrl, {
+        method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
         }
       });
-      
+
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}: ${response.statusText}`);
       }
-      
+
       // Get the blob data from response
       const blob = await response.blob();
-      
+
       // Create a blob URL
       const blobUrl = URL.createObjectURL(blob);
-      
+
       // Create download link
       const a = document.createElement('a');
       a.href = blobUrl;
       a.download = filename;
       a.style.display = 'none';
-      
+
       // Add to document, click, and remove
       document.body.appendChild(a);
       a.click();
-      
+
       // Clean up
       setTimeout(() => {
         URL.revokeObjectURL(blobUrl);
         document.body.removeChild(a);
       }, 100);
-      
+
       return true;
     } catch (error) {
       console.error(`Download error for ${filename}:`, error);
@@ -685,6 +701,7 @@ const Chat: React.FC = () => {
       return false;
     }
   };
+
 
   const renderMessageContent = (msg: Message) => {
     const API_URL = 'http://localhost:3000';
@@ -697,7 +714,8 @@ const Chat: React.FC = () => {
         </Typography>
       );
     } else if (msg.message_type === 'IMAGE' && msg.attachment) {
-      const attachmentUrl = `${API_URL}/chat/attachments/${msg.attachment.id}/${encodeURIComponent(msg.attachment.filename)}`;
+      const attachmentUrl = getAttachmentUrl(msg.attachment.id, msg.attachment.filename || '');
+      
       return (
         <Box>
           <Box sx={{ mt: 1, mb: 1 }}>
@@ -712,12 +730,9 @@ const Chat: React.FC = () => {
                 cursor: 'pointer'
               }}
               onClick={() => downloadFile(
-                attachmentUrl, 
+                attachmentUrl,
                 msg.attachment?.filename || 'image'
               )}
-              onError={(e) => {
-                console.error(`Failed to load image: ${attachmentUrl}`);
-              }}
             />
           </Box>
           <Typography
@@ -728,59 +743,35 @@ const Chat: React.FC = () => {
           </Typography>
         </Box>
       );
-        } else if (msg.message_type === 'FILE' && msg.attachment) {
-    const attachmentUrl = `${API_URL}/chat/attachments/${msg.attachment.id}/${encodeURIComponent(msg.attachment.filename || '')}`;
-    const isPdf = (msg.attachment.mime_type === 'application/pdf' ||
-      (msg.attachment.filename && msg.attachment.filename.toLowerCase().endsWith('.pdf')));
-      
+    } else if (msg.message_type === 'FILE' && msg.attachment) {
+      const attachmentUrl = getAttachmentUrl(msg.attachment.id, msg.attachment.filename || '');
+      const isPdf = (msg.attachment.mime_type === 'application/pdf' ||
+        (msg.attachment.filename && msg.attachment.filename.toLowerCase().endsWith('.pdf')));
+
       return (
         <Box>
-          {isPdf ? (
-            <Box sx={{ mt: 1, mb: 1 }}>
-              <Button
-                variant="contained"
-                startIcon={<PdfIcon />}
-                size="small"
-                onClick={() => {
-                  // Open PDF in new tab instead of downloading
-                  const attachmentUrl = `${API_URL}/chat/attachments/${msg.attachment?.id}/${encodeURIComponent(msg.attachment?.filename || '')}`;
-                  window.open(attachmentUrl, '_blank');
-                }}
-                sx={{
-                  backgroundColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.2)' : '#f5f5f5',
-                  color: isCurrentUserMessage ? 'white' : 'primary.main',
-                  '&:hover': {
-                    backgroundColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.3)' : '#e0e0e0',
-                  }
-                }}
-              >
-                View PDF
-              </Button>
-            </Box>
-          ) : (
-            <Button
-              variant={isCurrentUserMessage ? "contained" : "outlined"}
-              startIcon={<FileIcon />}
-              size="small"
-              onClick={() => downloadFile(
-                attachmentUrl, 
-                msg.attachment?.filename || 'file'
-              )}
-              sx={{
-                mt: 1,
-                mb: 1,
-                textTransform: 'none',
-                backgroundColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.2)' : undefined,
-                color: isCurrentUserMessage ? 'white' : undefined,
-                borderColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.5)' : undefined,
-                '&:hover': {
-                  backgroundColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.3)' : undefined,
-                }
-              }}
-            >
-              Download {msg.attachment.filename ? msg.attachment.filename.split('.').pop()?.toUpperCase() : 'FILE'}
-            </Button>
-          )}
+          <Button
+            variant={isCurrentUserMessage ? "contained" : "outlined"}
+            startIcon={isPdf ? <PdfIcon /> : <FileIcon />}
+            size="small"
+            onClick={() => downloadFile(
+              attachmentUrl,
+              msg.attachment?.filename || 'file'
+            )}
+            sx={{
+              mt: 1,
+              mb: 1,
+              textTransform: 'none',
+              backgroundColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.2)' : undefined,
+              color: isCurrentUserMessage ? 'white' : undefined,
+              borderColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.5)' : undefined,
+              '&:hover': {
+                backgroundColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.3)' : undefined,
+              }
+            }}
+          >
+            {isPdf ? 'Download PDF' : `Download ${msg.attachment.filename ? msg.attachment.filename.split('.').pop()?.toUpperCase() : 'FILE'}`}
+          </Button>
           <Typography
             variant="caption"
             display="block"
@@ -793,26 +784,26 @@ const Chat: React.FC = () => {
     } else if (msg.message_type === 'INTERVIEW_REQUEST' && msg.content) {
       try {
         // Check if content is already an object or a string
-        const interviewData = typeof msg.content === 'string' 
-          ? JSON.parse(msg.content) 
+        const interviewData = typeof msg.content === 'string'
+          ? JSON.parse(msg.content)
           : msg.content;
-        
+
         const interviewDate = parseISO(interviewData.date);
         const formattedDate = format(interviewDate, 'EEEE, MMMM d, yyyy');
         const formattedTime = format(interviewDate, 'h:mm a');
         const isUserRecruiter = localStorage.getItem('userType') === 'recruiter';
-        
+
         return (
           <Box>
-            <Box sx={{ 
-              p: 1, 
+            <Box sx={{
+              p: 1,
               border: '1px solid',
               borderColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.2)' : 'divider',
               borderRadius: 1,
               mb: 1,
               backgroundColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'
             }}>
-              <Typography variant="subtitle2" sx={{ 
+              <Typography variant="subtitle2" sx={{
                 display: 'flex',
                 alignItems: 'center',
                 color: isCurrentUserMessage ? 'white' : 'primary.main',
@@ -821,8 +812,8 @@ const Chat: React.FC = () => {
                 <CalendarIcon sx={{ mr: 1, fontSize: '18px' }} />
                 Interview Request
               </Typography>
-              
-              <Box sx={{ 
+
+              <Box sx={{
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 0.5,
@@ -832,34 +823,44 @@ const Chat: React.FC = () => {
                   <CalendarIcon sx={{ mr: 1, fontSize: '16px' }} />
                   {formattedDate}
                 </Typography>
-                
+
                 <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
                   <TimeIcon sx={{ mr: 1, fontSize: '16px' }} />
                   {formattedTime}
                 </Typography>
-                
+
                 <Typography variant="body2">
                   <b>Location:</b> {
                     interviewData.location === 'onsite' ? 'On-site Interview' :
-                    interviewData.location === 'online' ? 'Online (Video Call)' :
-                    interviewData.location === 'phone' ? 'Phone Interview' :
-                    interviewData.location
+                      interviewData.location === 'online' ? 'Online (Video Call)' :
+                        interviewData.location === 'phone' ? 'Phone Interview' :
+                          interviewData.location
                   }
                 </Typography>
-                
+
                 {interviewData.notes && (
                   <Typography variant="body2">
                     <b>Notes:</b> {interviewData.notes}
                   </Typography>
                 )}
-                
+
                 {interviewData.status && (
-                  <Typography variant="body2" sx={{ 
+                  <Typography variant="body2" sx={{
                     mt: 1,
-                    color: 
+                    display: 'inline-block',
+                    backgroundColor: 'white',
+                    color:
                       interviewData.status === 'ACCEPTED' ? 'success.main' :
                       interviewData.status === 'DECLINED' ? 'error.main' :
-                      'warning.main'
+                      'warning.main',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    fontWeight: 'medium',
+                    border: '1px solid',
+                    borderColor:
+                      interviewData.status === 'ACCEPTED' ? 'success.light' :
+                      interviewData.status === 'DECLINED' ? 'error.light' :
+                      'warning.light'
                   }}>
                     Status: {
                       interviewData.status === 'ACCEPTED' ? 'Accepted' :
@@ -869,27 +870,27 @@ const Chat: React.FC = () => {
                   </Typography>
                 )}
               </Box>
-              
+
               {/* Show accept/decline buttons only to appliers and only if status is PENDING */}
               {!isUserRecruiter && interviewData.status === 'PENDING' && (
-                <Box sx={{ 
-                  display: 'flex', 
+                <Box sx={{
+                  display: 'flex',
                   justifyContent: 'flex-end',
                   mt: 1,
                   gap: 1
                 }}>
-                  <Button 
-                    size="small" 
-                    variant="contained" 
+                  <Button
+                    size="small"
+                    variant="contained"
                     color="success"
                     startIcon={<AcceptIcon />}
                     onClick={() => handleAcceptInterview(msg.message_id, interviewData)}
                   >
                     Accept
                   </Button>
-                  <Button 
-                    size="small" 
-                    variant="outlined" 
+                  <Button
+                    size="small"
+                    variant="outlined"
                     color="error"
                     startIcon={<DeclineIcon />}
                     onClick={() => handleDeclineInterview(msg.message_id, interviewData)}
@@ -921,7 +922,17 @@ const Chat: React.FC = () => {
 
   // Add this inside your Chat component before the return statement
   const InterviewScheduleDialog = () => (
-    <Dialog open={interviewDialogOpen} onClose={() => setInterviewDialogOpen(false)} maxWidth="sm" fullWidth>
+    <Dialog 
+      open={interviewDialogOpen} 
+      onClose={() => {
+        setInterviewDialogOpen(false);
+        setInterviewError(null);
+      }}
+      maxWidth="sm" 
+      fullWidth
+      disableEscapeKeyDown={false}
+      disableRestoreFocus
+    >
       <DialogTitle>Schedule Interview</DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
@@ -931,13 +942,11 @@ const Chat: React.FC = () => {
               value={interviewDate}
               onChange={(newDate) => setInterviewDate(newDate)}
               disablePast
-              renderInput={(params) => <TextField {...params} fullWidth />}
             />
             <TimePicker
               label="Time"
               value={interviewTime}
               onChange={(newTime) => setInterviewTime(newTime)}
-              renderInput={(params) => <TextField {...params} fullWidth />}
             />
           </LocalizationProvider>
 
@@ -963,7 +972,7 @@ const Chat: React.FC = () => {
             onChange={(e) => setInterviewNotes(e.target.value)}
             fullWidth
           />
-          
+
           {interviewError && (
             <FormHelperText error>{interviewError}</FormHelperText>
           )}
@@ -971,8 +980,8 @@ const Chat: React.FC = () => {
       </DialogContent>
       <DialogActions>
         <Button onClick={() => setInterviewDialogOpen(false)}>Cancel</Button>
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           onClick={handleSendInterviewRequest}
           disabled={!interviewDate || !interviewTime || !interviewLocation}
         >
@@ -1056,14 +1065,14 @@ const Chat: React.FC = () => {
         ...interviewData,
         status: "ACCEPTED"
       };
-      
+
       const response = await updateMessageStatus(messageId, JSON.stringify(updateData));
-      
+
       if (response.success) {
-        setMessages(prev => prev.map(msg => 
-          msg.message_id === messageId ? 
-          {...msg, content: JSON.stringify(updateData)} : 
-          msg
+        setMessages(prev => prev.map(msg =>
+          msg.message_id === messageId ?
+            { ...msg, content: JSON.stringify(updateData) } :
+            msg
         ));
       }
     } catch (err: any) {
@@ -1080,16 +1089,16 @@ const Chat: React.FC = () => {
         ...interviewData,
         status: "DECLINED"
       };
-      
+
       // Call your API to update the interview status
       const response = await updateMessageStatus(messageId, JSON.stringify(updateData));
-      
+
       if (response.success) {
         // Update the message in the UI
-        setMessages(prev => prev.map(msg => 
-          msg.message_id === messageId ? 
-          {...msg, content: JSON.stringify(updateData)} : 
-          msg
+        setMessages(prev => prev.map(msg =>
+          msg.message_id === messageId ?
+            { ...msg, content: JSON.stringify(updateData) } :
+            msg
         ));
       }
     } catch (err: any) {
@@ -1104,29 +1113,26 @@ const Chat: React.FC = () => {
       if (!selectedChat) {
         throw new Error('No chat is currently selected');
       }
-      
+
       const token = localStorage.getItem('accessToken');
       const chatId = selectedChat.chat_id;
-      
-      const response = await fetch(`http://localhost:3000/chat/chats/${chatId}/messages/${messageId}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
+
+      const response = await FetchEndpoint(
+        `/chat/chats/${chatId}/messages/${messageId}`,
+        'PATCH',
+        token,
+        {
           content: updatedContent,
           status: 'UPDATED'
         })
-      });
-      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to update interview status');
       }
-      
+
       const data = await response.json();
       return { success: true, data };
+
     } catch (error: any) {
       console.error("Error updating message status:", error);
       throw error;
@@ -1140,6 +1146,36 @@ const Chat: React.FC = () => {
       console.log("Set current chat ID:", selectedChat.chat_id);
     }
   }, [selectedChat]);
+
+  // This is an async function that fetches the attachment through the API
+  const fetchAttachment = async (attachmentId: string, filename: string) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      throw new Error('No access token found');
+    }
+    const url = `/chat/attachments/${attachmentId}/${encodeURIComponent(filename)}`;
+    const response = await FetchEndpoint(url, 'GET', token, null);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch attachment: ${response.status}`);
+    }
+    console.log("Attachment URL:", response.json);
+    return response; // Return the full response
+  };
+
+  // Update this function to include the token as a query parameter
+  const getAttachmentUrl = (attachmentId: string, filename: string): string => {
+  const API_URL = 'http://localhost:3000'; 
+  const token = localStorage.getItem('accessToken');
+  
+  // Make sure this matches exactly how your backend expects the URL
+  return `${API_URL}/chat/attachments/${attachmentId}/${encodeURIComponent(filename)}?token=${token}`;
+};
+
+  // Add this function before the return statement
+  const handleOpenInterviewDialog = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent event bubbling
+    setInterviewDialogOpen(true);
+  };
 
   return (
     <Box sx={{
@@ -1362,12 +1398,12 @@ const Chat: React.FC = () => {
                 >
                   {uploadingFile ? <CircularProgress size={24} /> : <AttachFileIcon />}
                 </IconButton>
-                
+
                 {/* Add interview scheduling button for recruiters only */}
                 {localStorage.getItem('userType') === 'recruiter' && (
                   <IconButton
                     color="primary"
-                    onClick={() => setInterviewDialogOpen(true)}
+                    onClick={handleOpenInterviewDialog}
                     disabled={uploadingFile || sendingMessage}
                     sx={{ mr: 1 }}
                     title="Schedule Interview"

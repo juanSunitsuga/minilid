@@ -14,6 +14,9 @@ import process from 'process';
 import { readdirSync } from 'fs';  // Keep native fs separate
 import { promises as fs } from 'fs';
 import { InterviewSchedules } from "../../../models/interview_schedules";
+import jwt from "jsonwebtoken";
+import { appConfig } from "../../../config/app";
+import { th } from "date-fns/locale";
 
 const PROJECT_ROOT = process.cwd();
 const BASE_DIR = path.join(PROJECT_ROOT, 'data');
@@ -232,19 +235,15 @@ export const getChatsForUser = async (userId: string, isRecruiter: boolean): Pro
   try {
     // First check if directory exists using fs-extra
     if (!await fsExtra.pathExists(CHATS_DIR)) {
-      console.log(`Chat directory doesn't exist: ${CHATS_DIR}`);
       return [];
     }
 
     // Use Node.js native fs module instead of fs-extra for directory reading
     const files = readdirSync(CHATS_DIR);
-    console.log(`Found ${files.length} files in chat directory:`, files);
-
     const chatIds = files
       .filter(file => file.startsWith('chat_') && file.endsWith('.json'))
       .map(file => file.replace('chat_', '').replace('.json', ''));
 
-    console.log(`Found ${chatIds.length} chat files`);
 
     const chats: ChatData[] = [];
 
@@ -310,34 +309,25 @@ const router = express.Router();
 
 // Middleware to check chat access
 const chatAccessMiddleware = middlewareWrapper(async (req, res, next) => {
-  try {
-    // Get chat ID from URL params
-    const chatId = req.params.chat_id;
-    
-    console.log("Chat access middleware - chat ID:", chatId);
-    
-    if (!chatId) {
-      throw new Error("Chat ID is required");
-    }
-    
-    // Read the chat data
-    const chatData = await readChatJson(chatId);
-    
-    if (!chatData) {
-      console.log("Chat not found for ID:", chatId);
-      throw new Error("Chat not found");
-    }
-    
-    // Store chat data in request object for later use
-    req.chat = chatData;
-  } catch (error) {
-    // This will be caught by the controllerWrapper
-    throw error;
+  // Get chat ID from URL params
+  const chatId = req.params.chat_id;
+
+  if (!chatId) {
+    throw new Error("Chat ID is required");
   }
+
+  // Read the chat data
+  const chatData = await readChatJson(chatId);
+
+  if (!chatData) {
+    throw new Error("Chat not found");
+  }
+
+  // Store chat data in request object for later use
+  req.chat = chatData;
 });
 
 router.get("/chats", authMiddleware, controllerWrapper(async (req, res) => {
-  console.log("GET /chats - User:", req.user);
   const userId = req.user?.id;
 
 
@@ -347,18 +337,10 @@ router.get("/chats", authMiddleware, controllerWrapper(async (req, res) => {
 
   // Ensure directories exist
   fsExtra.ensureDirSync(CHATS_DIR);
-  console.log("Ensured chats directory exists at:", CHATS_DIR);
 
   // Determine if user is applier or recruiter
   const applier = await Appliers.findOne({ where: { applier_id: userId } });
   const recruiter = await Recruiters.findOne({ where: { recruiter_id: userId } });
-
-  console.log("User type:", {
-    isApplier: !!applier,
-    applierId: applier?.applier_id,
-    isRecruiter: !!recruiter,
-    recruiterId: recruiter?.recruiter_id
-  });
 
   // Get chats from JSON files
   let chats = [];
@@ -368,7 +350,6 @@ router.get("/chats", authMiddleware, controllerWrapper(async (req, res) => {
     } else if (recruiter) {
       chats = await getChatsForUser(recruiter.recruiter_id, true);
     } else {
-      console.log("User is neither an applier nor a recruiter");
       // Return empty array instead of error
       return {
         message: "No chats found",
@@ -382,8 +363,6 @@ router.get("/chats", authMiddleware, controllerWrapper(async (req, res) => {
       data: []
     };
   }
-
-  console.log(`Found ${chats.length} chats`);
 
   // If no chats found, return empty array
   if (chats.length === 0) {
@@ -481,7 +460,6 @@ router.post("/create-chat", authMiddleware, controllerWrapper(async (req, res) =
   const userId = req.user?.id;
   const { job_application_id } = req.body;
 
-  console.log("POST /create-chat - User:", req.user, "Body:", req.body);
   if (!userId) {
     throw new Error("Unauthorized");
   }
@@ -560,7 +538,6 @@ router.post("/create-chat", authMiddleware, controllerWrapper(async (req, res) =
   };
 }));
 
-// Add route for sending message with attachment
 router.post("/chats/:chat_id/attachment",
   authMiddleware,
   chatAccessMiddleware,
@@ -584,17 +561,14 @@ router.post("/chats/:chat_id/attachment",
       throw new Error("Chat not found");
     }
 
-    // Get file stats
     const stats = await fs.stat(file.path);
 
-    // Determine if sender is recruiter or applier
     const isRecruiter = chat.recruiter_id === userId;
 
     if (!req.attachmentId) {
       throw new Error("Attachment ID is missing");
     }
 
-    // Add attachment message to JSON
     const newMessage = await addAttachmentMessage(
       chatId,
       userId,
@@ -612,14 +586,108 @@ router.post("/chats/:chat_id/attachment",
   })
 );
 
-// Route for getting attachment
-router.get("/attachments/:attachmentId/:filename", authMiddleware, controllerWrapper(async (req, res, next) => {
+const findChatByAttachmentId = async (attachmentId: string): Promise<ChatData | null> => {
+  try {
+    const files = readdirSync(CHATS_DIR)
+      .filter(file => file.startsWith('chat_') && file.endsWith('.json'));
+
+    for (const file of files) {
+      const chatId = file.replace('chat_', '').replace('.json', '');
+      const chat = await readChatJson(chatId);
+
+      if (chat && chat.messages) {
+        const hasAttachment = chat.messages.some(
+          msg => msg.attachment && msg.attachment.id === attachmentId
+        );
+
+        if (hasAttachment) {
+          return chat;
+        }
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('Error finding chat by attachment ID:', error);
+    return null;
+  }
+};
+
+// Add this helper function before your route
+const serveFile = (filePath: string, res: express.Response): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+// Create a custom wrapper for file serving routes with better error handling
+const fileControllerWrapper = (handler: (req: express.Request, res: express.Response) => Promise<any>) => {
+  return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+      await handler(req, res);
+      // No response.json() here - the handler will manage the response
+    } catch (error) {
+      console.error("Error in file controller:", error);
+      // Only send error response if headers haven't been sent
+      if (!res.headersSent) {
+        res.status(500).json({ message: "Server error" });
+      }
+      // Don't call next(error) here to avoid the ERR_HTTP_HEADERS_SENT error
+    }
+  };
+};
+
+// Use the custom wrapper for your route
+router.get("/attachments/:attachmentId/:filename", fileControllerWrapper(async (req, res) => {
+  // Get token from Authorization header OR query parameter
+  const authHeader = req.headers["authorization"];
+  const headerToken = authHeader && authHeader.split(" ")[1];
+  const queryToken = req.query.token as string;
+  const token = headerToken || queryToken;
+
+  if (!token) {
+    throw new Error("No token provided");
+  }
+
+  let userId: string;
+  // Cast to unknown first, then to our expected type
+  const decoded = jwt.verify(token, appConfig.jwtSecret) as unknown as {
+    id: string;
+    email?: string;
+    name?: string;
+  };
+
+  if (!decoded || !decoded.id) {
+    throw new Error("Invalid token structure");
+  }
+
+  userId = decoded.id;
+
+
   const { attachmentId, filename } = req.params;
+
+  // Find which chat this attachment belongs to
+  const chat = await findChatByAttachmentId(attachmentId);
+
+  if (!chat) {
+    throw new Error("Chat not found for this attachment");
+  }
+
+  // Check if user is either the applier or recruiter of this chat
+  if (chat.applier_id !== userId && chat.recruiter_id !== userId) {
+    throw new Error("Unauthorized: You do not have access to this attachment");
+  }
+
   const filePath = path.join(ATTACHMENTS_DIR, attachmentId, filename);
 
   // Check if file exists
   if (!await fsExtra.pathExists(filePath)) {
-    throw new Error("Attachment not found");
+    throw new Error("File not found");
   }
 
   // Set proper content-type based on file extension
@@ -645,11 +713,10 @@ router.get("/attachments/:attachmentId/:filename", authMiddleware, controllerWra
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
   }
 
-  // Signal that this is a file response
-  return {
-    __type: 'file',
-    filePath: filePath
-  };
+  res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+
+  // Use the Promise-based function to serve the file
+  await serveFile(filePath, res);
 }));
 
 router.post("/chats/:chat_id/interview", authMiddleware, chatAccessMiddleware, controllerWrapper(async (req, res) => {
@@ -657,7 +724,6 @@ router.post("/chats/:chat_id/interview", authMiddleware, chatAccessMiddleware, c
   const chatId = req.params.chat_id;
   const { interviewDetails, job_id } = req.body;
 
-  console.log("Chat ID:", chatId, "User ID:", userId, "Interview Details:", interviewDetails);
   if (!interviewDetails) {
     throw new Error("Interview details are required");
   }
@@ -667,11 +733,9 @@ router.post("/chats/:chat_id/interview", authMiddleware, chatAccessMiddleware, c
     throw new Error("Chat not found");
   }
 
-  console.log(2)
   // Determine if sender is recruiter or applier
   const isRecruiter = chat.recruiter_id === userId;
 
-  console.log(3)
   // Create message in the chat
   const newMessage: ChatMessage = {
     message_id: uuidv4(),

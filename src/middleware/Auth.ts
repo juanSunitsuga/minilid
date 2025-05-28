@@ -14,7 +14,6 @@ const authMiddleware = middlewareWrapper(
     }
 
     try {
-      // IMPORTANT: Use JWT_CONFIG.secret here, not appConfig.jwtSecret
       const decoded = jwt.verify(token, appConfig.jwtSecret) as {
         id: string;
         email?: string;
