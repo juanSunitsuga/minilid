@@ -13,6 +13,10 @@ import multer from 'multer';
 import process from 'process';
 import { readdirSync } from 'fs';  // Keep native fs separate
 import { promises as fs } from 'fs';
+import { InterviewSchedules } from "../../../models/interview_schedules";
+import jwt from "jsonwebtoken";
+import { appConfig } from "../../../config/app";
+import { th } from "date-fns/locale";
 
 const PROJECT_ROOT = process.cwd();
 const BASE_DIR = path.join(PROJECT_ROOT, 'data');
@@ -231,19 +235,15 @@ export const getChatsForUser = async (userId: string, isRecruiter: boolean): Pro
   try {
     // First check if directory exists using fs-extra
     if (!await fsExtra.pathExists(CHATS_DIR)) {
-      console.log(`Chat directory doesn't exist: ${CHATS_DIR}`);
       return [];
     }
 
     // Use Node.js native fs module instead of fs-extra for directory reading
     const files = readdirSync(CHATS_DIR);
-    console.log(`Found ${files.length} files in chat directory:`, files);
-
     const chatIds = files
       .filter(file => file.startsWith('chat_') && file.endsWith('.json'))
       .map(file => file.replace('chat_', '').replace('.json', ''));
 
-    console.log(`Found ${chatIds.length} chat files`);
 
     const chats: ChatData[] = [];
 
@@ -309,38 +309,25 @@ const router = express.Router();
 
 // Middleware to check chat access
 const chatAccessMiddleware = middlewareWrapper(async (req, res, next) => {
-  const userId = req.user?.id;
-  const chatId = req.params.chatId || req.params.chat_id;
-  
-  if (!userId) {
-    throw new Error("Unauthorized: User ID is required");
-  }
+  // Get chat ID from URL params
+  const chatId = req.params.chat_id;
 
   if (!chatId) {
     throw new Error("Chat ID is required");
   }
 
-  // Read chat from JSON
-  const chat = await readChatJson(chatId);
+  // Read the chat data
+  const chatData = await readChatJson(chatId);
 
-  if (!chat) {
+  if (!chatData) {
     throw new Error("Chat not found");
   }
 
-  if (chat.applier_id !== userId && chat.recruiter_id !== userId) {
-    throw new Error("You do not have access to this chat");
-  }
-
-  const jobApplication = await JobAppliers.findByPk(chat.job_application_id);
-  if (!jobApplication || !['interviewing'].includes(jobApplication.status)) {
-    throw new Error("Chat is only available after application has been approved for interview or hired");
-  }
-
-  req.chat = chat;
+  // Store chat data in request object for later use
+  req.chat = chatData;
 });
 
 router.get("/chats", authMiddleware, controllerWrapper(async (req, res) => {
-  console.log("GET /chats - User:", req.user);
   const userId = req.user?.id;
 
 
@@ -350,18 +337,10 @@ router.get("/chats", authMiddleware, controllerWrapper(async (req, res) => {
 
   // Ensure directories exist
   fsExtra.ensureDirSync(CHATS_DIR);
-  console.log("Ensured chats directory exists at:", CHATS_DIR);
 
   // Determine if user is applier or recruiter
   const applier = await Appliers.findOne({ where: { applier_id: userId } });
   const recruiter = await Recruiters.findOne({ where: { recruiter_id: userId } });
-
-  console.log("User type:", {
-    isApplier: !!applier,
-    applierId: applier?.applier_id,
-    isRecruiter: !!recruiter,
-    recruiterId: recruiter?.recruiter_id
-  });
 
   // Get chats from JSON files
   let chats = [];
@@ -371,7 +350,6 @@ router.get("/chats", authMiddleware, controllerWrapper(async (req, res) => {
     } else if (recruiter) {
       chats = await getChatsForUser(recruiter.recruiter_id, true);
     } else {
-      console.log("User is neither an applier nor a recruiter");
       // Return empty array instead of error
       return {
         message: "No chats found",
@@ -385,8 +363,6 @@ router.get("/chats", authMiddleware, controllerWrapper(async (req, res) => {
       data: []
     };
   }
-
-  console.log(`Found ${chats.length} chats`);
 
   // If no chats found, return empty array
   if (chats.length === 0) {
@@ -426,7 +402,7 @@ router.get("/chats", authMiddleware, controllerWrapper(async (req, res) => {
 }));
 
 // Get specific chat with messages
-router.get('/chats/:chatId', authMiddleware, chatAccessMiddleware, controllerWrapper(async (req, res) => {
+router.get('/chats/:chat_id', authMiddleware, chatAccessMiddleware, controllerWrapper(async (req, res) => {
   // Chat was loaded in middleware
   const chat = req.chat;
 
@@ -442,14 +418,10 @@ router.post("/chats/:chat_id/messages", authMiddleware, chatAccessMiddleware, co
   const chatId = req.params.chat_id;
   const { message, messageType = "TEXT" } = req.body;
 
-  console.log("POST /chats/:chat_id/messages - User:", req.user, "Chat ID:", chatId, "Body:", req.body);
-
-  console.log(1)
   if (!message) {
     throw new Error("Message content is required");
   }
 
-  console.log(2)
   const chat = req.chat;
   if (!chat) {
     throw new Error("Chat not found");
@@ -469,7 +441,6 @@ router.post("/chats/:chat_id/messages", authMiddleware, chatAccessMiddleware, co
     status: "SENT"
   };
 
-  console.log(3)
   // Add message to JSON file
   try {
     await addMessageToChat(chatId, newMessage);
@@ -478,7 +449,6 @@ router.post("/chats/:chat_id/messages", authMiddleware, chatAccessMiddleware, co
     throw new Error(`Failed to add message: ${error}`);
   }
 
-  console.log(4)
   return {
     message: "Message sent successfully",
     data: newMessage
@@ -490,7 +460,6 @@ router.post("/create-chat", authMiddleware, controllerWrapper(async (req, res) =
   const userId = req.user?.id;
   const { job_application_id } = req.body;
 
-  console.log("POST /create-chat - User:", req.user, "Body:", req.body);
   if (!userId) {
     throw new Error("Unauthorized");
   }
@@ -569,7 +538,6 @@ router.post("/create-chat", authMiddleware, controllerWrapper(async (req, res) =
   };
 }));
 
-// Add route for sending message with attachment
 router.post("/chats/:chat_id/attachment",
   authMiddleware,
   chatAccessMiddleware,
@@ -593,17 +561,14 @@ router.post("/chats/:chat_id/attachment",
       throw new Error("Chat not found");
     }
 
-    // Get file stats
     const stats = await fs.stat(file.path);
 
-    // Determine if sender is recruiter or applier
     const isRecruiter = chat.recruiter_id === userId;
 
     if (!req.attachmentId) {
       throw new Error("Attachment ID is missing");
     }
 
-    // Add attachment message to JSON
     const newMessage = await addAttachmentMessage(
       chatId,
       userId,
@@ -621,17 +586,250 @@ router.post("/chats/:chat_id/attachment",
   })
 );
 
-// Route for getting attachment
-router.get("/attachments/:attachmentId/:filename", authMiddleware, controllerWrapper(async (req, res) => {
+const findChatByAttachmentId = async (attachmentId: string): Promise<ChatData | null> => {
+  try {
+    const files = readdirSync(CHATS_DIR)
+      .filter(file => file.startsWith('chat_') && file.endsWith('.json'));
+
+    for (const file of files) {
+      const chatId = file.replace('chat_', '').replace('.json', '');
+      const chat = await readChatJson(chatId);
+
+      if (chat && chat.messages) {
+        const hasAttachment = chat.messages.some(
+          msg => msg.attachment && msg.attachment.id === attachmentId
+        );
+
+        if (hasAttachment) {
+          return chat;
+        }
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('Error finding chat by attachment ID:', error);
+    return null;
+  }
+};
+
+// Add this helper function before your route
+const serveFile = (filePath: string, res: express.Response): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+// Create a custom wrapper for file serving routes with better error handling
+const fileControllerWrapper = (handler: (req: express.Request, res: express.Response) => Promise<any>) => {
+  return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+      await handler(req, res);
+      // No response.json() here - the handler will manage the response
+    } catch (error) {
+      console.error("Error in file controller:", error);
+      // Only send error response if headers haven't been sent
+      if (!res.headersSent) {
+        res.status(500).json({ message: "Server error" });
+      }
+      // Don't call next(error) here to avoid the ERR_HTTP_HEADERS_SENT error
+    }
+  };
+};
+
+// Use the custom wrapper for your route
+router.get("/attachments/:attachmentId/:filename", fileControllerWrapper(async (req, res) => {
+  // Get token from Authorization header OR query parameter
+  const authHeader = req.headers["authorization"];
+  const headerToken = authHeader && authHeader.split(" ")[1];
+  const queryToken = req.query.token as string;
+  const token = headerToken || queryToken;
+
+  if (!token) {
+    throw new Error("No token provided");
+  }
+
+  let userId: string;
+  // Cast to unknown first, then to our expected type
+  const decoded = jwt.verify(token, appConfig.jwtSecret) as unknown as {
+    id: string;
+    email?: string;
+    name?: string;
+  };
+
+  if (!decoded || !decoded.id) {
+    throw new Error("Invalid token structure");
+  }
+
+  userId = decoded.id;
+
+
   const { attachmentId, filename } = req.params;
+
+  // Find which chat this attachment belongs to
+  const chat = await findChatByAttachmentId(attachmentId);
+
+  if (!chat) {
+    throw new Error("Chat not found for this attachment");
+  }
+
+  // Check if user is either the applier or recruiter of this chat
+  if (chat.applier_id !== userId && chat.recruiter_id !== userId) {
+    throw new Error("Unauthorized: You do not have access to this attachment");
+  }
 
   const filePath = path.join(ATTACHMENTS_DIR, attachmentId, filename);
 
-  if (!await fs.pathExists(filePath)) {
-    return res.status(404).json({ message: "Attachment not found" });
+  // Check if file exists
+  if (!await fsExtra.pathExists(filePath)) {
+    throw new Error("File not found");
   }
 
-  res.sendFile(filePath);
+  // Set proper content-type based on file extension
+  const ext = path.extname(filename).toLowerCase();
+
+  // Important: Set the correct Content-Type for PDFs
+  if (ext === '.pdf') {
+    res.setHeader('Content-Type', 'application/pdf');
+  } else if (ext === '.png') {
+    res.setHeader('Content-Type', 'image/png');
+  } else if (ext === '.jpg' || ext === '.jpeg') {
+    res.setHeader('Content-Type', 'image/jpeg');
+  } else if (ext === '.gif') {
+    res.setHeader('Content-Type', 'image/gif');
+  } else {
+    res.setHeader('Content-Type', 'application/octet-stream');
+  }
+
+  // For download vs viewing in browser
+  if (ext === '.pdf') {
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
+  } else {
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+  }
+
+  res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+
+  // Use the Promise-based function to serve the file
+  await serveFile(filePath, res);
+}));
+
+router.post("/chats/:chat_id/interview", authMiddleware, chatAccessMiddleware, controllerWrapper(async (req, res) => {
+  const userId = req.user?.id;
+  const chatId = req.params.chat_id;
+  const { interviewDetails, job_id } = req.body;
+
+  if (!interviewDetails) {
+    throw new Error("Interview details are required");
+  }
+
+  const chat = req.chat;
+  if (!chat) {
+    throw new Error("Chat not found");
+  }
+
+  // Determine if sender is recruiter or applier
+  const isRecruiter = chat.recruiter_id === userId;
+
+  // Create message in the chat
+  const newMessage: ChatMessage = {
+    message_id: uuidv4(),
+    sender_id: userId || '',
+    is_recruiter: isRecruiter,
+    content: JSON.stringify(interviewDetails),
+    message_type: "INTERVIEW_REQUEST",
+    timestamp: new Date().toISOString(),
+    status: "SENT"
+  };
+
+  // Add message to JSON file
+  await addMessageToChat(chatId, newMessage);
+
+  // Create corresponding interview schedule if job_id is provided
+  if (job_id) {
+    // Create an interview schedule
+    await InterviewSchedules.create({
+      schedule_id: uuidv4(),
+      job_id,
+      interview_date: new Date(interviewDetails.date),
+      location: interviewDetails.location,
+      recruiter_id: chat.recruiter_id,
+      applier_id: chat.applier_id,
+      status: "PENDING"
+    });
+  }
+
+  // Update chat with latest message info
+  const chatData = await readChatJson(chatId);
+  if (chatData) {
+    chatData.last_message = `[INTERVIEW] ${new Date(interviewDetails.date).toLocaleString()}`;
+    chatData.updated_at = new Date().toISOString();
+    await fs.writeFile(getChatFilePath(chatId), JSON.stringify(chatData, null, 2), 'utf8');
+  }
+
+  return {
+    message: "Interview request sent successfully",
+    data: newMessage
+  };
+}));
+
+// Update the message PATCH endpoint to be consistent with other chat routes
+router.patch("/chats/:chat_id/messages/:message_id", authMiddleware, chatAccessMiddleware, controllerWrapper(async (req, res) => {
+  const chatId = req.params.chat_id;
+  const messageId = req.params.message_id;
+  const { content, status } = req.body;
+
+  // Read the chat file
+  const chatData = await readChatJson(chatId);
+  if (!chatData) {
+    throw new Error("Chat not found");
+  }
+
+  // Find the message by ID
+  const messageIndex = chatData.messages.findIndex(m => m.message_id === messageId);
+  if (messageIndex === -1) {
+    throw new Error("Message not found");
+  }
+
+  // Update the message
+  if (content !== undefined) {
+    chatData.messages[messageIndex].content = content;
+  }
+
+  if (status !== undefined) {
+    chatData.messages[messageIndex].status = status;
+  }
+
+  // Save the updated chat
+  await fs.writeFile(getChatFilePath(chatId), JSON.stringify(chatData, null, 2), 'utf8');
+
+  // If this is an interview message, update the corresponding interview schedule
+  if (chatData.messages[messageIndex].message_type === 'INTERVIEW_REQUEST') {
+    try {
+      const interviewData = JSON.parse(content || chatData.messages[messageIndex].content);
+
+      if (interviewData.schedule_id) {
+        // Update the interview schedule status
+        const schedule = await InterviewSchedules.findByPk(interviewData.schedule_id);
+        if (schedule) {
+          schedule.status = interviewData.status || schedule.status;
+          await schedule.save();
+        }
+      }
+    } catch (e) {
+      console.error("Error updating interview schedule:", e);
+    }
+  }
+
+  return {
+    message: "Message updated successfully",
+    data: chatData.messages[messageIndex]
+  };
 }));
 
 export default router;

@@ -26,6 +26,7 @@ import createPostRoutes from './routes/createPostRoutes';
 import profileRoutes from './routes/profileRoutes';
 import chatRoutes from './routes/chatRoutes';
 import applyJobRoutes from './routes/applyJobRoutes';
+import interviewRoutes from './routes/interviewRoutes';
 
 // Import configuration
 import config from '../../config/config.json';
@@ -75,6 +76,7 @@ app.use('/profile', profileRoutes);
 app.use('/job', createPostRoutes);
 app.use('/chat', chatRoutes);
 app.use('/job-applications', applyJobRoutes);
+app.use('/interviews', interviewRoutes);
 
 app.use((req, res) => {
     res.status(404).json({ message: 'Route not found' });

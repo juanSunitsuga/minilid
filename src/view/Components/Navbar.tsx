@@ -44,13 +44,17 @@ const Navbar: React.FC = () => {
             <FaBriefcase className="nav-icon" />
             <span className="nav-text">Jobs</span>
           </Link>
-          <Link to="/chat" className={`nav-item ${activePath === '/chat' ? 'active' : ''}`}>
-            <div className="notification-wrapper">
-              <BsChatDotsFill className="nav-icon" />
-              {/* <span className="notification-badge">6</span> */}
-            </div>
-            <span className="nav-text">Chat</span>
-          </Link>
+          
+          {/* Only show Chat link when user is authenticated */}
+          {isAuthenticated && (
+            <Link to="/chat" className={`nav-item ${activePath === '/chat' ? 'active' : ''}`}>
+              <div className="notification-wrapper">
+                <BsChatDotsFill className="nav-icon" />
+                {/* <span className="notification-badge">6</span> */}
+              </div>
+              <span className="nav-text">Chat</span>
+            </Link>
+          )}
 
           {/* Conditional rendering based on authentication status */}
           {isAuthenticated ? (
@@ -70,7 +74,16 @@ const Navbar: React.FC = () => {
 
               <button
                 onClick={logout}
-                className="nav-item logout-button"
+                className={`nav-item ${activePath === '/logout' ? 'active' : ''}`}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  padding: 0,
+                  minWidth: '80px',
+                  color: 'rgba(0, 0, 0, 0.6)',
+                  height: '52px'
+                }}
                 aria-label="Logout"
               >
                 <FaSignOutAlt className="nav-icon" />

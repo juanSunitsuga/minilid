@@ -231,7 +231,6 @@ router.post('/register-recruiter', controllerWrapper(async (req: Request, res: R
 
 // Applier login route with wrapper
 router.post('/login-applier', controllerWrapper(async (req: Request, res: Response, next: NextFunction) => {
-  // Validate request
   const errors = validateUserLogin(req);
   if (errors.length > 0) {
     throw new Error(`Validation errors: ${errors.join(', ')}`);
