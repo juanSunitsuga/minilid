@@ -141,17 +141,20 @@ router.put("/response/:id", authMiddleware, controllerWrapper(async (req, res) =
     const id = req.params.id;
     const response = req.body;
 
+    console.log(1)
     const job_applier = await JobAppliers.findOne({
         where: {
             id: id,
         }
     });
 
+    console.log(2)
     if (!job_applier) {
         res.locals.errorCode = 404;
         throw new Error("Applier for Job not found");
     }
 
+    console.log(3)
     if (response) {
         job_applier.status = "interviewing";
     }
@@ -159,8 +162,10 @@ router.put("/response/:id", authMiddleware, controllerWrapper(async (req, res) =
         job_applier.status = "rejected";
     }
 
+    console.log(4)
     job_applier.save();
 
+    console.log(5)
     return {
         message: "Job application submitted successfully",
         data: job_applier

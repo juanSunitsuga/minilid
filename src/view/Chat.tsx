@@ -22,7 +22,17 @@ import {
   Grow,
   CircularProgress,
   Snackbar,
-  Alert
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
+  FormHelperText
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -35,9 +45,15 @@ import {
   Image as ImageIcon,
   Videocam as VideoIcon,
   CheckCircle as CheckCircleIcon,
-  ErrorOutline as ErrorIcon
+  ErrorOutline as ErrorIcon,
+  EventAvailable as CalendarIcon,
+  CheckCircle as AcceptIcon,
+  Cancel as DeclineIcon,
+  AccessTime as TimeIcon
 } from '@mui/icons-material';
 import { getChats, getChatById, sendMessage, sendAttachment } from '../services/chatService';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider, DatePicker, TimePicker } from '@mui/x-date-pickers';
 
 // Types for API responses
 interface Message {
@@ -48,6 +64,7 @@ interface Message {
   message_type: string;
   timestamp: string;
   status: string;
+  isLocallyModified?: boolean;
   attachment?: {
     id: string;
     filename: string;
@@ -284,6 +301,14 @@ const Chat: React.FC = () => {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
+  // Add these state variables in your Chat component
+  const [interviewDialogOpen, setInterviewDialogOpen] = useState(false);
+  const [interviewDate, setInterviewDate] = useState<Date | null>(null);
+  const [interviewTime, setInterviewTime] = useState<Date | null>(null);
+  const [interviewLocation, setInterviewLocation] = useState('');
+  const [interviewNotes, setInterviewNotes] = useState('');
+  const [interviewError, setInterviewError] = useState<string | null>(null);
+
   // Format date for chat list
   const formatChatDate = (dateString: string) => {
     try {
@@ -299,16 +324,6 @@ const Chat: React.FC = () => {
       return dateString;
     }
   };
-
-  // Check if the current user is a recruiter
-  // useEffect(() => {
-  //   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  //   console.log("User data:", user); // Debug user data
-  //   setUserId(user.id);
-  //   setIsUserRecruiter(user.role === 'recruiter');
-  //   console.log("Is user recruiter:", user.role === 'recruiter'); 
-  // }, []);
-
   // Fetch all chats on component mount
   useEffect(() => {
     const fetchChats = async () => {
@@ -361,10 +376,6 @@ const Chat: React.FC = () => {
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    // Only auto-scroll in these cases:
-    // 1. Initial load (when messages length changes from 0)
-    // 2. User sends a new message (we sent a message)
-    // 3. User was already at the bottom before new message arrived
 
     if (messages.length > prevMessagesLength.current && shouldScrollToBottom) {
       if (messagesEndRef.current) {
@@ -379,13 +390,11 @@ const Chat: React.FC = () => {
   const handleMessagesScroll = () => {
     if (messagesContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-      // Consider "at bottom" if within 100px of bottom
       const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
       setShouldScrollToBottom(isAtBottom);
     }
   };
 
-  // Filter chats based on search query
   useEffect(() => {
     if (searchQuery) {
       const filtered = chats.filter(chat =>
@@ -422,9 +431,6 @@ const Chat: React.FC = () => {
           is_recruiter: isRecruiter
         };
 
-        console.log("Sending message as recruiter:", isRecruiter);
-        console.log("New message:", newMessage);
-
         setMessages(prev => [...prev, newMessage]);
 
         // Update the chat list with new last message
@@ -455,12 +461,10 @@ const Chat: React.FC = () => {
   // Replace your current handleFileUpload function with this improved version
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || !event.target.files[0] || !selectedChat) {
-      console.log("No file selected or no chat selected");
       return;
     }
 
     const file = event.target.files[0];
-    console.log("File selected:", file.name, "Size:", file.size, "Type:", file.type);
 
     try {
       setUploadingFile(true);
@@ -470,19 +474,14 @@ const Chat: React.FC = () => {
       const userType = localStorage.getItem('userType');
       const isRecruiter = userType === 'recruiter';
 
-      console.log("Sending file as:", userType);
-
       // Call the API to send the attachment
       const response = await sendAttachment(selectedChat.chat_id, file);
-      console.log("Upload response:", response);
 
       if ((response as any).data) {
         const newMessage: Message = {
           ...(response as any).data,
           is_recruiter: isRecruiter
         };
-
-        console.log("New message with attachment:", newMessage);
 
         // Update messages state with new message
         setMessages(prev => [...prev, newMessage]);
@@ -520,36 +519,11 @@ const Chat: React.FC = () => {
     }
   };
 
-  // Add this to improve the sendAttachment function in your services/chatService.ts file
-  // if you have access to modify it:
-
-  /*
-  export const sendAttachment = async (chatId: string, file: File): Promise<AttachmentResponse> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    const token = localStorage.getItem('accessToken');
-    
-    const response = await fetch(`http://localhost:3000/chat/chats/${chatId}/attachment`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
-      body: formData
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to upload file');
-    }
-    
-    return response.json();
-  };
-  */
-
   // Handle chat selection
   const handleChatSelect = (chat: ChatItem) => {
     setSelectedChat(chat);
+    localStorage.setItem('currentChatId', chat.chat_id);
+    console.log("Selected chat ID:", chat.chat_id);
     setError(null);
   };
 
@@ -557,8 +531,6 @@ const Chat: React.FC = () => {
   const isMyMessage = (message: Message) => {
     // Get user type directly from localStorage for consistent results
     const userType = localStorage.getItem('userType');
-
-    console.log(`Message ${message.message_id}: isRecruiter=${message.is_recruiter}, userType=${userType}`);
 
     // Compare directly against localStorage values for consistency
     if (userType === 'recruiter') {
@@ -605,12 +577,55 @@ const Chat: React.FC = () => {
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
-    if (selectedChat) {
+    if (selectedChat && !interviewDialogOpen) { // Don't poll when dialog is open
       interval = setInterval(async () => {
         try {
           const response = await getChatById(selectedChat.chat_id);
           if (response.data && response.data.messages) {
-            setMessages(response.data.messages);
+            // Smart merge of messages instead of complete replacement
+            setMessages(prevMessages => {
+              // If no previous messages, just use the new ones
+              if (prevMessages.length === 0) {
+                return response.data.messages;
+              }
+              
+              // Create a map of existing messages by ID for quick lookup
+              const existingMsgMap = new Map(
+                prevMessages.map(msg => [msg.message_id, msg])
+              );
+              
+              // Create a new array with merged messages
+              const mergedMessages = [...prevMessages];
+              
+              // Add any new messages that don't exist in our current state
+              response.data.messages.forEach((newMsg: Message) => {
+                const existingMsg = existingMsgMap.get(newMsg.message_id);
+                
+                if (!existingMsg) {
+                  // This is a new message, add it
+                  mergedMessages.push(newMsg);
+                } else if (existingMsg.content !== newMsg.content || 
+                           existingMsg.status !== newMsg.status) {
+                  // Update changed message but preserve local UI state for messages
+                  // that might have pending local changes
+                  const isLocallyModified = existingMsg.isLocallyModified;
+                  if (!isLocallyModified) {
+                    // Replace the existing message at its index
+                    const index = mergedMessages.findIndex(
+                      msg => msg.message_id === newMsg.message_id
+                    );
+                    if (index !== -1) {
+                      mergedMessages[index] = newMsg;
+                    }
+                  }
+                }
+              });
+              
+              // Sort by timestamp to ensure proper order
+              return mergedMessages.sort(
+                (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+              );
+            });
           }
         } catch (err) {
           console.error('Error polling for messages:', err);
@@ -621,15 +636,12 @@ const Chat: React.FC = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [selectedChat]);
+  }, [selectedChat, interviewDialogOpen]); // Add interviewDialogOpen to dependencies
 
   // Add this function to your Chat component
 
   const downloadFile = async (url: string, filename: string) => {
-    try {
-      // Notify user download is starting
-      console.log(`Downloading ${filename}...`);
-      
+    try {      
       // Get the token
       const token = localStorage.getItem('accessToken');
       
@@ -778,6 +790,125 @@ const Chat: React.FC = () => {
           </Typography>
         </Box>
       );
+    } else if (msg.message_type === 'INTERVIEW_REQUEST' && msg.content) {
+      try {
+        // Check if content is already an object or a string
+        const interviewData = typeof msg.content === 'string' 
+          ? JSON.parse(msg.content) 
+          : msg.content;
+        
+        const interviewDate = parseISO(interviewData.date);
+        const formattedDate = format(interviewDate, 'EEEE, MMMM d, yyyy');
+        const formattedTime = format(interviewDate, 'h:mm a');
+        const isUserRecruiter = localStorage.getItem('userType') === 'recruiter';
+        
+        return (
+          <Box>
+            <Box sx={{ 
+              p: 1, 
+              border: '1px solid',
+              borderColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.2)' : 'divider',
+              borderRadius: 1,
+              mb: 1,
+              backgroundColor: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'
+            }}>
+              <Typography variant="subtitle2" sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                color: isCurrentUserMessage ? 'white' : 'primary.main',
+                mb: 1
+              }}>
+                <CalendarIcon sx={{ mr: 1, fontSize: '18px' }} />
+                Interview Request
+              </Typography>
+              
+              <Box sx={{ 
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 0.5,
+                color: isCurrentUserMessage ? 'rgba(255, 255, 255, 0.9)' : 'text.primary'
+              }}>
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <CalendarIcon sx={{ mr: 1, fontSize: '16px' }} />
+                  {formattedDate}
+                </Typography>
+                
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <TimeIcon sx={{ mr: 1, fontSize: '16px' }} />
+                  {formattedTime}
+                </Typography>
+                
+                <Typography variant="body2">
+                  <b>Location:</b> {
+                    interviewData.location === 'onsite' ? 'On-site Interview' :
+                    interviewData.location === 'online' ? 'Online (Video Call)' :
+                    interviewData.location === 'phone' ? 'Phone Interview' :
+                    interviewData.location
+                  }
+                </Typography>
+                
+                {interviewData.notes && (
+                  <Typography variant="body2">
+                    <b>Notes:</b> {interviewData.notes}
+                  </Typography>
+                )}
+                
+                {interviewData.status && (
+                  <Typography variant="body2" sx={{ 
+                    mt: 1,
+                    color: 
+                      interviewData.status === 'ACCEPTED' ? 'success.main' :
+                      interviewData.status === 'DECLINED' ? 'error.main' :
+                      'warning.main'
+                  }}>
+                    Status: {
+                      interviewData.status === 'ACCEPTED' ? 'Accepted' :
+                      interviewData.status === 'DECLINED' ? 'Declined' :
+                      'Pending Response'
+                    }
+                  </Typography>
+                )}
+              </Box>
+              
+              {/* Show accept/decline buttons only to appliers and only if status is PENDING */}
+              {!isUserRecruiter && interviewData.status === 'PENDING' && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'flex-end',
+                  mt: 1,
+                  gap: 1
+                }}>
+                  <Button 
+                    size="small" 
+                    variant="contained" 
+                    color="success"
+                    startIcon={<AcceptIcon />}
+                    onClick={() => handleAcceptInterview(msg.message_id, interviewData)}
+                  >
+                    Accept
+                  </Button>
+                  <Button 
+                    size="small" 
+                    variant="outlined" 
+                    color="error"
+                    startIcon={<DeclineIcon />}
+                    onClick={() => handleDeclineInterview(msg.message_id, interviewData)}
+                  >
+                    Decline
+                  </Button>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        );
+      } catch (e) {
+        console.error("Error rendering interview request:", e, "Content:", msg.content);
+        return (
+          <Typography variant="body1" color="error">
+            Invalid interview data
+          </Typography>
+        );
+      }
     }
 
     // Fallback for unknown message types
@@ -787,6 +918,228 @@ const Chat: React.FC = () => {
       </Typography>
     );
   };
+
+  // Add this inside your Chat component before the return statement
+  const InterviewScheduleDialog = () => (
+    <Dialog open={interviewDialogOpen} onClose={() => setInterviewDialogOpen(false)} maxWidth="sm" fullWidth>
+      <DialogTitle>Schedule Interview</DialogTitle>
+      <DialogContent>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DatePicker
+              label="Date"
+              value={interviewDate}
+              onChange={(newDate) => setInterviewDate(newDate)}
+              disablePast
+              renderInput={(params) => <TextField {...params} fullWidth />}
+            />
+            <TimePicker
+              label="Time"
+              value={interviewTime}
+              onChange={(newTime) => setInterviewTime(newTime)}
+              renderInput={(params) => <TextField {...params} fullWidth />}
+            />
+          </LocalizationProvider>
+
+          <FormControl fullWidth>
+            <InputLabel id="interview-location-label">Location</InputLabel>
+            <Select
+              labelId="interview-location-label"
+              value={interviewLocation}
+              label="Location"
+              onChange={(e: SelectChangeEvent) => setInterviewLocation(e.target.value)}
+            >
+              <MenuItem value="onsite">On-site</MenuItem>
+              <MenuItem value="online">Online (Video Call)</MenuItem>
+              <MenuItem value="phone">Phone Interview</MenuItem>
+            </Select>
+          </FormControl>
+
+          <TextField
+            label="Additional Notes"
+            multiline
+            rows={3}
+            value={interviewNotes}
+            onChange={(e) => setInterviewNotes(e.target.value)}
+            fullWidth
+          />
+          
+          {interviewError && (
+            <FormHelperText error>{interviewError}</FormHelperText>
+          )}
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setInterviewDialogOpen(false)}>Cancel</Button>
+        <Button 
+          variant="contained" 
+          onClick={handleSendInterviewRequest}
+          disabled={!interviewDate || !interviewTime || !interviewLocation}
+        >
+          Send Request
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+
+  // Add this function to your Chat component
+  const handleSendInterviewRequest = async () => {
+    try {
+      if (!interviewDate || !interviewTime || !interviewLocation || !selectedChat) {
+        setInterviewError("Please fill all required fields");
+        return;
+      }
+
+      // Create a combined date and time
+      const interviewDateTime = new Date(interviewDate);
+      const timeDate = new Date(interviewTime);
+      interviewDateTime.setHours(timeDate.getHours(), timeDate.getMinutes());
+
+      // Prepare interview data
+      const interviewData = {
+        date: format(interviewDateTime, "yyyy-MM-dd'T'HH:mm:ss"),
+        location: interviewLocation,
+        notes: interviewNotes,
+        status: "PENDING"
+      };
+
+      // Send the interview request (this should be implemented in your API)
+      const response = await sendMessage(
+        selectedChat.chat_id,
+        JSON.stringify(interviewData),
+        'INTERVIEW_REQUEST'
+      );
+
+      if (response.data) {
+        // Add the message to the chat
+        const newMessage: Message = {
+          ...response.data,
+          is_recruiter: true,
+          content: JSON.stringify(interviewData)
+        };
+
+        setMessages(prev => [...prev, newMessage]);
+
+        // Update the chat list
+        const updatedChats = chats.map(chat => {
+          if (chat.chat_id === selectedChat.chat_id) {
+            return {
+              ...chat,
+              last_message: `[INTERVIEW] ${format(interviewDateTime, 'MMM d, yyyy h:mm a')}`,
+              updated_at: new Date().toISOString()
+            };
+          }
+          return chat;
+        });
+
+        setChats(updatedChats);
+        setFilteredChats(updatedChats);
+
+        // Close the dialog and reset fields
+        setInterviewDialogOpen(false);
+        setInterviewDate(null);
+        setInterviewTime(null);
+        setInterviewLocation('');
+        setInterviewNotes('');
+        setInterviewError(null);
+      }
+    } catch (err: any) {
+      console.error("Error scheduling interview:", err);
+      setInterviewError(err.message || "Failed to schedule interview");
+    }
+  };
+
+  // Add this function to handle accepting an interview
+  const handleAcceptInterview = async (messageId: string, interviewData: any) => {
+    try {
+      const updateData = {
+        ...interviewData,
+        status: "ACCEPTED"
+      };
+      
+      const response = await updateMessageStatus(messageId, JSON.stringify(updateData));
+      
+      if (response.success) {
+        setMessages(prev => prev.map(msg => 
+          msg.message_id === messageId ? 
+          {...msg, content: JSON.stringify(updateData)} : 
+          msg
+        ));
+      }
+    } catch (err: any) {
+      console.error("Error accepting interview:", err);
+      setError(err.message || "Failed to accept interview");
+    }
+  };
+
+  // Function to handle declining an interview
+  const handleDeclineInterview = async (messageId: string, interviewData: any) => {
+    try {
+      // Update the interview status
+      const updateData = {
+        ...interviewData,
+        status: "DECLINED"
+      };
+      
+      // Call your API to update the interview status
+      const response = await updateMessageStatus(messageId, JSON.stringify(updateData));
+      
+      if (response.success) {
+        // Update the message in the UI
+        setMessages(prev => prev.map(msg => 
+          msg.message_id === messageId ? 
+          {...msg, content: JSON.stringify(updateData)} : 
+          msg
+        ));
+      }
+    } catch (err: any) {
+      console.error("Error declining interview:", err);
+      setError(err.message || "Failed to decline interview");
+    }
+  };
+
+  // Move this function inside the component
+  const updateMessageStatus = async (messageId: string, updatedContent: string): Promise<{ success: boolean, data?: any }> => {
+    try {
+      if (!selectedChat) {
+        throw new Error('No chat is currently selected');
+      }
+      
+      const token = localStorage.getItem('accessToken');
+      const chatId = selectedChat.chat_id;
+      
+      const response = await fetch(`http://localhost:3000/chat/chats/${chatId}/messages/${messageId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          content: updatedContent,
+          status: 'UPDATED'
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update interview status');
+      }
+      
+      const data = await response.json();
+      return { success: true, data };
+    } catch (error: any) {
+      console.error("Error updating message status:", error);
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    // When selectedChat changes, store its ID in localStorage
+    if (selectedChat && selectedChat.chat_id) {
+      localStorage.setItem('currentChatId', selectedChat.chat_id);
+      console.log("Set current chat ID:", selectedChat.chat_id);
+    }
+  }, [selectedChat]);
 
   return (
     <Box sx={{
@@ -1009,6 +1362,19 @@ const Chat: React.FC = () => {
                 >
                   {uploadingFile ? <CircularProgress size={24} /> : <AttachFileIcon />}
                 </IconButton>
+                
+                {/* Add interview scheduling button for recruiters only */}
+                {localStorage.getItem('userType') === 'recruiter' && (
+                  <IconButton
+                    color="primary"
+                    onClick={() => setInterviewDialogOpen(true)}
+                    disabled={uploadingFile || sendingMessage}
+                    sx={{ mr: 1 }}
+                    title="Schedule Interview"
+                  >
+                    <CalendarIcon />
+                  </IconButton>
+                )}
 
                 <StyledTextField
                   fullWidth
@@ -1073,6 +1439,8 @@ const Chat: React.FC = () => {
           {uploadError}
         </Alert>
       </Snackbar>
+
+      <InterviewScheduleDialog />
     </Box>
   );
 };

@@ -28,7 +28,6 @@ export const FetchEndpoint = async (endpoint: string, method: string, token: str
     const clone = response.clone();
     try {
       const responseData = await clone.text();
-      console.log('Raw response:', responseData);
     } catch (e) {
       console.error('Could not read response body for logging:', e);
     }

@@ -12,7 +12,9 @@
     { "key": "jobId", "value": "" },
     { "key": "applicationId", "value": "" },
     { "key": "chatId", "value": "" },
-    { "key": "attachmentId", "value": "" }
+    { "key": "messageId", "value": "" },
+    { "key": "attachmentId", "value": "" },
+    { "key": "interviewScheduleId", "value": "" }
   ],
   "item": [
     {
@@ -54,6 +56,7 @@
               "  pm.collectionVariables.set('recruiterToken', json.accessToken);",
               "  console.log('Set recruiterToken from root accessToken');",
               "}",
+
               "console.log('Response:', JSON.stringify(json));"
             ]
           }
@@ -121,6 +124,7 @@
               "  pm.collectionVariables.set('applierToken', json.accessToken);",
               "  console.log('Set applierToken from root accessToken');",
               "}",
+
               "console.log('Response:', JSON.stringify(json));"
             ]
           }
@@ -292,6 +296,21 @@
     },
     {
       "name": "Send Message as Recruiter",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "console.log('Send message response:', JSON.stringify(json));",
+              "if(json.data && json.data.message_id) {",
+              "  pm.collectionVariables.set('messageId', json.data.message_id);",
+              "  console.log('Set messageId to:', json.data.message_id);",
+              "}"
+            ]
+          }
+        }
+      ],
       "request": {
         "method": "POST",
         "header": [
@@ -302,6 +321,46 @@
         "body": {
           "mode": "raw",
           "raw": "{\n  \"message\": \"Hello, let's schedule an interview!\",\n  \"messageType\": \"TEXT\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Send Interview Request as Recruiter",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "console.log('Interview request response:', JSON.stringify(json));",
+              "if(json.data && json.data.message_id) {",
+              "  pm.collectionVariables.set('messageId', json.data.message_id);",
+              "  console.log('Set messageId to:', json.data.message_id);",
+              "}",
+              "// Try to extract schedule_id from content if available",
+              "try {",
+              "  const content = JSON.parse(json.data.content);",
+              "  if(content && content.schedule_id) {",
+              "    pm.collectionVariables.set('interviewScheduleId', content.schedule_id);",
+              "    console.log('Set interviewScheduleId to:', content.schedule_id);",
+              "  }",
+              "} catch(e) {",
+              "  console.log('Could not parse message content');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{recruiterToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/chat/chats/{{chatId}}/interview", "host": ["{{baseUrl}}"], "path": ["chat", "chats", "{{chatId}}", "interview"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"interviewDetails\": {\n    \"date\": \"2025-06-15T14:00:00.000Z\",\n    \"location\": \"Video Call - Microsoft Teams\",\n    \"notes\": \"Please prepare a short introduction about your experience with React.\"\n  },\n  \"job_id\": \"{{jobId}}\"\n}"
         }
       }
     },
@@ -368,6 +427,16 @@
       }
     },
     {
+      "name": "Get Chat Messages",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{applierToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/chat/chats/{{chatId}}", "host": ["{{baseUrl}}"], "path": ["chat", "chats", "{{chatId}}"] }
+      }
+    },
+    {
       "name": "Reply as Applier",
       "request": {
         "method": "POST",
@@ -383,13 +452,18 @@
       }
     },
     {
-      "name": "Get Chat Messages",
+      "name": "Accept Interview Request",
       "request": {
-        "method": "GET",
+        "method": "PATCH",
         "header": [
+          { "key": "Content-Type", "value": "application/json" },
           { "key": "Authorization", "value": "Bearer {{applierToken}}" }
         ],
-        "url": { "raw": "{{baseUrl}}/chat/chats/{{chatId}}", "host": ["{{baseUrl}}"], "path": ["chat", "chats", "{{chatId}}"] }
+        "url": { "raw": "{{baseUrl}}/chat/chats/{{chatId}}/messages/{{messageId}}", "host": ["{{baseUrl}}"], "path": ["chat", "chats", "{{chatId}}", "messages", "{{messageId}}"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"content\": {\n    \"date\": \"2025-06-15T14:00:00.000Z\",\n    \"location\": \"Video Call - Microsoft Teams\",\n    \"notes\": \"Please prepare a short introduction about your experience with React.\",\n    \"status\": \"ACCEPTED\",\n    \"schedule_id\": \"{{interviewScheduleId}}\"\n  },\n  \"status\": \"ACCEPTED\"\n}"
+        }
       }
     },
     {
@@ -400,6 +474,56 @@
           { "key": "Authorization", "value": "Bearer {{applierToken}}" }
         ],
         "url": { "raw": "{{baseUrl}}/chat/attachments/{{attachmentId}}/interview_schedule.pdf", "host": ["{{baseUrl}}"], "path": ["chat", "attachments", "{{attachmentId}}", "interview_schedule.pdf"] }
+      }
+    },
+    {
+      "name": "Get Interviews for User",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "console.log('Get interviews response:', JSON.stringify(json));",
+              "if(json.data && json.data.length > 0) {",
+              "  pm.collectionVariables.set('interviewScheduleId', json.data[0].schedule_id);",
+              "  console.log('Set interviewScheduleId to:', json.data[0].schedule_id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{applierToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/interviews/user/applier/{{applierToken}}", "host": ["{{baseUrl}}"], "path": ["interviews", "user", "applier", "{{applierToken}}"] }
+      }
+    },
+    {
+      "name": "Get Specific Interview",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{applierToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/interviews/{{interviewScheduleId}}", "host": ["{{baseUrl}}"], "path": ["interviews", "{{interviewScheduleId}}"] }
+      }
+    },
+    {
+      "name": "Update Interview Status",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{applierToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/interviews/{{interviewScheduleId}}", "host": ["{{baseUrl}}"], "path": ["interviews", "{{interviewScheduleId}}"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"COMPLETED\",\n  \"message_id\": \"{{messageId}}\"\n}"
+        }
       }
     },
     {

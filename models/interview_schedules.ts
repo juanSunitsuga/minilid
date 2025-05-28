@@ -45,7 +45,6 @@ export class InterviewSchedules extends Model {
     @BelongsTo(() => Recruiters, { foreignKey: 'recruiter_id', constraints: false })
     declare recruiter: Recruiters;
     
-    // If you have applier_id as well:
     @ForeignKey(() => Appliers)
     @Column({
         type: DataType.UUID,
@@ -56,4 +55,11 @@ export class InterviewSchedules extends Model {
 
     @BelongsTo(() => Appliers, { foreignKey: 'applier_id', constraints: false })
     declare applier: Appliers;
+
+    @Column({
+        type: DataType.ENUM('ACCEPTED', 'DECLINED', 'PENDING'),
+        allowNull: false,
+        defaultValue: 'PENDING'
+    })
+    declare status: 'ACCEPTED' | 'DECLINED' | 'PENDING';
 }

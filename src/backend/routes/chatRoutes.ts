@@ -13,6 +13,7 @@ import multer from 'multer';
 import process from 'process';
 import { readdirSync } from 'fs';  // Keep native fs separate
 import { promises as fs } from 'fs';
+import { InterviewSchedules } from "../../../models/interview_schedules";
 
 const PROJECT_ROOT = process.cwd();
 const BASE_DIR = path.join(PROJECT_ROOT, 'data');
@@ -309,34 +310,30 @@ const router = express.Router();
 
 // Middleware to check chat access
 const chatAccessMiddleware = middlewareWrapper(async (req, res, next) => {
-  const userId = req.user?.id;
-  const chatId = req.params.chatId || req.params.chat_id;
-  
-  if (!userId) {
-    throw new Error("Unauthorized: User ID is required");
+  try {
+    // Get chat ID from URL params
+    const chatId = req.params.chat_id;
+    
+    console.log("Chat access middleware - chat ID:", chatId);
+    
+    if (!chatId) {
+      throw new Error("Chat ID is required");
+    }
+    
+    // Read the chat data
+    const chatData = await readChatJson(chatId);
+    
+    if (!chatData) {
+      console.log("Chat not found for ID:", chatId);
+      throw new Error("Chat not found");
+    }
+    
+    // Store chat data in request object for later use
+    req.chat = chatData;
+  } catch (error) {
+    // This will be caught by the controllerWrapper
+    throw error;
   }
-
-  if (!chatId) {
-    throw new Error("Chat ID is required");
-  }
-
-  // Read chat from JSON
-  const chat = await readChatJson(chatId);
-
-  if (!chat) {
-    throw new Error("Chat not found");
-  }
-
-  if (chat.applier_id !== userId && chat.recruiter_id !== userId) {
-    throw new Error("You do not have access to this chat");
-  }
-
-  const jobApplication = await JobAppliers.findByPk(chat.job_application_id);
-  if (!jobApplication || !['interviewing'].includes(jobApplication.status)) {
-    throw new Error("Chat is only available after application has been approved for interview or hired");
-  }
-
-  req.chat = chat;
 });
 
 router.get("/chats", authMiddleware, controllerWrapper(async (req, res) => {
@@ -426,7 +423,7 @@ router.get("/chats", authMiddleware, controllerWrapper(async (req, res) => {
 }));
 
 // Get specific chat with messages
-router.get('/chats/:chatId', authMiddleware, chatAccessMiddleware, controllerWrapper(async (req, res) => {
+router.get('/chats/:chat_id', authMiddleware, chatAccessMiddleware, controllerWrapper(async (req, res) => {
   // Chat was loaded in middleware
   const chat = req.chat;
 
@@ -441,8 +438,6 @@ router.post("/chats/:chat_id/messages", authMiddleware, chatAccessMiddleware, co
   const userId = req.user?.id;
   const chatId = req.params.chat_id;
   const { message, messageType = "TEXT" } = req.body;
-
-  console.log("POST /chats/:chat_id/messages - User:", req.user, "Chat ID:", chatId, "Body:", req.body);
 
   if (!message) {
     throw new Error("Message content is required");
@@ -584,21 +579,21 @@ router.post("/chats/:chat_id/attachment",
     }
 
     const chat = req.chat;
-    
+
     if (!chat) {
       throw new Error("Chat not found");
     }
 
     // Get file stats
     const stats = await fs.stat(file.path);
-    
+
     // Determine if sender is recruiter or applier
     const isRecruiter = chat.recruiter_id === userId;
-    
+
     if (!req.attachmentId) {
       throw new Error("Attachment ID is missing");
     }
-    
+
     // Add attachment message to JSON
     const newMessage = await addAttachmentMessage(
       chatId,
@@ -618,45 +613,159 @@ router.post("/chats/:chat_id/attachment",
 );
 
 // Route for getting attachment
-router.get("/attachments/:attachmentId/:filename", async (req, res) => {
-  try {
-    const { attachmentId, filename } = req.params;
-    const filePath = path.join(ATTACHMENTS_DIR, attachmentId, filename);
+router.get("/attachments/:attachmentId/:filename", authMiddleware, controllerWrapper(async (req, res, next) => {
+  const { attachmentId, filename } = req.params;
+  const filePath = path.join(ATTACHMENTS_DIR, attachmentId, filename);
 
-    // Check if file exists
-    if (!await fsExtra.pathExists(filePath)) {
-      return res.status(404).json({ message: "Attachment not found" });
-    }
-
-    // Set proper content-type based on file extension
-    const ext = path.extname(filename).toLowerCase();
-    
-    // Important: Set the correct Content-Type for PDFs
-    if (ext === '.pdf') {
-      res.setHeader('Content-Type', 'application/pdf');
-    } else if (ext === '.png') {
-      res.setHeader('Content-Type', 'image/png');
-    } else if (ext === '.jpg' || ext === '.jpeg') {
-      res.setHeader('Content-Type', 'image/jpeg');
-    } else if (ext === '.gif') {
-      res.setHeader('Content-Type', 'image/gif');
-    } else {
-      res.setHeader('Content-Type', 'application/octet-stream');
-    }
-
-    // For download vs viewing in browser
-    if (ext === '.pdf') {
-      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
-    } else {
-      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
-    }
-
-    // Send file directly without going through the wrapper
-    return res.sendFile(filePath);
-  } catch (error) {
-    console.error("Error serving attachment:", error);
-    return res.status(500).json({ message: "Failed to serve attachment" });
+  // Check if file exists
+  if (!await fsExtra.pathExists(filePath)) {
+    throw new Error("Attachment not found");
   }
-});
+
+  // Set proper content-type based on file extension
+  const ext = path.extname(filename).toLowerCase();
+
+  // Important: Set the correct Content-Type for PDFs
+  if (ext === '.pdf') {
+    res.setHeader('Content-Type', 'application/pdf');
+  } else if (ext === '.png') {
+    res.setHeader('Content-Type', 'image/png');
+  } else if (ext === '.jpg' || ext === '.jpeg') {
+    res.setHeader('Content-Type', 'image/jpeg');
+  } else if (ext === '.gif') {
+    res.setHeader('Content-Type', 'image/gif');
+  } else {
+    res.setHeader('Content-Type', 'application/octet-stream');
+  }
+
+  // For download vs viewing in browser
+  if (ext === '.pdf') {
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
+  } else {
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+  }
+
+  // Signal that this is a file response
+  return {
+    __type: 'file',
+    filePath: filePath
+  };
+}));
+
+router.post("/chats/:chat_id/interview", authMiddleware, chatAccessMiddleware, controllerWrapper(async (req, res) => {
+  const userId = req.user?.id;
+  const chatId = req.params.chat_id;
+  const { interviewDetails, job_id } = req.body;
+
+  console.log("Chat ID:", chatId, "User ID:", userId, "Interview Details:", interviewDetails);
+  if (!interviewDetails) {
+    throw new Error("Interview details are required");
+  }
+
+  const chat = req.chat;
+  if (!chat) {
+    throw new Error("Chat not found");
+  }
+
+  console.log(2)
+  // Determine if sender is recruiter or applier
+  const isRecruiter = chat.recruiter_id === userId;
+
+  console.log(3)
+  // Create message in the chat
+  const newMessage: ChatMessage = {
+    message_id: uuidv4(),
+    sender_id: userId || '',
+    is_recruiter: isRecruiter,
+    content: JSON.stringify(interviewDetails),
+    message_type: "INTERVIEW_REQUEST",
+    timestamp: new Date().toISOString(),
+    status: "SENT"
+  };
+
+  // Add message to JSON file
+  await addMessageToChat(chatId, newMessage);
+
+  // Create corresponding interview schedule if job_id is provided
+  if (job_id) {
+    // Create an interview schedule
+    await InterviewSchedules.create({
+      schedule_id: uuidv4(),
+      job_id,
+      interview_date: new Date(interviewDetails.date),
+      location: interviewDetails.location,
+      recruiter_id: chat.recruiter_id,
+      applier_id: chat.applier_id,
+      status: "PENDING"
+    });
+  }
+
+  // Update chat with latest message info
+  const chatData = await readChatJson(chatId);
+  if (chatData) {
+    chatData.last_message = `[INTERVIEW] ${new Date(interviewDetails.date).toLocaleString()}`;
+    chatData.updated_at = new Date().toISOString();
+    await fs.writeFile(getChatFilePath(chatId), JSON.stringify(chatData, null, 2), 'utf8');
+  }
+
+  return {
+    message: "Interview request sent successfully",
+    data: newMessage
+  };
+}));
+
+// Update the message PATCH endpoint to be consistent with other chat routes
+router.patch("/chats/:chat_id/messages/:message_id", authMiddleware, chatAccessMiddleware, controllerWrapper(async (req, res) => {
+  const chatId = req.params.chat_id;
+  const messageId = req.params.message_id;
+  const { content, status } = req.body;
+
+  // Read the chat file
+  const chatData = await readChatJson(chatId);
+  if (!chatData) {
+    throw new Error("Chat not found");
+  }
+
+  // Find the message by ID
+  const messageIndex = chatData.messages.findIndex(m => m.message_id === messageId);
+  if (messageIndex === -1) {
+    throw new Error("Message not found");
+  }
+
+  // Update the message
+  if (content !== undefined) {
+    chatData.messages[messageIndex].content = content;
+  }
+
+  if (status !== undefined) {
+    chatData.messages[messageIndex].status = status;
+  }
+
+  // Save the updated chat
+  await fs.writeFile(getChatFilePath(chatId), JSON.stringify(chatData, null, 2), 'utf8');
+
+  // If this is an interview message, update the corresponding interview schedule
+  if (chatData.messages[messageIndex].message_type === 'INTERVIEW_REQUEST') {
+    try {
+      const interviewData = JSON.parse(content || chatData.messages[messageIndex].content);
+
+      if (interviewData.schedule_id) {
+        // Update the interview schedule status
+        const schedule = await InterviewSchedules.findByPk(interviewData.schedule_id);
+        if (schedule) {
+          schedule.status = interviewData.status || schedule.status;
+          await schedule.save();
+        }
+      }
+    } catch (e) {
+      console.error("Error updating interview schedule:", e);
+    }
+  }
+
+  return {
+    message: "Message updated successfully",
+    data: chatData.messages[messageIndex]
+  };
+}));
 
 export default router;
