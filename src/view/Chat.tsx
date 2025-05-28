@@ -32,7 +32,8 @@ import {
   Select,
   MenuItem,
   SelectChangeEvent,
-  FormHelperText
+  FormHelperText,
+  Fab
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -49,12 +50,14 @@ import {
   EventAvailable as CalendarIcon,
   CheckCircle as AcceptIcon,
   Cancel as DeclineIcon,
-  AccessTime as TimeIcon
+  AccessTime as TimeIcon,
+  KeyboardArrowDown as ArrowDownIcon
 } from '@mui/icons-material';
 import { getChats, getChatById, sendMessage, sendAttachment } from '../services/chatService';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { FetchEndpoint } from './FetchEndpoint';
+import InterviewScheduleModal from './InterviewScheduleModal';
 
 // Types for API responses
 interface Message {
@@ -277,6 +280,14 @@ const OnlineBadge = styled(Badge)(({ theme }) => ({
   },
 }));
 
+const ScrollToBottomButton = styled(Fab)(({ theme }) => ({
+  position: 'absolute',
+  bottom: '100px', // Position it above the send button
+  right: '20px',
+  zIndex: 10,
+  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+}));
+
 const Chat: React.FC = () => {
   const [chats, setChats] = useState<ChatItem[]>([]);
   const [selectedChat, setSelectedChat] = useState<ChatItem | null>(null);
@@ -391,10 +402,18 @@ const Chat: React.FC = () => {
   const handleMessagesScroll = () => {
     if (messagesContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
-      setShouldScrollToBottom(isAtBottom);
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+
+      // If more than 300px from bottom, show the button
+      const shouldShowButton = distanceFromBottom > 300;
+      setShowScrollButton(shouldShowButton);
+
+      // Only auto-scroll if less than 100px from bottom
+      setShouldScrollToBottom(distanceFromBottom < 100);
     }
   };
+
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   useEffect(() => {
     if (searchQuery) {
@@ -579,7 +598,7 @@ const Chat: React.FC = () => {
 
     const pollMessages = async () => {
       if (!selectedChat) return;
-      
+
       try {
         const response = await getChatById(selectedChat.chat_id);
         if (response.data && response.data.messages) {
@@ -637,7 +656,7 @@ const Chat: React.FC = () => {
     if (selectedChat && !interviewDialogOpen) {
       // Initial poll when component mounts or dependencies change
       pollMessages();
-      
+
       // Set up interval
       interval = setInterval(pollMessages, 5000);
     }
@@ -652,10 +671,10 @@ const Chat: React.FC = () => {
   const downloadFile = async (url: string, filename: string) => {
     try {
       console.log("Downloading from URL:", url); // Debug log
-      
+
       // Get the token
       const token = localStorage.getItem('accessToken');
-      
+
       // Check if the URL already has a token parameter
       const hasToken = url.includes('token=');
       const finalUrl = hasToken ? url : `${url}${url.includes('?') ? '&' : '?'}token=${token}`;
@@ -715,7 +734,7 @@ const Chat: React.FC = () => {
       );
     } else if (msg.message_type === 'IMAGE' && msg.attachment) {
       const attachmentUrl = getAttachmentUrl(msg.attachment.id, msg.attachment.filename || '');
-      
+
       return (
         <Box>
           <Box sx={{ mt: 1, mb: 1 }}>
@@ -851,21 +870,21 @@ const Chat: React.FC = () => {
                     backgroundColor: 'white',
                     color:
                       interviewData.status === 'ACCEPTED' ? 'success.main' :
-                      interviewData.status === 'DECLINED' ? 'error.main' :
-                      'warning.main',
+                        interviewData.status === 'DECLINED' ? 'error.main' :
+                          'warning.main',
                     padding: '3px 8px',
                     borderRadius: '4px',
                     fontWeight: 'medium',
                     border: '1px solid',
                     borderColor:
                       interviewData.status === 'ACCEPTED' ? 'success.light' :
-                      interviewData.status === 'DECLINED' ? 'error.light' :
-                      'warning.light'
+                        interviewData.status === 'DECLINED' ? 'error.light' :
+                          'warning.light'
                   }}>
                     Status: {
                       interviewData.status === 'ACCEPTED' ? 'Accepted' :
-                      interviewData.status === 'DECLINED' ? 'Declined' :
-                      'Pending Response'
+                        interviewData.status === 'DECLINED' ? 'Declined' :
+                          'Pending Response'
                     }
                   </Typography>
                 )}
@@ -921,78 +940,9 @@ const Chat: React.FC = () => {
   };
 
   // Add this inside your Chat component before the return statement
-  const InterviewScheduleDialog = () => (
-    <Dialog 
-      open={interviewDialogOpen} 
-      onClose={() => {
-        setInterviewDialogOpen(false);
-        setInterviewError(null);
-      }}
-      maxWidth="sm" 
-      fullWidth
-      disableEscapeKeyDown={false}
-      disableRestoreFocus
-    >
-      <DialogTitle>Schedule Interview</DialogTitle>
-      <DialogContent>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <DatePicker
-              label="Date"
-              value={interviewDate}
-              onChange={(newDate) => setInterviewDate(newDate)}
-              disablePast
-            />
-            <TimePicker
-              label="Time"
-              value={interviewTime}
-              onChange={(newTime) => setInterviewTime(newTime)}
-            />
-          </LocalizationProvider>
-
-          <FormControl fullWidth>
-            <InputLabel id="interview-location-label">Location</InputLabel>
-            <Select
-              labelId="interview-location-label"
-              value={interviewLocation}
-              label="Location"
-              onChange={(e: SelectChangeEvent) => setInterviewLocation(e.target.value)}
-            >
-              <MenuItem value="onsite">On-site</MenuItem>
-              <MenuItem value="online">Online (Video Call)</MenuItem>
-              <MenuItem value="phone">Phone Interview</MenuItem>
-            </Select>
-          </FormControl>
-
-          <TextField
-            label="Additional Notes"
-            multiline
-            rows={3}
-            value={interviewNotes}
-            onChange={(e) => setInterviewNotes(e.target.value)}
-            fullWidth
-          />
-
-          {interviewError && (
-            <FormHelperText error>{interviewError}</FormHelperText>
-          )}
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setInterviewDialogOpen(false)}>Cancel</Button>
-        <Button
-          variant="contained"
-          onClick={handleSendInterviewRequest}
-          disabled={!interviewDate || !interviewTime || !interviewLocation}
-        >
-          Send Request
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
 
   // Add this function to your Chat component
-  const handleSendInterviewRequest = async () => {
+  const handleSendInterviewRequest = async (): Promise<void> => {
     try {
       if (!interviewDate || !interviewTime || !interviewLocation || !selectedChat) {
         setInterviewError("Please fill all required fields");
@@ -1055,6 +1005,8 @@ const Chat: React.FC = () => {
     } catch (err: any) {
       console.error("Error scheduling interview:", err);
       setInterviewError(err.message || "Failed to schedule interview");
+      // Rethrow to make the promise reject
+      throw err;
     }
   };
 
@@ -1164,17 +1116,24 @@ const Chat: React.FC = () => {
 
   // Update this function to include the token as a query parameter
   const getAttachmentUrl = (attachmentId: string, filename: string): string => {
-  const API_URL = 'http://localhost:3000'; 
-  const token = localStorage.getItem('accessToken');
-  
-  // Make sure this matches exactly how your backend expects the URL
-  return `${API_URL}/chat/attachments/${attachmentId}/${encodeURIComponent(filename)}?token=${token}`;
-};
+    const API_URL = 'http://localhost:3000';
+    const token = localStorage.getItem('accessToken');
+
+    // Make sure this matches exactly how your backend expects the URL
+    return `${API_URL}/chat/attachments/${attachmentId}/${encodeURIComponent(filename)}?token=${token}`;
+  };
 
   // Add this function before the return statement
   const handleOpenInterviewDialog = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent event bubbling
     setInterviewDialogOpen(true);
+  };
+
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      setShouldScrollToBottom(true);
+    }
   };
 
   return (
@@ -1333,6 +1292,7 @@ const Chat: React.FC = () => {
               <ChatMessages
                 ref={messagesContainerRef}
                 onScroll={handleMessagesScroll}
+                sx={{ position: 'relative' }} // Important for absolute positioning inside
               >
                 {loading ? (
                   <Box display="flex" justifyContent="center" alignItems="center" height="100%">
@@ -1380,7 +1340,7 @@ const Chat: React.FC = () => {
                 )}
               </ChatMessages>
 
-              <ChatReply>
+              <ChatReply sx={{ position: 'relative' }}> {/* Add position relative here */}
                 {/* Hidden file input */}
                 <input
                   type="file"
@@ -1389,6 +1349,27 @@ const Chat: React.FC = () => {
                   onChange={handleFileUpload}
                   ref={fileInputRef}
                 />
+
+                {/* Position the scroll button here, above the send button */}
+                {showScrollButton && (
+                  <Zoom in={showScrollButton} timeout={300} unmountOnExit={false}>
+                    <ScrollToBottomButton
+                      color="default" // Changed from primary to default
+                      onClick={scrollToBottom}
+                      size="small"
+                      sx={{
+                        bgcolor: 'background.paper',
+                        color: 'primary.main', 
+                        '&:hover': {
+                          bgcolor: 'primary.main',
+                          color: 'background.paper',
+                        }
+                      }}
+                    >
+                      <ArrowDownIcon />
+                    </ScrollToBottomButton>
+                  </Zoom>
+                )}
 
                 <IconButton
                   color="primary"
@@ -1476,7 +1457,24 @@ const Chat: React.FC = () => {
         </Alert>
       </Snackbar>
 
-      <InterviewScheduleDialog />
+      {/* Interview scheduling dialog */}
+      <InterviewScheduleModal
+        open={interviewDialogOpen}
+        onClose={() => {
+          setInterviewDialogOpen(false);
+          setInterviewError(null);
+        }}
+        onSubmit={handleSendInterviewRequest}
+        interviewDate={interviewDate}
+        setInterviewDate={setInterviewDate}
+        interviewTime={interviewTime}
+        setInterviewTime={setInterviewTime}
+        interviewLocation={interviewLocation}
+        setInterviewLocation={setInterviewLocation}
+        interviewNotes={interviewNotes}
+        setInterviewNotes={setInterviewNotes}
+        interviewError={interviewError}
+      />
     </Box>
   );
 };
