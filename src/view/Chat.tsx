@@ -675,19 +675,18 @@ const Chat: React.FC = () => {
       // Get the token
       const token = localStorage.getItem('accessToken');
 
-      // Check if the URL already has a token parameter
-      const hasToken = url.includes('token=');
-      const finalUrl = hasToken ? url : `${url}${url.includes('?') ? '&' : '?'}token=${token}`;
+      const urlObj = new URL(url);
+      const endpoint = urlObj.pathname;
 
       // Fetch the file with authorization
-      const response = await fetch(finalUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        }
-      });
+      const response = await FetchEndpoint(
+        endpoint,
+        'GET',
+        token,
+        null // no body for GET request
+      );
 
-      if (!response.ok) {
+      if (!response.ok || !response) {
         throw new Error(`Server returned ${response.status}: ${response.statusText}`);
       }
 
@@ -1359,7 +1358,7 @@ const Chat: React.FC = () => {
                       size="small"
                       sx={{
                         bgcolor: 'background.paper',
-                        color: 'primary.main', 
+                        color: 'primary.main',
                         '&:hover': {
                           bgcolor: 'primary.main',
                           color: 'background.paper',
