@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaHome, FaBriefcase, FaSearch, FaUser, FaBell, FaSignInAlt, FaSignOutAlt } from 'react-icons/fa';
+import { FaHome, FaBriefcase, FaSearch, FaUser, FaBell, FaSignInAlt, FaSignOutAlt, FaChartBar, FaBuilding, FaClipboardList } from 'react-icons/fa';
 import { BsChatDotsFill } from 'react-icons/bs';
 import { useAuth } from '../Context/AuthContext';
 import { useModal } from '../Context/ModalContext';
@@ -12,11 +12,37 @@ const Navbar: React.FC = () => {
   const { isAuthenticated, userType, userData, companyData, logout } = useAuth();
   const { openLoginModal, openRegisterModal } = useModal();
   
-  // Debug auth state
-
   useEffect(() => {
     setActivePath(location.pathname);
   }, [location]);
+
+  // Get dashboard label and icon based on user type
+  const getDashboardInfo = () => {
+    switch(userType) {
+      case 'applier':
+        return {
+          label: 'My Applications',
+          icon: <FaClipboardList className="nav-icon" />
+        };
+      case 'recruiter':
+        return {
+          label: 'Manage Jobs',
+          icon: <FaChartBar className="nav-icon" />
+        };
+      case 'company':
+        return {
+          label: 'Company',
+          icon: <FaBuilding className="nav-icon" />
+        };
+      default:
+        return {
+          label: 'Dashboard',
+          icon: <FaChartBar className="nav-icon" />
+        };
+    }
+  };
+
+  const dashboardInfo = getDashboardInfo();
 
   return (
     <header className="minilid-header">
@@ -50,7 +76,6 @@ const Navbar: React.FC = () => {
             <Link to="/chat" className={`nav-item ${activePath === '/chat' ? 'active' : ''}`}>
               <div className="notification-wrapper">
                 <BsChatDotsFill className="nav-icon" />
-                {/* <span className="notification-badge">6</span> */}
               </div>
               <span className="nav-text">Chat</span>
             </Link>
@@ -59,6 +84,24 @@ const Navbar: React.FC = () => {
           {/* Conditional rendering based on authentication status */}
           {isAuthenticated ? (
             <>
+              {/* Add Dashboard button with dynamic label based on user type */}
+              <button
+                onClick={() => navigate('/dashboard')}
+                className={`nav-item ${activePath === '/dashboard' ? 'active' : ''}`}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  padding: 0,
+                  minWidth: '80px',
+                  color: 'rgba(0, 0, 0, 0.6)',
+                  height: '52px'
+                }}
+              >
+                {dashboardInfo.icon}
+                <span className="nav-text">{dashboardInfo.label}</span>
+              </button>
+
               <Link to="/profile" className={`nav-item ${activePath === '/profile' ? 'active' : ''}`}>
                 <FaUser className="nav-icon profile-icon" />
                 <span className="nav-text">Me</span>

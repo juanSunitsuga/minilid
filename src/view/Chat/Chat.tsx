@@ -53,10 +53,8 @@ import {
   AccessTime as TimeIcon,
   KeyboardArrowDown as ArrowDownIcon
 } from '@mui/icons-material';
-import { getChats, getChatById, sendMessage, sendAttachment } from '../services/chatService';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider, DatePicker, TimePicker } from '@mui/x-date-pickers';
-import { FetchEndpoint } from './FetchEndpoint';
+import { getChats, getChatById, sendMessage, sendAttachment } from '../../services/chatService';
+import { FetchEndpoint } from '../FetchEndpoint';
 import InterviewScheduleModal from './InterviewScheduleModal';
 
 // Types for API responses

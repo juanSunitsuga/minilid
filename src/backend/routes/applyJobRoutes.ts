@@ -2,6 +2,10 @@ import express from "express";
 import { JobPosts } from "../../../models/job_posts";
 import { Appliers } from "../../../models/appliers";
 import { JobAppliers } from "../../../models/job_appliers";
+import { Recruiters } from "../../../models/recruiters";
+import { Companies } from "../../../models/companies";
+import { JobCategories } from "../../../models/job_categories";
+import { JobTypes } from "../../../models/job_types";
 import authMiddleware from "../../middleware/Auth";
 import { controllerWrapper } from "../../utils/controllerWrapper";
 
@@ -64,28 +68,40 @@ router.post("/apply", authMiddleware, controllerWrapper(async (req, res) => {
 
 // Get my job applications
 router.get("/my-applications", authMiddleware, controllerWrapper(async (req, res) => {
+    console.log("Fetching job applications for user...");
     const userId = req.user?.id;
 
     if (!userId) {
         throw new Error("Unauthorized: User ID not found");
     }
 
-    // Find applier
     const applier = await Appliers.findOne({
         where: { user_id: userId }
     });
 
     if (!applier) {
-        throw new Error("Applier profile not found");
+        throw new Error("Applier profile not found. Please complete your profile first.");
     }
 
     // Get all applications
     const applications = await JobAppliers.findAll({
-        where: { applier_id: applier.applier_id },
+        where: { applier_id: userId },
         include: [
             {
                 model: JobPosts,
                 as: "jobPost",
+                include: [
+                    {
+                        model: Recruiters,
+                        as: "recruiter",
+                        include: [
+                            {
+                                model: Companies,
+                                as: "company"
+                            }
+                        ]
+                    }
+                ],
                 attributes: ["job_id", "title", "description", "posted_date"]
             }
         ]
@@ -137,24 +153,98 @@ router.delete("/cancel/:applicationId", authMiddleware, controllerWrapper(async 
     };
 }));
 
+router.get('/job-applicants', authMiddleware, controllerWrapper(async (req, res) => {
+    const userId = req.user?.id;
+
+    if (!userId) {
+        throw new Error("Unauthorized: User ID not found");
+    }
+
+    // Find recruiter
+    const recruiter = await Recruiters.findOne({
+        where: { recruiter_id: userId }
+    });
+
+    console.log(0, recruiter)
+
+    if (!recruiter) {
+        throw new Error("Unauthorized: Recruiter not found");
+    }
+
+    const company = await Companies.findOne({
+        where: { company_id: recruiter.company_id }
+    });
+
+    // Find all jobs posted by this recruiter
+    const jobs = await JobPosts.findAll({
+        where: { recruiter_id: recruiter.recruiter_id },
+        order: [["posted_date", "DESC"]]
+    });
+
+    if (!jobs || jobs.length === 0) {
+        return {
+            message: "No jobs found for this recruiter",
+            data: []
+        };
+    }
+
+    const category = await JobCategories.findAll();
+    const type = await JobTypes.findAll();
+
+
+
+    // Get applicant counts for each job
+    const jobsWithApplicantCounts = await Promise.all(jobs.map(async job => {
+        const applicantCount = await JobAppliers.count({
+            where: { job_id: job.job_id }
+        });
+
+        const jobData = job.get({ plain: true });
+
+        const matchingCategory = category.find(c => c.category_id === jobData.category_id);
+
+        const matchingType = type.find(t => t.type_id === jobData.type_id);
+
+        return {
+            job_id: jobData.job_id,
+            title: jobData.title,
+            description: jobData.description,
+            posted_date: jobData.posted_date,
+            category: matchingCategory ? {
+                name: matchingCategory.category_name 
+            } : null,
+            type: matchingType ? {
+                name: matchingType.type_name,
+            } : null,
+            company: company ? {
+                name: company.company_name, 
+                address: company.address
+            } : null,
+            applicants_count: applicantCount
+        };
+    }));
+
+    return {
+        message: "Jobs with applicant counts retrieved successfully",
+        data: jobsWithApplicantCounts
+    };
+}));
+
 router.put("/response/:id", authMiddleware, controllerWrapper(async (req, res) => {
     const id = req.params.id;
     const response = req.body;
 
-    console.log(1)
     const job_applier = await JobAppliers.findOne({
         where: {
             id: id,
         }
     });
 
-    console.log(2)
     if (!job_applier) {
         res.locals.errorCode = 404;
         throw new Error("Applier for Job not found");
     }
 
-    console.log(3)
     if (response) {
         job_applier.status = "interviewing";
     }
@@ -162,10 +252,8 @@ router.put("/response/:id", authMiddleware, controllerWrapper(async (req, res) =
         job_applier.status = "rejected";
     }
 
-    console.log(4)
     job_applier.save();
 
-    console.log(5)
     return {
         message: "Job application submitted successfully",
         data: job_applier

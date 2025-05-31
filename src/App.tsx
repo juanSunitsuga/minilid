@@ -9,8 +9,9 @@ import Navbar from './view/Components/Navbar';
 import Home from './view/Home';
 import Profile from './view/Profile/Profile';
 import Job from './view/Job';
-import Chat from './view/Chat';
+import Chat from './view/Chat/Chat';
 import CreateJob from './view/CreateJob';
+import Dashboard from './view/Dashboard/Dashboard';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
             <Route path="/chat" element={<Chat />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/create-job" element={<CreateJob />} />
+            <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
         </main>
       </ModalProvider>
