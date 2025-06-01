@@ -12,13 +12,13 @@ import Job from './view/Job';
 import Chat from './view/Chat/Chat';
 import CreateJob from './view/CreateJob';
 import Dashboard from './view/Dashboard/Dashboard';
+import JobDetail from './view/JobDetail';
 
 function App() {
   return (
     <AuthProvider>
       <ModalProvider>
         <Navbar />
-
         <main className="content">
           <Routes>
             <Route path="/" element={<Home />} />
@@ -26,6 +26,7 @@ function App() {
             <Route path="/chat" element={<Chat />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/create-job" element={<CreateJob />} />
+            <Route path="/job/:jobId" element={<JobDetail />} />
             <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
         </main>

@@ -46,6 +46,18 @@ export default {
         type: Sequelize.TEXT,
         allowNull: true,
       },
+      salary_min: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+      },
+      salary_max: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+      },
+      salary_type: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
       posted_date: {
         type: Sequelize.DATE,
         allowNull: false,

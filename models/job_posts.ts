@@ -54,6 +54,24 @@ export class JobPosts extends Model {
     })
     declare type_id: number;
 
+    @Column({ 
+        type: DataType.INTEGER,
+        allowNull: false
+    })
+    declare salary_min: number;
+
+    @Column({ 
+        type: DataType.INTEGER,
+        allowNull: false
+    })
+    declare salary_max: number;
+
+    @Column({
+        type: DataType.STRING,
+        allowNull: true
+    })
+    declare salary_type: string;
+
     @ForeignKey(() => Recruiters)
     @Column({ 
         type: DataType.UUID,
