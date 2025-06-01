@@ -399,11 +399,14 @@ router.get("/job/:jobId/applications", authMiddleware, controllerWrapper(async (
 // Update application status (for recruiters)
 router.patch("/applications/:applicationId/status", authMiddleware, controllerWrapper(async (req, res) => {
     const userId = req.user?.id;
+    console.log(1, userId)
     const applicationId = req.params.applicationId;
+    console.log(2, applicationId)
     const { status } = req.body;
+    console.log(3, status)
 
     if (!userId) throw new Error("Unauthorized: User ID not found");
-    if (!status || !['applied', 'reviewed', 'accepted', 'rejected'].includes(status)) {
+    if (!status || !['applied', 'interviewing', 'rejected'].includes(status)) {
         throw new Error("Invalid status. Must be: applied, reviewed, accepted, or rejected");
     }
 

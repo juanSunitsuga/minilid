@@ -65,8 +65,8 @@ import {
   Delete as DeleteIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
-import { FetchEndpoint } from './FetchEndpoint';
-import { useAuth } from './Context/AuthContext';
+import { FetchEndpoint } from '../FetchEndpoint';
+import { useAuth } from '../Context/AuthContext';
 
 // Interface untuk job details
 interface JobDetails {
@@ -114,7 +114,7 @@ interface JobApplication {
     name: string;
     email: string;
   };
-  status: 'applied' | 'reviewed' | 'accepted' | 'rejected';
+  status: 'applied' | 'interviewing' | 'rejected';
   cover_letter?: string;
   createdAt: string;
   cv_available: boolean;
@@ -179,55 +179,36 @@ const JobDetail: React.FC = () => {
   const downloadCV = async (applicationId: string, applierName: string) => {
     try {
       const token = localStorage.getItem('accessToken');
-      if (!token) throw new Error('No access token found');
+      console.log('Downloading CV for application:', applicationId);
 
-      // Build the download URL (absolute or relative)
-      const url = `/job-applications/download-cv/${applicationId}`;
-      const filename = `${applierName.replace(/\s+/g, '_')}_CV.pdf`;
+      const response = await FetchEndpoint(`/job-applications/download-cv/${applicationId}`, 'GET', token, null);
 
-      // Fetch the file with authorization
-      const response = await FetchEndpoint(
-        url,
-        'GET',
-        token,
-        null // no body for GET request
-      );
-
-      if (!response.ok || !response) {
-        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Download failed:', response.status, errorText);
+        throw new Error(`Failed to download CV: ${response.status}`);
       }
 
-      // Get the blob data from response
       const blob = await response.blob();
+      console.log('CV blob size:', blob.size);
 
       if (blob.size === 0) {
         throw new Error('Downloaded file is empty');
       }
 
-      // Create a blob URL
-      const blobUrl = URL.createObjectURL(blob);
-
-      // Create download link
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = filename;
-      a.style.display = 'none';
-
-      // Add to document, click, and remove
+      a.href = url;
+      a.download = `${applierName.replace(/\s+/g, '_')}_CV.pdf`;
       document.body.appendChild(a);
       a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
 
-      // Clean up
-      setTimeout(() => {
-        URL.revokeObjectURL(blobUrl);
-        document.body.removeChild(a);
-      }, 100);
-
-      return true;
-    } catch (error: any) {
-      console.error('Error downloading CV:', error);
-      alert(`Failed to download CV: ${error.message}`);
-      return false;
+      console.log('CV downloaded successfully');
+    } catch (err) {
+      console.error('Error downloading CV:', err);
+      alert(`Failed to download CV: ${err.message}`);
     }
   };
 
@@ -235,8 +216,7 @@ const JobDetail: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'applied': return <ApplicationIcon fontSize="small" />;
-      case 'reviewed': return <ReviewIcon fontSize="small" />;
-      case 'accepted': return <AcceptIcon fontSize="small" />;
+      case 'interviewing': return <ReviewIcon fontSize="small" />;
       case 'rejected': return <RejectIcon fontSize="small" />;
       default: return <ApplicationIcon fontSize="small" />;
     }
@@ -308,12 +288,27 @@ const JobDetail: React.FC = () => {
     setUpdatingStatus(applicationId);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await FetchEndpoint(`/apply/applications/${applicationId}/status`, 'PATCH', token, { status: newStatus });
+      if (newStatus == 'interviewing') {
+        const response = await FetchEndpoint(`/chat/create-chat`, 'POST', token, {job_application_id: applicationId})
+
+        console.log(1, response);
+
+        if (!response.ok) {
+          throw new Error('Failed to update application status');
+        }
+
+      }
+
+      const response = await FetchEndpoint(`/job-applications/applications/${applicationId}/status`, 'PATCH', token, { status: newStatus });
+
+      console.log('Updating application status:', applicationId, 'to', newStatus);
 
       if (!response.ok) {
         throw new Error('Failed to update application status');
       }
 
+      const updatedApplication = await response.json();
+      console.log('Application updated:', updatedApplication);
       // Refresh applications list
       await fetchApplications();
 
@@ -352,8 +347,7 @@ const JobDetail: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'applied': return 'info';
-      case 'reviewed': return 'warning';
-      case 'accepted': return 'success';
+      case 'interviewing': return 'warning';
       case 'rejected': return 'error';
       default: return 'default';
     }
@@ -1272,7 +1266,7 @@ const JobDetail: React.FC = () => {
                             Update Status:
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 1 }}>
-                            {['reviewed', 'accepted', 'rejected'].map((status) => (
+                            {['applied', 'interviewing', 'rejected'].map((status) => (
                               <Button
                                 key={status}
                                 variant={selectedApplication.status === status ? 'contained' : 'outlined'}
@@ -1280,6 +1274,7 @@ const JobDetail: React.FC = () => {
                                 color={getStatusColor(status)}
                                 disabled={updatingStatus === selectedApplication.id}
                                 onClick={() => updateApplicationStatus(selectedApplication.id, status)}
+
                               >
                                 {status.charAt(0).toUpperCase() + status.slice(1)}
                               </Button>

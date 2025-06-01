@@ -45,7 +45,7 @@ import {
   ExpandLess as ExpandLessIcon,
   SearchOff as SearchOffIcon
 } from '@mui/icons-material';
-import { FetchEndpoint } from './FetchEndpoint';
+import { FetchEndpoint } from '../FetchEndpoint';
 
 // ✅ UPDATED: Interface matching Home.tsx structure
 interface JobPost {

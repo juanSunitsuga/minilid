@@ -8,11 +8,11 @@ import Navbar from './view/Components/Navbar';
 // Import views
 import Home from './view/Home';
 import Profile from './view/Profile/Profile';
-import Job from './view/Job';
+import Job from './view/Job/Job';
 import Chat from './view/Chat/Chat';
 import CreateJob from './view/CreateJob';
 import Dashboard from './view/Dashboard/Dashboard';
-import JobDetail from './view/JobDetail';
+import JobDetail from './view/Job/JobDetail';
 
 function App() {
   return (
