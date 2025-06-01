@@ -68,7 +68,6 @@ router.post("/apply", authMiddleware, controllerWrapper(async (req, res) => {
 
 // Get my job applications
 router.get("/my-applications", authMiddleware, controllerWrapper(async (req, res) => {
-    console.log("Fetching job applications for user...");
     const userId = req.user?.id;
 
     if (!userId) {
@@ -76,7 +75,7 @@ router.get("/my-applications", authMiddleware, controllerWrapper(async (req, res
     }
 
     const applier = await Appliers.findOne({
-        where: { user_id: userId }
+        where: { applier_id: userId }
     });
 
     if (!applier) {

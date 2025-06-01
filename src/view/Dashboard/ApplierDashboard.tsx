@@ -49,7 +49,7 @@ interface Application {
     job_id: string;
     applier_id: string;
     status: string;
-    created_at: string;
+    createdAt: string;
     updated_at: string;
     jobPost: JobPost;
 }
@@ -65,10 +65,8 @@ const ApplierDashboard: React.FC = () => {
         setError(null);
         try {
             const token = localStorage.getItem('accessToken');
-            console.log('Fetching applications with token:', token);
 
             const response = await FetchEndpoint('/job-applications/my-applications', 'GET', token, null);
-            
             if (!response.ok) {
                 throw new Error('Failed to fetch applications');
             }
@@ -157,6 +155,7 @@ const ApplierDashboard: React.FC = () => {
         rejected: applications.filter(app => app.status.toLowerCase() === 'rejected').length
     };
 
+
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -173,19 +172,19 @@ const ApplierDashboard: React.FC = () => {
             </Box>
 
             {/* Stats Cards - Using Box with flexbox instead of Grid */}
-            <Box 
-                sx={{ 
-                    display: 'flex', 
-                    flexWrap: 'wrap', 
-                    gap: 3, 
-                    mb: 4 
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 3,
+                    mb: 4
                 }}
             >
                 {/* Total Applications */}
-                <Box sx={{ 
-                    flexGrow: 1, 
-                    flexBasis: { xs: '100%', sm: '45%', md: '18%' }, 
-                    minWidth: { xs: '100%', sm: '200px', md: '150px' } 
+                <Box sx={{
+                    flexGrow: 1,
+                    flexBasis: { xs: '100%', sm: '45%', md: '18%' },
+                    minWidth: { xs: '100%', sm: '200px', md: '150px' }
                 }}>
                     <Card sx={{ height: '100%' }}>
                         <CardContent sx={{ textAlign: 'center' }}>
@@ -200,10 +199,10 @@ const ApplierDashboard: React.FC = () => {
                 </Box>
 
                 {/* Applied */}
-                <Box sx={{ 
-                    flexGrow: 1, 
-                    flexBasis: { xs: '100%', sm: '45%', md: '18%' }, 
-                    minWidth: { xs: '100%', sm: '200px', md: '150px' } 
+                <Box sx={{
+                    flexGrow: 1,
+                    flexBasis: { xs: '100%', sm: '45%', md: '18%' },
+                    minWidth: { xs: '100%', sm: '200px', md: '150px' }
                 }}>
                     <Card sx={{ height: '100%', bgcolor: 'primary.light' }}>
                         <CardContent sx={{ textAlign: 'center' }}>
@@ -218,10 +217,10 @@ const ApplierDashboard: React.FC = () => {
                 </Box>
 
                 {/* Interviewing */}
-                <Box sx={{ 
-                    flexGrow: 1, 
-                    flexBasis: { xs: '100%', sm: '45%', md: '18%' }, 
-                    minWidth: { xs: '100%', sm: '200px', md: '150px' } 
+                <Box sx={{
+                    flexGrow: 1,
+                    flexBasis: { xs: '100%', sm: '45%', md: '18%' },
+                    minWidth: { xs: '100%', sm: '200px', md: '150px' }
                 }}>
                     <Card sx={{ height: '100%', bgcolor: 'info.light' }}>
                         <CardContent sx={{ textAlign: 'center' }}>
@@ -236,10 +235,10 @@ const ApplierDashboard: React.FC = () => {
                 </Box>
 
                 {/* Accepted */}
-                <Box sx={{ 
-                    flexGrow: 1, 
-                    flexBasis: { xs: '100%', sm: '45%', md: '18%' }, 
-                    minWidth: { xs: '100%', sm: '200px', md: '150px' } 
+                <Box sx={{
+                    flexGrow: 1,
+                    flexBasis: { xs: '100%', sm: '45%', md: '18%' },
+                    minWidth: { xs: '100%', sm: '200px', md: '150px' }
                 }}>
                     <Card sx={{ height: '100%', bgcolor: 'success.light' }}>
                         <CardContent sx={{ textAlign: 'center' }}>
@@ -254,10 +253,10 @@ const ApplierDashboard: React.FC = () => {
                 </Box>
 
                 {/* Rejected */}
-                <Box sx={{ 
-                    flexGrow: 1, 
-                    flexBasis: { xs: '100%', sm: '45%', md: '18%' }, 
-                    minWidth: { xs: '100%', sm: '200px', md: '150px' } 
+                <Box sx={{
+                    flexGrow: 1,
+                    flexBasis: { xs: '100%', sm: '45%', md: '18%' },
+                    minWidth: { xs: '100%', sm: '200px', md: '150px' }
                 }}>
                     <Card sx={{ height: '100%', bgcolor: 'error.light' }}>
                         <CardContent sx={{ textAlign: 'center' }}>
@@ -312,7 +311,7 @@ const ApplierDashboard: React.FC = () => {
                                 </TableHead>
                                 <TableBody>
                                     {applications.map((application) => (
-                                        <TableRow key={application.id} hover>
+                                        < TableRow key = { application.id } hover >
                                             <TableCell>
                                                 <Typography variant="body1">{application.jobPost.title}</Typography>
                                             </TableCell>
@@ -320,7 +319,7 @@ const ApplierDashboard: React.FC = () => {
                                                 {application.jobPost.company?.name || "Unknown Company"}
                                             </TableCell>
                                             <TableCell>
-                                                {new Date(application.created_at).toLocaleDateString()}
+                                                {new Date(application.createdAt).toLocaleDateString()}
                                             </TableCell>
                                             <TableCell>
                                                 {getStatusChip(application.status)}
@@ -350,13 +349,13 @@ const ApplierDashboard: React.FC = () => {
                                             </TableCell>
                                         </TableRow>
                                     ))}
-                                </TableBody>
-                            </Table>
+                            </TableBody>
+                        </Table>
                         </TableContainer>
                     )}
-                </Box>
-            </Paper>
-        </Container>
+            </Box>
+        </Paper>
+        </Container >
     );
 };
 

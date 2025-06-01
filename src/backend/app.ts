@@ -78,8 +78,8 @@ app.use('/job', createPostRoutes);
 app.use('/chat', chatRoutes);
 app.use('/job-applications', applyJobRoutes);
 app.use('/interviews', interviewRoutes);
-
 app.use(error)
+
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -51,7 +51,8 @@ import {
   CheckCircle as AcceptIcon,
   Cancel as DeclineIcon,
   AccessTime as TimeIcon,
-  KeyboardArrowDown as ArrowDownIcon
+  KeyboardArrowDown as ArrowDownIcon,
+  Replay as ReplayIcon // Add this import
 } from '@mui/icons-material';
 import { getChats, getChatById, sendMessage, sendAttachment } from '../../services/chatService';
 import { FetchEndpoint } from '../FetchEndpoint';
@@ -319,6 +320,8 @@ const Chat: React.FC = () => {
   const [interviewNotes, setInterviewNotes] = useState('');
   const [interviewError, setInterviewError] = useState<string | null>(null);
 
+  const [lastFetchType, setLastFetchType] = useState<'chats' | 'messages' | null>(null);
+
   // Format date for chat list
   const formatChatDate = (dateString: string) => {
     try {
@@ -335,53 +338,62 @@ const Chat: React.FC = () => {
     }
   };
   // Fetch all chats on component mount
-  useEffect(() => {
-    const fetchChats = async () => {
-      try {
-        setLoading(true);
-        const response = await getChats();
+  const fetchChats = async () => {
+    try {
+      setLoading(true);
+      setLastFetchType('chats');
+      const response = await getChats();
 
-        if (response.data && Array.isArray(response.data)) {
-          setChats(response.data);
-          setFilteredChats(response.data);
+      if (response.data && Array.isArray(response.data)) {
+        setChats(response.data);
+        setFilteredChats(response.data);
 
-          // If we have chats, select the first one
-          if (response.data.length > 0) {
-            setSelectedChat(response.data[0]);
-          }
+        // If we have chats, select the first one
+        if (response.data.length > 0) {
+          setSelectedChat(response.data[0]);
         }
-        setLoading(false);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load chats');
-        setLoading(false);
       }
-    };
-
-    fetchChats();
-  }, []);
+      setError(null);
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load chats');
+      setLoading(false);
+    }
+  };
 
   // When a chat is selected, fetch its messages
-  useEffect(() => {
-    const fetchMessages = async () => {
-      if (!selectedChat) return;
+  const fetchMessages = async () => {
+    if (!selectedChat) return;
 
-      try {
-        setLoading(true);
-        const response = await getChatById(selectedChat.chat_id);
+    try {
+      setLoading(true);
+      setLastFetchType('messages');
+      const response = await getChatById(selectedChat.chat_id);
 
-        if (response.data && response.data.messages) {
-          setMessages(response.data.messages);
-        } else {
-          setMessages([]);
-        }
-        setLoading(false);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load messages');
-        setLoading(false);
+      if (response.data && response.data.messages) {
+        setMessages(response.data.messages);
+      } else {
+        setMessages([]);
       }
-    };
+      setError(null);
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load messages');
+      setLoading(false);
+    }
+  };
 
-    fetchMessages();
+  // Fetch chats and messages on mount and when selectedChat changes
+  useEffect(() => {
+    fetchChats();
+    // eslint-disable-next-line
+  }, []);
+
+  useEffect(() => {
+    if (selectedChat) {
+      fetchMessages();
+    }
+    // eslint-disable-next-line
   }, [selectedChat?.chat_id]);
 
   // Scroll to bottom when messages change
@@ -798,11 +810,18 @@ const Chat: React.FC = () => {
         </Box>
       );
     } else if (msg.message_type === 'INTERVIEW_REQUEST' && msg.content) {
+      let interviewData: any = null;
       try {
-        // Check if content is already an object or a string
-        const interviewData = typeof msg.content === 'string'
-          ? JSON.parse(msg.content)
-          : msg.content;
+        if (typeof msg.content === 'object' && msg.content !== null) {
+          interviewData = msg.content;
+        } else if (typeof msg.content === 'string') {
+          try {
+            interviewData = JSON.parse(msg.content);
+          } catch {
+            interviewData = null;
+          }
+        }
+        if (!interviewData) throw new Error("Invalid interview data");
 
         const interviewDate = parseISO(interviewData.date);
         const formattedDate = format(interviewDate, 'EEEE, MMMM d, yyyy');
@@ -887,7 +906,6 @@ const Chat: React.FC = () => {
                 )}
               </Box>
 
-              {/* Show accept/decline buttons only to appliers and only if status is PENDING */}
               {!isUserRecruiter && interviewData.status === 'PENDING' && (
                 <Box sx={{
                   display: 'flex',
@@ -1133,6 +1151,15 @@ const Chat: React.FC = () => {
     }
   };
 
+  // Add this reload handler
+  const handleReload = () => {
+    if (lastFetchType === 'chats') {
+      fetchChats();
+    } else if (lastFetchType === 'messages') {
+      fetchMessages();
+    }
+  };
+
   return (
     <Box sx={{
       padding: '20px',
@@ -1203,6 +1230,20 @@ const Chat: React.FC = () => {
               <Box p={4} textAlign="center">
                 <CircularProgress size={30} />
               </Box>
+            ) : error ? (
+              <Box p={4} textAlign="center">
+                <Typography color="error">
+                  {error}
+                </Typography>
+                <Button
+                  variant="outlined"
+                  startIcon={<ReplayIcon />}
+                  onClick={handleReload}
+                  sx={{ mt: 2 }}
+                >
+                  Reload
+                </Button>
+              </Box>
             ) : filteredChats.length > 0 ? (
               filteredChats.map((chat, index) => (
                 <Fade in={true} key={chat.chat_id} timeout={300} style={{ transitionDelay: `${index * 50}ms` }}>
@@ -1262,9 +1303,8 @@ const Chat: React.FC = () => {
             ) : (
               <Box p={4} textAlign="center">
                 <Typography color="text.secondary">
-                  {error ? 'Error loading chats' : 'No conversations found'}
+                  No conversations found
                 </Typography>
-                {error && <Typography color="error" variant="caption">{error}</Typography>}
               </Box>
             )}
           </List>
@@ -1294,6 +1334,18 @@ const Chat: React.FC = () => {
                 {loading ? (
                   <Box display="flex" justifyContent="center" alignItems="center" height="100%">
                     <CircularProgress />
+                  </Box>
+                ) : error ? (
+                  <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="100%">
+                    <Typography color="error">{error}</Typography>
+                    <Button
+                      variant="outlined"
+                      startIcon={<ReplayIcon />}
+                      onClick={handleReload}
+                      sx={{ mt: 2 }}
+                    >
+                      Reload
+                    </Button>
                   </Box>
                 ) : messages.length > 0 ? (
                   <>
