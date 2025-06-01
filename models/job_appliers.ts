@@ -38,6 +38,18 @@ export class JobAppliers extends Model {
     declare applier: Appliers;
 
     @Column({
+        type: DataType.STRING,
+        allowNull: false
+    })
+    declare cv_url: String;
+
+    @Column({
+        type: DataType.STRING,
+        allowNull: false
+    })
+    declare cover_letter: String;
+
+    @Column({
         type: DataType.ENUM('applied', 'interviewing', 'hired', 'rejected'),
         allowNull: false,
         defaultValue: 'applied'

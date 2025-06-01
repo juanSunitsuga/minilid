@@ -30,6 +30,14 @@ export default {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
+      cv_url: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
+      cover_letter: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
       status: {
         type: Sequelize.ENUM('applied', 'interviewing', 'rejected'),
         allowNull: false,

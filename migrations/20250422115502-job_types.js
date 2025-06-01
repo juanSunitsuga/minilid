@@ -15,9 +15,25 @@ export default {
         allowNull: false,
       },
     });
+    
+    await queryInterface.bulkInsert('job_types', [
+      {
+        type: 'Part Time'
+      },
+      {
+        type: 'Full Time'
+      },
+      {
+        type: 'Contract'
+      },
+      {
+        type: 'Internship'
+      }
+    ]);
   },
 
   async down(queryInterface, Sequelize) {
+    await queryInterface.bulkDelete('job_types', null, {});
     await queryInterface.dropTable('job_types');
   },
 };

@@ -11,6 +11,7 @@ import Profile from './view/Profile/Profile';
 import Job from './view/Job';
 import Chat from './view/Chat';
 import CreateJob from './view/CreateJob';
+import JobDetail from './view/JobDetail';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
             <Route path="/chat" element={<Chat />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/create-job" element={<CreateJob />} />
+            <Route path="/job/:jobId" element={<JobDetail />} />
           </Routes>
         </main>
       </ModalProvider>
