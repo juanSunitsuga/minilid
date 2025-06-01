@@ -330,10 +330,10 @@ router.get('/job-applicants', authMiddleware, controllerWrapper(async (req, res)
             description: jobData.description,
             posted_date: jobData.posted_date,
             category: matchingCategory ? {
-                name: matchingCategory.category_name 
+                name: matchingCategory.category
             } : null,
             type: matchingType ? {
-                name: matchingType.type_name,
+                name: matchingType.type,
             } : null,
             company: company ? {
                 name: company.company_name, 
