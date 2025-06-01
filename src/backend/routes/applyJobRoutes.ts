@@ -8,6 +8,7 @@ import { JobCategories } from "../../../models/job_categories";
 import { JobTypes } from "../../../models/job_types";
 import authMiddleware from "../../middleware/Auth";
 import { controllerWrapper } from "../../utils/controllerWrapper";
+import app from "../app";
 
 const router = express.Router();
 
@@ -105,6 +106,13 @@ router.get("/my-applications", authMiddleware, controllerWrapper(async (req, res
             }
         ]
     });
+
+    if(applications.length === 0) {
+        return {
+            message: "No job applications found",
+            data: []
+        };
+    }
 
     return {
         message: "Job applications retrieved successfully",
