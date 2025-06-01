@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import * as fsExtra from "fs-extra";
 import { JobPosts } from "../../../models/job_posts";
 import { Appliers } from "../../../models/appliers";
 import { JobAppliers } from "../../../models/job_appliers";
@@ -15,6 +16,18 @@ import { appConfig } from "../../../config/app";
 import process from 'process';
 
 const router = express.Router();
+
+const serveFile = (filePath: string, res: express.Response): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
 
 // Apply for a job
 router.post("/apply", authMiddleware, controllerWrapper(async (req, res) => {
@@ -98,30 +111,25 @@ router.post("/apply", authMiddleware, controllerWrapper(async (req, res) => {
 
 }));
 
-// Download CV endpoint
+// Download CV endpoint (refactored, no try/catch)
 router.get("/download-cv/:applicationId", controllerWrapper(async (req, res) => {
-    const authHeader = req.headers['authorization'];
-    let token: string | undefined;
-    let userId: string;
-
-    if (authHeader && typeof authHeader === 'string') {
-        if (authHeader.startsWith('Bearer ')) {
-            token = authHeader.slice(7);
-        } else {
-            token = authHeader;
-        }
-    }
+    // Get token from Authorization header OR query parameter
+    const authHeader = req.headers["authorization"];
+    const headerToken = authHeader && authHeader.split(" ")[1];
+    const queryToken = req.query.token as string;
+    const token = headerToken || queryToken;
 
     if (!token) {
-        throw new Error("Authorization token not provided");
+        throw new Error("No token provided");
     }
 
+    // Verify token
     const decoded = jwt.verify(token, appConfig.jwtSecret) as { id: string; email?: string; name?: string; };
     if (!decoded || !decoded.id) {
         throw new Error("Invalid token structure");
     }
+    const userId = decoded.id;
 
-    userId = decoded.id;
     const applicationId = req.params.applicationId;
 
     // Find application with job details
@@ -155,7 +163,7 @@ router.get("/download-cv/:applicationId", controllerWrapper(async (req, res) => 
     }
 
     const cvFilePath = application.cv_url as string;
-    if (!fs.existsSync(cvFilePath)) {
+    if (!await fsExtra.pathExists(cvFilePath)) {
         throw new Error("CV file not found on server");
     }
 
@@ -168,22 +176,20 @@ router.get("/download-cv/:applicationId", controllerWrapper(async (req, res) => 
     const originalFilename = path.basename(cvFilePath);
     const downloadFilename = `${applier?.name || 'applicant'}_CV.pdf`.replace(/[^a-zA-Z0-9_.-]/g, '_');
 
-    // Set appropriate headers for file download
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${downloadFilename}"`);
+    // Set proper content-type based on file extension
+    const ext = path.extname(originalFilename).toLowerCase();
+    if (ext === '.pdf') {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(downloadFilename)}"`);
+    } else {
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(downloadFilename)}"`);
+    }
     res.setHeader('Content-Length', stats.size);
     res.setHeader('Cache-Control', 'no-cache');
 
-    // Create read stream and pipe to response
-    const readStream = fs.createReadStream(cvFilePath);
-
-    readStream.on('error', (error) => {
-        if (!res.headersSent) {
-            throw new Error("Failed to read CV file");
-        }
-    });
-
-    readStream.pipe(res);
+    // Serve the file
+    await serveFile(cvFilePath, res);
 }));
 
 // Get my job applications

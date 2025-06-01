@@ -179,36 +179,55 @@ const JobDetail: React.FC = () => {
   const downloadCV = async (applicationId: string, applierName: string) => {
     try {
       const token = localStorage.getItem('accessToken');
-      console.log('Downloading CV for application:', applicationId);
-      
-      const response = await FetchEndpoint(`/job-applications/download-cv/${applicationId}`, 'GET', token, null);
+      if (!token) throw new Error('No access token found');
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Download failed:', response.status, errorText);
-        throw new Error(`Failed to download CV: ${response.status}`);
+      // Build the download URL (absolute or relative)
+      const url = `/job-applications/download-cv/${applicationId}`;
+      const filename = `${applierName.replace(/\s+/g, '_')}_CV.pdf`;
+
+      // Fetch the file with authorization
+      const response = await FetchEndpoint(
+        url,
+        'GET',
+        token,
+        null // no body for GET request
+      );
+
+      if (!response.ok || !response) {
+        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
       }
 
+      // Get the blob data from response
       const blob = await response.blob();
-      console.log('CV blob size:', blob.size);
-      
+
       if (blob.size === 0) {
         throw new Error('Downloaded file is empty');
       }
 
-      const url = window.URL.createObjectURL(blob);
+      // Create a blob URL
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Create download link
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `${applierName.replace(/\s+/g, '_')}_CV.pdf`;
+      a.href = blobUrl;
+      a.download = filename;
+      a.style.display = 'none';
+
+      // Add to document, click, and remove
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      console.log('CV downloaded successfully');
-    } catch (err) {
-      console.error('Error downloading CV:', err);
-      alert(`Failed to download CV: ${err.message}`);
+
+      // Clean up
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+        document.body.removeChild(a);
+      }, 100);
+
+      return true;
+    } catch (error: any) {
+      console.error('Error downloading CV:', error);
+      alert(`Failed to download CV: ${error.message}`);
+      return false;
     }
   };
 
