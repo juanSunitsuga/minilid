@@ -161,8 +161,7 @@ const RecruiterDashboard: React.FC = () => {
             variant="contained" 
             color="primary" 
             startIcon={<AddIcon />}
-            component={Link}
-            to="/create-job"
+            onClick={() => navigate('/create-job')}
           >
             Post New Job
           </Button>
