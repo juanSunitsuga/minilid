@@ -90,27 +90,6 @@ const RecruiterDashboard: React.FC = () => {
     fetchJobs();
   }, []);
 
-  const handleDeleteJob = async (jobId: string) => {
-    if (!window.confirm('Are you sure you want to delete this job posting?')) {
-      return;
-    }
-    
-    try {
-      const token = localStorage.getItem('accessToken');
-      const response = await FetchEndpoint(`/jobs/${jobId}`, 'DELETE', token, null);
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete job');
-      }
-      
-      // Refresh the list
-      fetchJobs();
-    } catch (err: any) {
-      console.error('Error deleting job:', err);
-      alert(err.message || 'An error occurred while deleting the job posting');
-    }
-  };
-
   // Calculate statistics
   const totalJobs = jobs.length;
   const totalApplicants = jobs.reduce((acc, job) => acc + job.applicants_count, 0);
