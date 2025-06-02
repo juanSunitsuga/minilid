@@ -81,6 +81,7 @@ const getChatFilePath = (chatId: string): string => {
 // Create a new chat
 export const createChatDocument = async (chatData: ChatData): Promise<void> => {
   // Use native fs with manual JSON handling
+
   await fs.writeFile(
     getChatFilePath(chatData.chat_id),
     JSON.stringify(chatData, null, 2),
@@ -487,20 +488,23 @@ router.post("/create-chat", authMiddleware, controllerWrapper(async (req, res) =
   }
 
   if (!['interviewing'].includes(jobApplication.status)) {
-    throw new Error("Chat can only be created for applications with status 'interviewing' or 'hired'");
+    throw new Error("Chat can only be created for applications with status 'interviewing'");
   }
 
   const recruiter = await Recruiters.findOne({
     where: { recruiter_id: userId }
   });
+
   if (!recruiter) {
     throw new Error("You are not authorized to create this chat");
   }
 
   // Check if chat already exists
   const existingChatId = await findChatByApplicationId(job_application_id);
+
   if (existingChatId) {
     const existingChat = await readChatJson(existingChatId);
+
     if (existingChat) {
       return {
         status: "failed",
@@ -512,6 +516,7 @@ router.post("/create-chat", authMiddleware, controllerWrapper(async (req, res) =
 
   // Create new chat JSON
   const chatId = uuidv4();
+
   const newChat: ChatData = {
     chat_id: chatId,
     job_application_id,

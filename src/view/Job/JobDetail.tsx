@@ -247,7 +247,7 @@ const JobDetail: React.FC = () => {
   useEffect(() => {
     if (skillSearchTerm.trim() === '') {
       setFilteredSkills([]);
-      setShowSuggestions(false);
+      setShowSuggestions(false); 
       return;
     }
 
@@ -288,27 +288,29 @@ const JobDetail: React.FC = () => {
     setUpdatingStatus(applicationId);
     try {
       const token = localStorage.getItem('accessToken');
-      if (newStatus == 'interviewing') {
-        const response = await FetchEndpoint(`/chat/create-chat`, 'POST', token, {job_application_id: applicationId})
 
-        console.log(1, response);
-
-        if (!response.ok) {
-          throw new Error('Failed to update application status');
-        }
-
-      }
+      console.log('Updating application status:', applicationId, 'to', newStatus);
 
       const response = await FetchEndpoint(`/job-applications/applications/${applicationId}/status`, 'PATCH', token, { status: newStatus });
 
-      console.log('Updating application status:', applicationId, 'to', newStatus);
+      if (newStatus === 'interviewing') {
+        const response = await FetchEndpoint(`/chat/create-chat`, 'POST', token, {job_application_id: applicationId})
+        
+        
+        if (!response.ok) {
+          throw new Error('Failed to update application status');
+        }
+        const chat = await response.json();
+        console.log('Chat created:', chat);
+        
+        navigate(`/chat`);
+      }
 
       if (!response.ok) {
         throw new Error('Failed to update application status');
       }
 
       const updatedApplication = await response.json();
-      console.log('Application updated:', updatedApplication);
       // Refresh applications list
       await fetchApplications();
 
@@ -1213,7 +1215,7 @@ const JobDetail: React.FC = () => {
                             primary={application.applier.name}
                             secondary={
                               <Box>
-                                <Typography variant="body2">{application.applier.email}</Typography>
+                                <Typography variant="body2" component="span">{application.applier.email}</Typography>
                                 <Chip
                                   size="small"
                                   label={application.status.toUpperCase()}
@@ -1266,19 +1268,68 @@ const JobDetail: React.FC = () => {
                             Update Status:
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 1 }}>
-                            {['applied', 'interviewing', 'rejected'].map((status) => (
-                              <Button
-                                key={status}
-                                variant={selectedApplication.status === status ? 'contained' : 'outlined'}
-                                size="small"
-                                color={getStatusColor(status)}
-                                disabled={updatingStatus === selectedApplication.id}
-                                onClick={() => updateApplicationStatus(selectedApplication.id, status)}
+                            {['applied', 'interviewing', 'rejected'].map((status) => {
+                              // Disable "Applied" if status is not "applied"
+                              const disableApplied =
+                                status === 'applied' &&
+                                (selectedApplication.status === 'interviewing' ||
+                                  selectedApplication.status === 'rejected');
+                              return (
+                                <Button
+                                  key={status}
+                                  variant={selectedApplication.status === status ? 'contained' : 'outlined'}
+                                  size="small"
+                                  color={getStatusColor(status)}
+                                  disabled={updatingStatus === selectedApplication.id || disableApplied}
+                                  onClick={() => updateApplicationStatus(selectedApplication.id, status)}
+                                >
+                                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                                </Button>
+                              );
+                            })}
 
-                              >
-                                {status.charAt(0).toUpperCase() + status.slice(1)}
-                              </Button>
-                            ))}
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              size="small"
+                              disabled={
+                                updatingStatus === selectedApplication.id ||
+                                selectedApplication.status === 'rejected' ||
+                                selectedApplication.status === 'interviewing'
+                              }
+                              onClick={async () => {
+                                if (
+                                  selectedApplication.status === 'rejected' ||
+                                  selectedApplication.status === 'interviewing'
+                                ) {
+                                  alert('You cannot finish an application that is rejected or interviewing.');
+                                  return;
+                                }
+                                if (window.confirm('Are you sure you want to finish (delete) this application?')) {
+                                  setUpdatingStatus(selectedApplication.id);
+                                  try {
+                                    const token = localStorage.getItem('accessToken');
+                                    const response = await FetchEndpoint(
+                                      `/job-applications/cancel/${selectedApplication.id}`,
+                                      'DELETE',
+                                      token,
+                                      null
+                                    );
+                                    if (!response.ok) {
+                                      throw new Error('Failed to delete application');
+                                    }
+                                    await fetchApplications();
+                                    setSelectedApplication(null);
+                                  } catch (err) {
+                                    alert('Failed to delete application.');
+                                  } finally {
+                                    setUpdatingStatus(null);
+                                  }
+                                }
+                              }}
+                            >
+                              Finished
+                            </Button>
                           </Box>
                         </Box>
                       </Box>

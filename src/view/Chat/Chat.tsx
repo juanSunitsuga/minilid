@@ -680,7 +680,6 @@ const Chat: React.FC = () => {
 
   const downloadFile = async (url: string, filename: string) => {
     try {
-      console.log("Downloading from URL:", url); // Debug log
 
       // Get the token
       const token = localStorage.getItem('accessToken');
@@ -1110,7 +1109,6 @@ const Chat: React.FC = () => {
     // When selectedChat changes, store its ID in localStorage
     if (selectedChat && selectedChat.chat_id) {
       localStorage.setItem('currentChatId', selectedChat.chat_id);
-      console.log("Set current chat ID:", selectedChat.chat_id);
     }
   }, [selectedChat]);
 
@@ -1125,7 +1123,6 @@ const Chat: React.FC = () => {
     if (!response.ok) {
       throw new Error(`Failed to fetch attachment: ${response.status}`);
     }
-    console.log("Attachment URL:", response.json);
     return response; // Return the full response
   };
 

@@ -248,21 +248,19 @@ router.delete("/cancel/:applicationId", authMiddleware, controllerWrapper(async 
     }
 
     // Find applier
-    const applier = await Appliers.findOne({
-        where: { user_id: userId }
+    const applier = await Recruiters.findOne({
+        where: { recruiter_id: userId }
     });
 
     if (!applier) {
-        throw new Error("Applier profile not found");
+        throw new Error("Recruiter profile not found");
     }
 
     // Find application
     const application = await JobAppliers.findOne({
         where: {
             id: applicationId,
-            applier_id: applier.applier_id,
-            // Only allow cancellation if status is 'applied'
-            status: 'applied'
+            status: 'interviewing', // Only allow cancellation if status is 'interviewing'
         }
     });
 
@@ -274,7 +272,7 @@ router.delete("/cancel/:applicationId", authMiddleware, controllerWrapper(async 
     await application.destroy();
 
     return {
-        message: "Job application cancelled successfully"
+        message: "Job application finished!"
     };
 }));
 
@@ -399,16 +397,16 @@ router.get("/job/:jobId/applications", authMiddleware, controllerWrapper(async (
 // Update application status (for recruiters)
 router.patch("/applications/:applicationId/status", authMiddleware, controllerWrapper(async (req, res) => {
     const userId = req.user?.id;
-    console.log(1, userId)
     const applicationId = req.params.applicationId;
-    console.log(2, applicationId)
     const { status } = req.body;
-    console.log(3, status)
 
     if (!userId) throw new Error("Unauthorized: User ID not found");
+
+
     if (!status || !['applied', 'interviewing', 'rejected'].includes(status)) {
         throw new Error("Invalid status. Must be: applied, reviewed, accepted, or rejected");
     }
+
 
     // Find application and verify recruiter permission
     const application = await JobAppliers.findOne({

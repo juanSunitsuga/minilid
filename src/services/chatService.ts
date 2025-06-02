@@ -20,7 +20,6 @@ export const getChats = async () => {
 // Get specific chat with messages
 export const getChatById = async (chatId: string): Promise<any> => {
   try {
-    console.log("Getting chat with ID:", chatId);
     const token = localStorage.getItem('accessToken');
 
     if (!chatId || chatId === 'undefined') {

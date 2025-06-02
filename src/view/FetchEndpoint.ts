@@ -5,8 +5,6 @@ export const FetchEndpoint = async (endpoint: string, method: string, token: str
   // Add leading slash if missing
   const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
 
-  console.log(`Making ${method} request to: ${BASE_URL}${path}`);
-
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
