@@ -211,64 +211,70 @@ router.get("/my-applications", authMiddleware, controllerWrapper(async (req, res
     // Get all applications
     const applications = await JobAppliers.findAll({
         where: { applier_id: userId },
-        include: [
-            {
-                model: JobPosts,
-                as: "jobPost",
-                include: [
-                    {
-                        model: Recruiters,
-                        as: "recruiter",
-                        include: [
-                            {
-                                model: Companies,
-                                as: "company"
-                            }
-                        ]
-                    }
-                ],
-                attributes: ["job_id", "title", "description", "posted_date"]
-            }
-        ]
     });
 
+    const jobIds = applications.map(app => app.job_id);
+    if (jobIds.length === 0) {
+        return {
+            message: "No job applications found",
+            data: []
+        };
+    }
+    const jobs = await JobPosts.findAll({
+        where: { job_id: jobIds },
+        attributes: ["job_id", "title", "description", "posted_date", "recruiter_id"],
+    });
+    const recruiterIds = jobs.map(job => job.recruiter_id);
+    if (recruiterIds.length === 0) {
+        return {
+            message: "No job postings found",
+            data: []
+        };
+    }
+    const recruiters = await Recruiters.findAll({
+        where: { recruiter_id: recruiterIds },
+        attributes: ["recruiter_id", "company_id"]
+    });
+    const companyIds = recruiters.map(recruiter => recruiter.company_id);
+    const companies = await Companies.findAll({
+        where: { company_id: companyIds },
+        attributes: ["company_id", "company_name", "address"]
+    });
+
+    // Create lookup maps for quick access
+    const jobMap = new Map(jobs.map(job => [job.job_id, job]));
+    const recruiterMap = new Map(recruiters.map(r => [r.recruiter_id, r]));
+    const companyMap = new Map(companies.map(c => [c.company_id, c]));
+
+    // Combine data
+    const combined = applications.map(app => {
+        const job = jobMap.get(String(app.job_id));
+        const recruiter = job ? recruiterMap.get(String(job.recruiter_id)) : null;
+        const company = recruiter ? companyMap.get(String(recruiter.company_id)) : null;
+        return {
+            id: app.id,
+            job_id: app.job_id,
+            status: app.status,
+            cover_letter: app.cover_letter,
+            appliedAt: app.createdAt,
+            job: job ? {
+                job_id: job.job_id,
+                title: job.title,
+                description: job.description,
+                posted_date: job.posted_date,
+            } : null,
+            company: company ? {
+                name: company.company_name,
+                address: company.address
+            } : null
+        };
+    });
+    console.log(1, combined)
     return {
         message: "Job applications retrieved successfully",
-        data: applications
-    }
-}));
-
-router.delete("/delete/:applicationId", authMiddleware, controllerWrapper(async (req, res) => {
-    const userId = req.user?.id;
-    const applicationId = req.params.applicationId;
-    if (!userId) {
-        throw new Error("Unauthorized: User ID not found");
-    }
-    // Find applier
-    const applier = await Appliers.findOne({
-        where: { applier_id: userId }
-    });
-    if (!applier) {
-        throw new Error("Applier profile not found");
-    }
-    // Find application
-    const application = await JobAppliers.findOne({
-        where: {
-            id: applicationId,
-            applier_id: userId,
-        }
-    });
-    if (!application) {
-        throw new Error("Application not found or you don't have permission to delete it");
-    }
-    // Delete the application
-    await application.destroy();
-    
-    return {
-        message: "Job application deleted successfully"
+        data: combined
     };
-}
-));
+}));
 
 // Cancel job application
 router.delete("/cancel/:applicationId", authMiddleware, controllerWrapper(async (req, res) => {

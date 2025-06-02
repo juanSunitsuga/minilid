@@ -35,21 +35,19 @@ import { Link } from 'react-router-dom';
 interface Application {
     id: number;
     job_id: string;
-    applier_id: string;
     status: string;
-    createdAt: string;
-    updated_at: string;
-    jobPost?: {
+    cover_letter: string;
+    appliedAt: string; // or Date if you parse it
+    job?: {
         job_id: string;
         title: string;
         description: string;
-        posted_date: string;
-        company?: {
-            company_id: string | null;
-            company_name: string;
-            address: string;
-        };
-    };
+        posted_date: string; // or Date if you parse it
+    } | null;
+    company?: {
+        name: string;
+        address: string;
+    } | null;
 }
 
 const ApplierDashboard: React.FC = () => {
@@ -311,13 +309,13 @@ const ApplierDashboard: React.FC = () => {
                                     {applications.map((application) => (
                                         < TableRow key = { application.id } hover >
                                             <TableCell>
-                                                <Typography variant="body1">{application.jobPost?.title}</Typography>
+                                                <Typography variant="body1">{application.job?.title}</Typography>
                                             </TableCell>
                                             <TableCell>
-                                                {application.jobPost?.company?.company_name || "Unknown Company"}
+                                                {application.company?.name || "Unknown Company"}
                                             </TableCell>
                                             <TableCell>
-                                                {new Date(application.createdAt).toLocaleDateString()}
+                                                {new Date(application.job?.posted_date).toLocaleDateString()}
                                             </TableCell>
                                             <TableCell>
                                                 {getStatusChip(application.status)}
