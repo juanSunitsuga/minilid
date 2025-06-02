@@ -4,16 +4,11 @@ import { Sequelize } from 'sequelize-typescript';
 
 // Import models
 import { Appliers } from '../../models/appliers';
-import { Attachments } from '../../models/attachments';
-import { Branch } from '../../models/branch';
-import { Chats } from '../../models/chats';
 import { Companies } from '../../models/companies';
 import { Experiences } from '../../models/experiences';
-import { InterviewSchedules } from '../../models/interview_schedules';
 import { JobCategories } from '../../models/job_categories';
 import { JobPosts } from '../../models/job_posts';
 import { JobTypes } from '../../models/job_types';
-import { Messages } from '../../models/messages';
 import { Recruiters } from '../../models/recruiters';
 import { Skills } from '../../models/skills';
 import { JobPostSkill } from '../../models/job_post_skills';
@@ -26,7 +21,6 @@ import createPostRoutes from './routes/createPostRoutes';
 import profileRoutes from './routes/profileRoutes';
 import chatRoutes from './routes/chatRoutes';
 import applyJobRoutes from './routes/applyJobRoutes';
-import interviewRoutes from './routes/interviewRoutes';
 import error from '../middleware/errorHandler';
 
 // Import configuration
@@ -48,11 +42,9 @@ app.use(express.urlencoded({ extended: true, limit: '50mb'  }));
 const sequelize = new Sequelize({
     ...config.development,
     models: [
-        Appliers, Attachments, Branch, Chats, 
-        Companies, Experiences, InterviewSchedules, 
-        JobCategories, JobPosts, JobTypes, 
-        Messages, Recruiters, Skills, 
-        JobPostSkill, ApplierSkill, JobAppliers
+        Appliers, Companies, Experiences, 
+        JobCategories, JobPosts, JobTypes, Recruiters, 
+        Skills, JobPostSkill, ApplierSkill, JobAppliers
     ]
 });
 
@@ -79,7 +71,6 @@ app.use('/profile', profileRoutes);
 app.use('/job', createPostRoutes);
 app.use('/chat', chatRoutes);
 app.use('/job-applications', applyJobRoutes);
-app.use('/interviews', interviewRoutes);
 app.use(error)
 
 
