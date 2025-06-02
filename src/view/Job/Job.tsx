@@ -15,7 +15,6 @@ import {
   FormControl,
   InputLabel,
   Avatar,
-  Slide,
   Grow,
   IconButton,
   Tooltip,
@@ -26,24 +25,33 @@ import {
   useTheme,
   Stack,
   Grid,
-  Chip
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
+  Container,
+  Snackbar
 } from '@mui/material';
 import {
   Search as SearchIcon,
   LocationOn as LocationIcon,
   Work as WorkIcon,
+  Category as CategoryIcon,
   AccessTime as ClockIcon,
   Bookmark as BookmarkIcon,
   BookmarkBorder,
   FilterList as FilterIcon,
-  Sort as SortIcon,
   AttachMoney as MoneyIcon,
   Clear as ClearIcon,
   Refresh as RefreshIcon,
-  Close as CloseIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
-  SearchOff as SearchOffIcon
+  SearchOff as SearchOffIcon,
+  Close as CloseIcon,
+  TuneOutlined as TuneIcon,
+  SortOutlined as SortIcon
 } from '@mui/icons-material';
 import { FetchEndpoint } from '../FetchEndpoint';
 
@@ -104,9 +112,11 @@ const Job: React.FC = () => {
   // State variables
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedJobType, setSelectedJobType] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedLocation, setSelectedLocation] = useState("All");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sort, setSort] = useState("newest");
+  const [bookmarkedJobs, setBookmarkedJobs] = useState<string[]>([]);
   const [bookmarkedJobs, setBookmarkedJobs] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
@@ -192,6 +202,7 @@ const Job: React.FC = () => {
 
   // Toggle job bookmark
   const toggleBookmark = (jobId: string, e?: React.MouseEvent) => {
+  const toggleBookmark = (jobId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     
     const newBookmarks = bookmarkedJobs.includes(jobId) 
@@ -204,12 +215,13 @@ const Job: React.FC = () => {
   
   // Toggle expanded job details
   const toggleJobExpand = (jobId: string) => {
+  const toggleJobExpand = (jobId: string) => {
     setExpandedJobId(expandedJobId === jobId ? null : jobId);
   };
 
   // Handle salary slider change
   const handleSalaryChange = (event: Event, newValue: number | number[]) => {
-    setSalaryRange(newValue as number[]);
+    setTempSalaryRange(newValue as number[]);
   };
 
   // ✅ UPDATED: Format salary display using same logic as Home.tsx
@@ -288,7 +300,9 @@ const Job: React.FC = () => {
   const sortedJobs = [...filteredJobs].sort((a, b) => {
     if (sort === "newest") {
       return new Date(b.posted_date).getTime() - new Date(a.posted_date).getTime();
+      return new Date(b.posted_date).getTime() - new Date(a.posted_date).getTime();
     } else if (sort === "oldest") {
+      return new Date(a.posted_date).getTime() - new Date(b.posted_date).getTime();
       return new Date(a.posted_date).getTime() - new Date(b.posted_date).getTime();
     } else if (sort === "salaryAsc") {
       return (a.salary_min || 0) - (b.salary_min || 0);
@@ -302,10 +316,17 @@ const Job: React.FC = () => {
   const resetFilters = () => {
     setSearchTerm("");
     setSelectedJobType("All");
+    setSelectedCategory("All");
     setSelectedLocation("All");
     setSelectedCategory("All");
     setSalaryRange([0, 50000000]);
     setSort("newest");
+    
+    // Also reset temporary filters
+    setTempJobType("All");
+    setTempCategory("All");
+    setTempLocation("All");
+    setTempSalaryRange([5000000, 30000000]);
   };
 
   // Navigate to job detail page
@@ -353,14 +374,26 @@ const Job: React.FC = () => {
           mb: 4, 
           textAlign: 'center',
           position: 'relative',
-          p: 4,
+          p: { xs: 3, md: 4 },
           borderRadius: 3,
-          background: 'linear-gradient(135deg, rgba(3, 169, 244, 0.8) 0%, rgba(0, 188, 212, 0.8) 100%)',
+          background: 'linear-gradient(135deg, rgba(3, 169, 244, 0.9) 0%, rgba(0, 188, 212, 0.9) 100%)',
           color: 'white',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-          overflow: 'hidden'
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
         }}
       >
+        <Box 
+          sx={{ 
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            opacity: 0.1,
+            background: 'url(https://images.unsplash.com/photo-1497215728101-856f4ea42174) center/cover',
+            borderRadius: 3,
+          }}
+        />
+        
         <Typography variant="h3" component="h1" fontWeight="bold" sx={{ mb: 2, position: 'relative' }}>
           Find your dream job
         </Typography>
@@ -371,12 +404,12 @@ const Job: React.FC = () => {
         <Box 
           sx={{ 
             display: 'flex',
-            maxWidth: '600px',
+            maxWidth: '650px',
             mx: 'auto',
             backgroundColor: 'white',
-            borderRadius: 2,
-            p: 0.5,
-            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+            borderRadius: 3,
+            p: 0.8,
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
           }}
         >
           <TextField
@@ -405,7 +438,12 @@ const Job: React.FC = () => {
           <Button 
             variant="contained" 
             color="primary"
-            sx={{ borderRadius: 1 }}
+            onClick={handleSearch}
+            sx={{ 
+              borderRadius: 2,
+              px: 3,
+              fontWeight: 600
+            }}
           >
             Search
           </Button>
@@ -617,16 +655,16 @@ const Job: React.FC = () => {
             <Stack spacing={2} sx={{ minHeight: 500 }}>
               {sortedJobs.map((job, index) => (
                 <Grow in={true} timeout={(index + 1) * 200} key={job.job_id}>
+                <Grow in={true} timeout={(index + 1) * 200} key={job.job_id}>
                   <Card
                     sx={{
-                      borderRadius: 2,
-                      boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)',
-                      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                      borderRadius: 3,
+                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
+                      transition: 'all 0.3s ease',
                       position: 'relative',
-                      overflow: 'visible',
                       '&:hover': {
                         transform: 'translateY(-4px)',
-                        boxShadow: '0 12px 20px rgba(0, 0, 0, 0.1)',
+                        boxShadow: '0 12px 28px rgba(0, 0, 0, 0.12)',
                       },
                       cursor: 'pointer'
                     }}
@@ -648,11 +686,12 @@ const Job: React.FC = () => {
                         </Avatar>
                         
                         <Box sx={{ flexGrow: 1 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <Typography variant="h6" component="h2" fontWeight="bold">
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'self-end' }}>
+                            <Typography variant="h6" component="h2" fontWeight="bold" sx={{ mb: 0.5 }}>
                               {job.title}
                             </Typography>
                             
+                            <Tooltip title={bookmarkedJobs.includes(job.job_id) ? "Remove from saved jobs" : "Save job"}>
                             <Tooltip title={bookmarkedJobs.includes(job.job_id) ? "Remove from saved jobs" : "Save job"}>
                               <IconButton 
                                 size="small"
@@ -669,6 +708,7 @@ const Job: React.FC = () => {
                                 }}
                               >
                                 {bookmarkedJobs.includes(job.job_id) ? (
+                                {bookmarkedJobs.includes(job.job_id) ? (
                                   <BookmarkIcon color="primary" />
                                 ) : (
                                   <BookmarkBorder/>
@@ -684,7 +724,7 @@ const Job: React.FC = () => {
                           <Stack 
                             direction="row" 
                             spacing={1} 
-                            sx={{ mt: 1, flexWrap: 'wrap', gap: 1, '& > *': { mb: 1 } }}
+                            sx={{ mt: 1, flexWrap: 'wrap', gap: 1, '& > *': { mb: 0.5 } }}
                           >
                             {job.company?.address && (
                               <Chip 
@@ -714,14 +754,16 @@ const Job: React.FC = () => {
                               label={formatDate(job.posted_date)} 
                               size="small" 
                               icon={<ClockIcon fontSize="small" />}
-                              sx={{ backgroundColor: 'rgba(0, 0, 0, 0.04)' }}
+                              sx={{ backgroundColor: 'rgba(0, 0, 0, 0.04)', borderRadius: '8px' }}
                             />
+                            
                             <Chip 
                               label={formatSalaryDisplay(job)} 
                               size="small" 
                               icon={<MoneyIcon fontSize="small" />}
                               color="primary"
                               variant="outlined"
+                              sx={{ borderRadius: '8px' }}
                             />
                           </Stack>
                         </Box>
@@ -740,7 +782,7 @@ const Job: React.FC = () => {
                           <Box>
                             <Box sx={{ mb: 2 }}>
                               <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                                Skills:
+                                Required Skills:
                               </Typography>
                               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                 {job.skills.map((skill, index) => (
@@ -752,7 +794,7 @@ const Job: React.FC = () => {
                                       backgroundColor: 'rgba(3, 169, 244, 0.1)',
                                       color: '#0277BD',
                                       fontWeight: 500,
-                                      borderRadius: 1
+                                      borderRadius: 2
                                     }}
                                   />
                                 ))}
@@ -762,7 +804,13 @@ const Job: React.FC = () => {
                         </Fade>
                       )}
 
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        mt: 2,
+                        pt: 1
+                      }}>
                         <Button 
                           variant="text" 
                           size="small"
@@ -773,6 +821,7 @@ const Job: React.FC = () => {
                           endIcon={expandedJobId === job.job_id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                           sx={{ textTransform: 'none' }}
                         >
+                          {expandedJobId === job.job_id ? 'Show less' : 'Show more'}
                           {expandedJobId === job.job_id ? 'Show less' : 'Show more'}
                         </Button>
                         

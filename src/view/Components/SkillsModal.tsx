@@ -23,6 +23,8 @@ import {
   Refresh as RefreshIcon
 } from '@mui/icons-material';
 
+import { FetchEndpoint } from '../FetchEndpoint';
+
 const MAX_SKILL_LENGTH = 30;
 
 // Styled components
@@ -167,9 +169,15 @@ const SkillsModal: React.FC<SkillsModalProps> = ({
     try {
       setLoading(true);
       setAlertMessage(null);
+
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        throw new Error('You must be logged in to update skills.');
+      }
       
-      await onSave(skills);
-      
+      console.log('Saving skills:', skills);
+      const result = await FetchEndpoint('/skills/appliers-skills/create', 'POST', token, skills)
+
       setAlertMessage('Skills updated successfully!');
       setAlertSeverity('success');
       

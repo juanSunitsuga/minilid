@@ -12,7 +12,7 @@ import { JobTypes } from '../../models/job_types';
 import { Recruiters } from '../../models/recruiters';
 import { Skills } from '../../models/skills';
 import { JobPostSkill } from '../../models/job_post_skills';
-import { ApplierSkill } from '../../models/applier_skills';
+import { ApplierSkill } from '../../models/applier_skill';
 import { JobAppliers } from '../../models/job_appliers';
 
 // Import routes

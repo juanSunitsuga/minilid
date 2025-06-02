@@ -1,5 +1,6 @@
-import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
+import { Table, Column, Model, DataType, ForeignKey, HasMany, BelongsTo } from "sequelize-typescript";
 import { Companies } from "./companies";
+import { Experiences } from "./experiences";
 
 @Table({
     tableName: "recruiters",
@@ -48,4 +49,13 @@ export class Recruiters extends Model {
         allowNull: true,
     })
     declare about: string | null;
+
+    @HasMany(() => Experiences, {
+        foreignKey: 'user_id',
+        scope: {
+            user_type: 'recruiter'
+        },
+        as: 'experiences'
+    })
+    declare experiences: Experiences[];
 }
