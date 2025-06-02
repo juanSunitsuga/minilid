@@ -30,18 +30,6 @@ import {
 import { FetchEndpoint } from '../FetchEndpoint';
 import { Link } from 'react-router-dom';
 
-// Add this type to better match your backend response
-interface JobPost {
-    job_id: string;
-    title: string;
-    description: string;
-    posted_date: string;
-    company?: {
-        company_id: string | null;
-        name: string;
-        address: string;
-    };
-}
 
 // Updated Application interface
 interface Application {
@@ -51,7 +39,17 @@ interface Application {
     status: string;
     createdAt: string;
     updated_at: string;
-    jobPost: JobPost;
+    jobPost?: {
+        job_id: string;
+        title: string;
+        description: string;
+        posted_date: string;
+        company?: {
+            company_id: string | null;
+            company_name: string;
+            address: string;
+        };
+    };
 }
 
 const ApplierDashboard: React.FC = () => {
@@ -313,10 +311,10 @@ const ApplierDashboard: React.FC = () => {
                                     {applications.map((application) => (
                                         < TableRow key = { application.id } hover >
                                             <TableCell>
-                                                <Typography variant="body1">{application.jobPost.title}</Typography>
+                                                <Typography variant="body1">{application.jobPost?.title}</Typography>
                                             </TableCell>
                                             <TableCell>
-                                                {application.jobPost.company?.name || "Unknown Company"}
+                                                {application.jobPost?.company?.company_name || "Unknown Company"}
                                             </TableCell>
                                             <TableCell>
                                                 {new Date(application.createdAt).toLocaleDateString()}
@@ -341,7 +339,7 @@ const ApplierDashboard: React.FC = () => {
                                                         size="small"
                                                         color="primary"
                                                         component={Link}
-                                                        to={`/jobs/${application.job_id}`}
+                                                        to={`/job/${application.job_id}`}
                                                     >
                                                         <JobIcon />
                                                     </IconButton>
