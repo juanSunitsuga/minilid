@@ -64,7 +64,9 @@ app.use('/experiences', experiencesRoutes);
 app.use('/skills', skillsRoutes);
 app.use(error)
 
-
+app.use((req, res) => {
+    res.status(404).json({ message: 'Route not found' });
+});
 
 // Start the server
 const PORT = process.env.PORT || 3000;
