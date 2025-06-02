@@ -1,4 +1,5 @@
-import { Table, Column, Model, DataType } from "sequelize-typescript";
+import { Table, Column, Model, DataType, HasMany } from "sequelize-typescript";
+import { Recruiters } from "./recruiters";
 
 @Table({
   tableName: "companies",
@@ -66,4 +67,11 @@ export class Companies extends Model {
     allowNull: true
   })
   declare industry: string | null;
+  
+  //add has many recruiters association
+  @HasMany(() => Recruiters, {
+    foreignKey: 'company_id',
+    as: 'recruiters'
+  })
+  declare recruiters?: Recruiters[];
 }

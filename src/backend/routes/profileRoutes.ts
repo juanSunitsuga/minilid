@@ -441,28 +441,16 @@ router.post("/appliers-skills", authMiddleware, controllerWrapper(async (req, re
     };
 }));
 
-
-// =============================================
-// EXPERIENCE MANAGEMENT ROUTES
-// =============================================
-
-// /**
-//  * POST /api/profile/experiences
-//  * Add new work experience
-//  * Used for: Creating new work experience entries for appliers or recruiters
-//  * Requires: Authentication
-//  * Body: { user_type, user_id, company_name, job_title, start_date, end_date?, description? }
-//  */
-// router.post("/experiences", authMiddleware, controllerWrapper(async (req, res) => {
-//     const { 
-//         user_type, 
-//         user_id, 
-//         company_name, 
-//         job_title, 
-//         start_date, 
-//         end_date, 
-//         description 
-//     } = req.body;
+router.post("/experiences", authMiddleware, controllerWrapper(async (req, res) => {
+    const {
+        user_type,
+        user_id,
+        company_name,
+        job_title,
+        start_date,
+        end_date,
+        description
+    } = req.body;
 
 //     if (!user_type || !user_id || !company_name || !job_title || !start_date) {
 //         throw new Error("User type, user ID, company name, job title, and start date are required.");
@@ -536,34 +524,27 @@ router.post("/appliers-skills", authMiddleware, controllerWrapper(async (req, re
 //     };
 // }));
 
-// /**
-//  * PUT /api/profile/experiences/:experience_id
-//  * Update existing work experience
-//  * Used for: Editing work experience entries
-//  * Body: { company_name?, job_title?, start_date?, end_date?, description? }
-//  */
-// router.put("/experiences/:experience_id", controllerWrapper(async (req, res) => {
-//     const { experience_id } = req.params;
-//     const { 
-//         company_name, 
-//         job_title, 
-//         start_date, 
-//         end_date, 
-//         description 
-//     } = req.body;
+router.put("/experiences/:experience_id", controllerWrapper(async (req, res) => {
+    const { experience_id } = req.params;
+    const {
+        company_name,
+        job_title,
+        start_date,
+        end_date,
+        description
+    } = req.body;
 
-//     const experience = await Experiences.findByPk(experience_id);
-    
-//     if (!experience) {
-//         throw new Error("Experience not found.");
-//     }
+    const experience = await Experiences.findByPk(experience_id);
 
-//     // Update only provided fields
-//     if (company_name) experience.company_name = company_name;
-//     if (job_title) experience.job_title = job_title; 
-//     if (start_date) experience.start_date = new Date(start_date);
-//     if (end_date !== undefined) experience.end_date = end_date ? new Date(end_date) : null;
-//     if (description !== undefined) experience.description = description;
+    if (!experience) {
+        throw new Error("Experience not found.");
+    }
+
+    if (company_name) experience.company_name = company_name;
+    if (job_title) experience.job_title = job_title;
+    if (start_date) experience.start_date = new Date(start_date);
+    if (end_date !== undefined) experience.end_date = end_date ? new Date(end_date) : null;
+    if (description !== undefined) experience.description = description;
 
 //     await experience.save();
 
@@ -581,17 +562,53 @@ router.post("/appliers-skills", authMiddleware, controllerWrapper(async (req, re
 // router.delete("/experiences/:experience_id", controllerWrapper(async (req, res) => {
 //     const { experience_id } = req.params;
 
-//     const experience = await Experiences.findByPk(experience_id);
-    
-//     if (!experience) {
-//         throw new Error("Experience not found.");
-//     }
+    const experience = await Experiences.findByPk(experience_id);
+
+    if (!experience) {
+        throw new Error("Experience not found.");
+    }
 
 //     await experience.destroy();
 
-//     return {
-//         message: "Experience deleted successfully."
-//     };
-// }));
+    return {
+        message: "Experience deleted successfully."
+    };
+}));
+
+router.put("/recruiters/:recruiter_id", authMiddleware, controllerWrapper(async (req, res) => {
+    const recruiterId = req.params.recruiter_id; // Fixed: was req.params.recruiter
+    
+    if (!recruiterId) {
+        throw new Error("Recruiter ID is required.");
+    }
+
+    const recruiter = await Recruiters.findOne({
+        where: { recruiter_id: recruiterId },
+    });
+
+    if (!recruiter) {
+        throw new Error("Recruiter not found.");
+    }
+
+    // Update the recruiter to remove company association
+    await Recruiters.update(
+        {
+            company_id: null,
+        },
+        {
+            where: { recruiter_id: recruiterId },
+        }
+    );
+
+    // Get the updated recruiter data
+    const updatedRecruiter = await Recruiters.findOne({
+        where: { recruiter_id: recruiterId },
+    });
+
+    return {
+        message: "Recruiter removed from company successfully.",
+        data: updatedRecruiter,
+    };
+}));
 
 export default router;

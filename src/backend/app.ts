@@ -21,9 +21,10 @@ import createPostRoutes from './routes/createPostRoutes';
 import profileRoutes from './routes/profileRoutes';
 import chatRoutes from './routes/chatRoutes';
 import applyJobRoutes from './routes/applyJobRoutes';
-import error from '../middleware/errorHandler';
+import companyRoutes from './routes/companyRoutes';
 import experiencesRoutes from './routes/experiencesRoutes';
 import skillsRoutes from './routes/skillsRoutes';
+import error from '../middleware/errorHandler';
 
 // Import configuration
 import config from '../../config/config.json';
@@ -58,12 +59,19 @@ app.use('/profile', profileRoutes);
 app.use('/job', createPostRoutes);
 app.use('/chat', chatRoutes);
 app.use('/job-applications', applyJobRoutes);
+app.use('/company', companyRoutes);
 app.use('/experiences', experiencesRoutes);
 app.use('/skills', skillsRoutes);
-app.use(error);
+app.use(error)
 
-app.use((req, res) => {
-    res.status(404).json({ message: 'Route not found' });
+
+// Error handling middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error(err.stack);
+    res.status(500).json({ 
+        message: 'Something went wrong!', 
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined 
+    });
 });
 
 // Start the server
