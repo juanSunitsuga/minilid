@@ -162,7 +162,7 @@ const RecruiterDashboard: React.FC = () => {
             color="primary" 
             startIcon={<AddIcon />}
             component={Link}
-            to="/jobs/create"
+            to="/create-job"
           >
             Post New Job
           </Button>
