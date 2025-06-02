@@ -28,6 +28,7 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import { SelectChangeEvent } from '@mui/material/Select';
+import { useNavigate } from 'react-router-dom';
 
 const PreviewBox = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -64,6 +65,7 @@ const CreateJob: React.FC = () => {
   const [error, setError] = useState('');
   const [fetchingData, setFetchingData] = useState(true);
   const [salaryDialogOpen, setSalaryDialogOpen] = useState<boolean>(false);
+  const navigate = useNavigate();
 
   const validateSalary = useCallback(() => {
     const min = parseInt(jobData.salary_min);
@@ -442,6 +444,8 @@ const CreateJob: React.FC = () => {
         salary_type: 'monthly',
       });
       setSkills([]);
+
+      navigate("/dashboard");
 
       alert('Job post created successfully!');
     } catch (err) {

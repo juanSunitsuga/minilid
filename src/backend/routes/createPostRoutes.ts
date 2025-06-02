@@ -19,7 +19,7 @@ interface SkillPlain {
 router.get('/job-types', async (req, res) => {
   try {
     const types = await JobTypes.findAll({
-      attributes: ['type_id', 'type'] 
+      attributes: ['type_id', 'type']
     });
     res.json(types);
   } catch (error) {
@@ -30,7 +30,7 @@ router.get('/job-types', async (req, res) => {
 router.get('/job-categories', async (req, res) => {
   try {
     const categories = await JobCategories.findAll({
-      attributes: ['category_id', 'category'] 
+      attributes: ['category_id', 'category']
     });
     res.json(categories);
   } catch (error) {
@@ -89,7 +89,7 @@ router.post('/skills', controllerWrapper(async (req, res) => {
 router.post("/jobposts", authMiddleware, controllerWrapper(async (req, res) => {
   console.log('💼 Creating job post - Request body:', req.body);
   console.log('👤 User from auth:', req.user);
-  
+
   const {
     title,
     description,
@@ -102,7 +102,7 @@ router.post("/jobposts", authMiddleware, controllerWrapper(async (req, res) => {
   } = req.body;
 
   if (!title || !description || !category_id || !type_id) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       error: "Missing required fields",
       required: ["title", "description", "category_id", "type_id"],
       received: { title, description, category_id, type_id }
@@ -110,7 +110,7 @@ router.post("/jobposts", authMiddleware, controllerWrapper(async (req, res) => {
   }
 
   if (!Array.isArray(skills) || skills.length === 0) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       error: "At least one skill is required",
       received: skills
     });
@@ -123,15 +123,15 @@ router.post("/jobposts", authMiddleware, controllerWrapper(async (req, res) => {
 
   try {
     const recruiter = await Recruiters.findOne({
-      where: { 
-        recruiter_id: user_id  
+      where: {
+        recruiter_id: user_id
       }
     });
 
     console.log('👤 Found recruiter:', recruiter);
 
     if (!recruiter) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: "User is not registered as a recruiter",
         user_id: user_id,
         suggestion: "Please register as a recruiter first"
@@ -157,7 +157,7 @@ router.post("/jobposts", authMiddleware, controllerWrapper(async (req, res) => {
 
     if (Array.isArray(skills) && skills.length > 0) {
       console.log('🎯 Adding skills:', skills);
-      
+
       const skillInstances = await Promise.all(
         skills.map(async (skill: string) => {
           const [skillInstance] = await Skills.findOrCreate({
@@ -172,11 +172,11 @@ router.post("/jobposts", authMiddleware, controllerWrapper(async (req, res) => {
         job_id: jobPost.job_id,
         skill_id: skillInstance.skill_id,
       }));
-      
+
       await JobPostSkill.bulkCreate(jobPostSkills, {
         ignoreDuplicates: true,
       });
-      
+
     }
 
     const response = {
@@ -198,11 +198,73 @@ router.post("/jobposts", authMiddleware, controllerWrapper(async (req, res) => {
     return res.status(201).json(response);
 
   } catch (error) {
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: "Failed to create job post",
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
+}));
+
+router.delete('/jobs/:jobId', authMiddleware, controllerWrapper(async (req, res) => {
+  const { jobId } = req.params;
+
+  const user_id = req.user?.id;
+  if (!user_id) {
+    return res.status(401).json({ error: "User authentication failed" });
+  }
+  const existingJob = await JobPosts.findOne({
+    where: { job_id: jobId },
+    include: [
+      {
+        model: Recruiters,
+        as: 'recruiter',
+        attributes: ['recruiter_id', 'name']
+      }
+    ]
+  });
+
+  if (!existingJob) {
+    return res.status(404).json({ error: "Job not found" });
+  }
+
+  const recruiter = await Recruiters.findOne({
+    where: { recruiter_id: user_id }
+  });
+
+  if (!recruiter) {
+    return res.status(403).json({
+      error: "User is not registered as a recruiter"
+    });
+  }
+
+  if (existingJob.recruiter_id !== recruiter.recruiter_id) {
+    return res.status(403).json({
+      error: "You can only delete your own job posts"
+    });
+  }
+
+  await JobPostSkill.destroy({
+    where: { job_id: jobId }
+  });
+  const deletedCount = await JobPosts.destroy({
+    where: { job_id: jobId }
+  });
+
+  if (deletedCount === 0) {
+    return res.status(500).json({
+      error: "Failed to delete job post",
+      details: "No rows were affected"
+    });
+  }
+
+  return res.status(200).json({
+    message: "Job post deleted successfully",
+    deleted_job: {
+      job_id: jobId,
+      title: existingJob.title,
+      recruiter: existingJob.recruiter?.name || "Unknown"
+    }
+  });
 }));
 
 // ✅ ADD: Get single job by ID
@@ -210,19 +272,19 @@ router.get('/jobs/:jobId', controllerWrapper(async (req, res) => {
   try {
     const { jobId } = req.params;
     console.log(`📋 Fetching job details for ID: ${jobId}`);
-    
+
     const job = await JobPosts.findOne({
       where: { job_id: jobId },
       attributes: [
-        'job_id', 
-        'title', 
-        'description', 
-        'category_id', 
-        'type_id', 
-        'recruiter_id', 
+        'job_id',
+        'title',
+        'description',
+        'category_id',
+        'type_id',
+        'recruiter_id',
         'posted_date',
         'salary_min',
-        'salary_max', 
+        'salary_max',
         'salary_type'
       ],
       include: [
@@ -262,7 +324,7 @@ router.get('/jobs/:jobId', controllerWrapper(async (req, res) => {
     }
 
     const plainJob = job.get({ plain: true });
-    
+
     const formattedJob = {
       job_id: plainJob.job_id,
       title: plainJob.title,
@@ -271,23 +333,23 @@ router.get('/jobs/:jobId', controllerWrapper(async (req, res) => {
       salary_min: plainJob.salary_min,
       salary_max: plainJob.salary_max,
       salary_type: plainJob.salary_type,
-      
+
       recruiter: plainJob.recruiter ? {
         recruiter_id: plainJob.recruiter.recruiter_id,
         name: plainJob.recruiter.name,
         company_id: plainJob.recruiter.company_id
       } : null,
-      
+
       category: plainJob.category ? {
         category_id: plainJob.category.category_id,
         name: plainJob.category.category
       } : null,
-      
+
       type: plainJob.type ? {
         type_id: plainJob.type.type_id,
         name: plainJob.type.type
       } : null,
-      
+
       company: plainJob.recruiter?.company ? {
         company_id: plainJob.recruiter.company.company_id,
         name: plainJob.recruiter.company.company_name,
@@ -297,18 +359,18 @@ router.get('/jobs/:jobId', controllerWrapper(async (req, res) => {
         name: "Unknown Company",
         address: "Unknown Address"
       },
-      
+
       skills: plainJob.skills ? plainJob.skills.map((skill: any) => ({
         skill_id: skill.skill_id,
         name: skill.name
       })) : [],
-      
+
       posted_date: plainJob.posted_date
     };
     res.json(formattedJob);
-    
+
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Failed to fetch job details",
       details: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -319,18 +381,18 @@ router.get('/jobs/:jobId', controllerWrapper(async (req, res) => {
 router.get('/jobs', async (req, res) => {
   try {
     console.log('📋 Fetching all jobs...');
-    
+
     const jobs = await JobPosts.findAll({
       include: [
         {
           model: JobCategories,
           as: 'category',
-          attributes: ['category_id', 'category'] 
+          attributes: ['category_id', 'category']
         },
         {
           model: JobTypes,
           as: 'type',
-          attributes: ['type_id', 'type'] 
+          attributes: ['type_id', 'type']
         },
         {
           model: Skills,
@@ -360,29 +422,29 @@ router.get('/jobs', async (req, res) => {
 
     const formattedJobs = jobs.map(job => {
       const plainJob = job.get({ plain: true });
-      
+
       return {
         job_id: plainJob.job_id,
         title: plainJob.title,
         description: plainJob.description,
         recruiter_id: plainJob.recruiter_id,
-        
+
         recruiter: plainJob.recruiter ? {
           recruiter_id: plainJob.recruiter.recruiter_id,
           name: plainJob.recruiter.name,
           company_id: plainJob.recruiter.company_id
         } : null,
-        
+
         category: plainJob.category ? {
           category_id: plainJob.category.category_id,
-          name: plainJob.category.category 
+          name: plainJob.category.category
         } : null,
-        
+
         type: plainJob.type ? {
           type_id: plainJob.type.type_id,
-          name: plainJob.type.type 
+          name: plainJob.type.type
         } : null,
-        
+
         company: plainJob.recruiter?.company ? {
           company_id: plainJob.recruiter.company.company_id,
           name: plainJob.recruiter.company.company_name,
@@ -392,7 +454,7 @@ router.get('/jobs', async (req, res) => {
           name: "Unknown Company",
           address: "Unknown Address"
         },
-        
+
         skills: plainJob.skills ? plainJob.skills.map((skill: SkillPlain) => ({
           skill_id: skill.skill_id,
           name: skill.name
@@ -407,10 +469,10 @@ router.get('/jobs', async (req, res) => {
 
     console.log(`✅ Fetched ${formattedJobs.length} jobs successfully`);
     res.json(formattedJobs);
-    
+
   } catch (error) {
     console.error("❌ Error fetching jobs:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Failed to fetch jobs",
       details: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -428,7 +490,7 @@ router.put('/jobs/:jobId', authMiddleware, controllerWrapper(async (req, res) =>
   } = req.body;
 
   if (!category_id || !type_id) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       error: "Missing required fields",
       required: ["category_id", "type_id"],
       received: { category_id, type_id }
@@ -461,14 +523,14 @@ router.put('/jobs/:jobId', authMiddleware, controllerWrapper(async (req, res) =>
     });
 
     if (!recruiter) {
-      return res.status(403).json({ 
-        error: "User is not registered as a recruiter" 
+      return res.status(403).json({
+        error: "User is not registered as a recruiter"
       });
     }
 
     if (existingJob.recruiter_id !== recruiter.recruiter_id) {
-      return res.status(403).json({ 
-        error: "You can only edit your own job posts" 
+      return res.status(403).json({
+        error: "You can only edit your own job posts"
       });
     }
 
@@ -484,7 +546,7 @@ router.put('/jobs/:jobId', authMiddleware, controllerWrapper(async (req, res) =>
 
     const validSalaryTypes = ['hourly', 'daily', 'monthly', 'yearly'];
     if (salary_type && !validSalaryTypes.includes(salary_type)) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "Invalid salary_type",
         valid_types: validSalaryTypes
       });
@@ -518,15 +580,15 @@ router.put('/jobs/:jobId', authMiddleware, controllerWrapper(async (req, res) =>
     const updatedJob = await JobPosts.findOne({
       where: { job_id: jobId },
       attributes: [
-        'job_id', 
-        'title', 
-        'description', 
-        'category_id', 
-        'type_id', 
-        'recruiter_id', 
+        'job_id',
+        'title',
+        'description',
+        'category_id',
+        'type_id',
+        'recruiter_id',
         'posted_date',
         'salary_min',
-        'salary_max', 
+        'salary_max',
         'salary_type'
       ],
       include: [
@@ -566,7 +628,7 @@ router.put('/jobs/:jobId', authMiddleware, controllerWrapper(async (req, res) =>
     }
 
     const plainJob = updatedJob.get({ plain: true });
-    
+
     const formattedJob = {
       job_id: plainJob.job_id,
       title: plainJob.title,
@@ -575,23 +637,23 @@ router.put('/jobs/:jobId', authMiddleware, controllerWrapper(async (req, res) =>
       salary_min: plainJob.salary_min,
       salary_max: plainJob.salary_max,
       salary_type: plainJob.salary_type,
-      
+
       recruiter: plainJob.recruiter ? {
         recruiter_id: plainJob.recruiter.recruiter_id,
         name: plainJob.recruiter.name,
         company_id: plainJob.recruiter.company_id
       } : null,
-      
+
       category: plainJob.category ? {
         category_id: plainJob.category.category_id,
-        category: plainJob.category.category 
+        category: plainJob.category.category
       } : null,
-      
+
       type: plainJob.type ? {
         type_id: plainJob.type.type_id,
-        type: plainJob.type.type 
+        type: plainJob.type.type
       } : null,
-      
+
       company: plainJob.recruiter?.company ? {
         company_id: plainJob.recruiter.company.company_id,
         name: plainJob.recruiter.company.company_name,
@@ -601,12 +663,12 @@ router.put('/jobs/:jobId', authMiddleware, controllerWrapper(async (req, res) =>
         name: "Unknown Company",
         address: "Unknown Address"
       },
-      
+
       skills: plainJob.skills ? plainJob.skills.map((skill: any) => ({
         skill_id: skill.skill_id,
         name: skill.name
       })) : [],
-      
+
       posted_date: plainJob.posted_date
     };
 
@@ -616,7 +678,7 @@ router.put('/jobs/:jobId', authMiddleware, controllerWrapper(async (req, res) =>
     });
 
   } catch (error) {
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: "Failed to update job",
       details: error instanceof Error ? error.message : 'Unknown error'
     });
