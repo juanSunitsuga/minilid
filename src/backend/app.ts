@@ -65,14 +65,6 @@ app.use('/skills', skillsRoutes);
 app.use(error)
 
 
-// Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error(err.stack);
-    res.status(500).json({ 
-        message: 'Something went wrong!', 
-        error: process.env.NODE_ENV === 'development' ? err.message : undefined 
-    });
-});
 
 // Start the server
 const PORT = process.env.PORT || 3000;
