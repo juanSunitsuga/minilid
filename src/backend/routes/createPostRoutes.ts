@@ -208,128 +208,41 @@ router.post("/jobposts", authMiddleware, controllerWrapper(async (req, res) => {
   }
 }));
 
-router.delete('/jobs/:jobId', controllerWrapper(async (req, res) => {
+router.delete('/jobs/:jobId', authMiddleware, controllerWrapper(async (req, res) => {
   const { jobId } = req.params;
-  const authHeader = req.headers["authorization"];
-  const headerToken = authHeader && authHeader.split(" ")[1];
-  const queryToken = req.query.token as string;
-  const token = headerToken || queryToken;
-  if (!token) {
-    throw new Error("No token provided");
-  }
-
-  let userId: string;
-  const decoded = jwt.verify(token, appConfig.jwtSecret) as unknown as {
-    id: string;
-    email?: string;
-    name?: string;
-  };
-
-  if (!decoded || !decoded.id) {
-    throw new Error("Invalid token structure");
-  }
-
-  userId = decoded.id;
-
-  if (!userId) {
+  const user_id = req.user?.id;
+  if (!user_id) {
     return res.status(401).json({ error: "User authentication failed" });
   }
-
-  const existingJob = await JobPosts.findOne({
-    where: { job_id: jobId },
-    include: [
-      {
-        model: Recruiters,
-        as: 'recruiter',
-        attributes: ['recruiter_id', 'name']
-      }
-    ]
-  });
-  console.log(`\n\n\n\n5`);
-
-  if (!existingJob) {
-    return res.status(404).json({ error: "Job not found" });
-  }
-  console.log(`\n\n\n\n6`);
-
-  const recruiter = await Recruiters.findOne({
-    where: { recruiter_id: decoded.id }
-  });
-  console.log(`\n\n\n\n7`);
-
-
-  if (!recruiter) {
-    return res.status(403).json({
-      error: "User is not registered as a recruiter"
-    });
-  }
-  console.log(`\n\n\n\n8`);
-
-
-  if (existingJob.recruiter_id !== recruiter.recruiter_id) {
-    return res.status(403).json({
-      error: "You can only delete your own job posts"
-    });
-  }
-  console.log(`\n\n\n\n9`);
-
   try {
-    console.log(`🗑️ Starting deletion process for job: ${jobId}`);
-
-    // 1. Check and count applications before deletion
-    const { JobAppliers } = require('../../../models/job_appliers');
-    const applicationCount = await JobAppliers.count({
-      where: { job_id: jobId }
+    const job = await JobPosts.findOne({
+      where: { job_id: jobId },
+      include: [
+        {
+          model: Recruiters,
+          as: 'recruiter',
+          attributes: ['recruiter_id']
+        }
+      ]
     });
 
-    // 2. Delete job applications (if any)
-    if (applicationCount > 0) {
-      await JobAppliers.destroy({
-        where: { job_id: jobId }
-      });
-      console.log(`✅ Deleted ${applicationCount} job application(s) for job: ${jobId}`);
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
     }
 
-    // 3. Delete job-skill associations
-    const skillCount = await JobPostSkill.count({
-      where: { job_id: jobId }
-    });
-
-    if (skillCount > 0) {
-      await JobPostSkill.destroy({
-        where: { job_id: jobId }
-      });
-      console.log(`✅ Deleted ${skillCount} job skill(s) for job: ${jobId}`);
-    }
-
-    // 4. Delete the job post itself
-    const deletedCount = await JobPosts.destroy({
-      where: { job_id: jobId }
-    });
-
-    if (deletedCount === 0) {
-      return res.status(500).json({
-        error: "Failed to delete job post",
-        details: "No job post was deleted"
+    if (job.recruiter.recruiter_id !== user_id) {
+      return res.status(403).json({
+        error: "You can only delete your own job posts"
       });
     }
 
-    return res.status(200).json({
-      message: "Job post and all related data deleted successfully",
-      deleted_job: {
-        job_id: jobId,
-        title: existingJob.title,
-        recruiter: existingJob.recruiter?.name || "Unknown",
-        deleted_applications: applicationCount,
-        deleted_skills: skillCount
-      }
-    });
+    await JobPosts.destroy({ where: { job_id: jobId } });
+
+    return res.status(200).json({ message: "Job deleted successfully" });
 
   } catch (error) {
-    console.error(`❌ Error deleting job ${jobId}:`, error);
-
     return res.status(500).json({
-      error: "Failed to delete job post",
+      error: "Failed to delete job",
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
