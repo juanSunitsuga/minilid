@@ -15,9 +15,28 @@ export default {
         allowNull: false,
       }
     });
+
+    await queryInterface.bulkInsert('skills', [
+      {
+        name: 'Node.js'
+      },
+      {
+        name: 'PostgreSQL'
+      },
+      {
+        name: 'TypeScript'
+      },
+      {
+        name: 'Back End'
+      },
+      {
+        name: 'Front End'
+      }
+    ]);
   },
 
   async down(queryInterface, Sequelize) {
+    await queryInterface.bulkDelete('skills', null, {});
     await queryInterface.dropTable('skills');
   },
 };

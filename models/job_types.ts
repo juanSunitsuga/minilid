@@ -16,5 +16,5 @@ export class JobTypes extends Model {
         type: DataType.STRING,
         allowNull: false,
     })
-    declare type_name: string;
+    declare type: string;
 }

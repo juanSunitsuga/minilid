@@ -38,11 +38,23 @@ export class JobAppliers extends Model {
     declare applier: Appliers;
 
     @Column({
-        type: DataType.ENUM('applied', 'interviewing', 'hired', 'rejected'),
+        type: DataType.STRING,
+        allowNull: false
+    })
+    declare cv_url: String;
+
+    @Column({
+        type: DataType.STRING,
+        allowNull: false
+    })
+    declare cover_letter: String;
+
+    @Column({
+        type: DataType.ENUM('applied', 'interviewing', 'rejected'),
         allowNull: false,
         defaultValue: 'applied'
     })
-    declare status: 'applied' | 'interviewing' | 'hired' | 'rejected';
+    declare status: 'applied' | 'interviewing' | 'rejected';
 
     @Column({
         type: DataType.DATE,

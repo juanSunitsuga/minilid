@@ -16,5 +16,5 @@ export class JobCategories extends Model {
         type: DataType.STRING,
         allowNull: false,
     })
-    declare category_name: string;
+    declare category: string;
 }

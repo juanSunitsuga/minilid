@@ -2,7 +2,6 @@ import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize
 import { Recruiters } from "./recruiters";
 import { JobPosts } from "./job_posts";
 import { Appliers } from "./appliers";
-import App from "../src/App";
 
 @Table({
     tableName: "interview_schedules",

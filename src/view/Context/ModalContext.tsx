@@ -162,14 +162,11 @@ const ModalContainer: React.FC = () => {
     // Handle successful login
     const handleLoginSuccess = () => {
         closeLoginModal();
-        // Add any additional logic after successful login
-        // For example: refresh user data, update UI, etc.
     };
 
     // Handle successful registration
     const handleRegisterSuccess = () => {
         closeRegisterModal();
-        // Add any additional logic after successful registration
     };
 
     return (

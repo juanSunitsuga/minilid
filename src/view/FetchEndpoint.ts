@@ -5,8 +5,6 @@ export const FetchEndpoint = async (endpoint: string, method: string, token: str
   // Add leading slash if missing
   const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
 
-  console.log(`Making ${method} request to: ${BASE_URL}${path}`);
-
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
@@ -24,6 +22,11 @@ export const FetchEndpoint = async (endpoint: string, method: string, token: str
   try {
     const response = await fetch(`${BASE_URL}${path}`, options);
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error response from ${BASE_URL}${path}:`, errorText);
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    }
     // For debugging - log the raw response
     const clone = response.clone();
     try {

@@ -8,6 +8,7 @@ import { v4 } from 'uuid';
 import { controllerWrapper } from '../../../src/utils/controllerWrapper';
 import { Op } from 'sequelize';
 import jwt from 'jsonwebtoken';
+import authMiddleware from '../../middleware/Auth';
 
 const router = express.Router();
 const SALT_ROUNDS = 10;
@@ -76,6 +77,32 @@ function validateUserLogin(req: Request): string[] {
 
   return errors;
 }
+
+router.get('/verify', authMiddleware, controllerWrapper(async (req: Request, res: Response) => {
+  const authHeader = req.headers['authorization'];
+  let token: string | undefined;
+
+  if (authHeader && typeof authHeader === 'string') {
+    // Support "Bearer <token>"
+    if (authHeader.startsWith('Bearer ')) {
+      token = authHeader.slice(7);
+    } else {
+      token = authHeader;
+    }
+  }
+
+  if (!token) {
+    throw new Error('Token is required');
+  }
+
+  const decoded = jwt.verify(token as string, appConfig.jwtSecret);
+  if (!decoded || typeof decoded !== 'object' || !('id' in decoded)) {
+    throw new Error('Invalid token');
+  }
+  return {
+    message: 'Token is valid'
+  };
+}));
 
 // For company registration
 router.post('/register-company', controllerWrapper(async (req: Request, res: Response, next: NextFunction) => {

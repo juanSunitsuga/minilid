@@ -27,6 +27,7 @@ import profileRoutes from './routes/profileRoutes';
 import chatRoutes from './routes/chatRoutes';
 import applyJobRoutes from './routes/applyJobRoutes';
 import interviewRoutes from './routes/interviewRoutes';
+import error from '../middleware/errorHandler';
 
 // Import configuration
 import config from '../../config/config.json';
@@ -38,8 +39,10 @@ app.use(cors({
     origin: 'http://localhost:5173', 
     credentials: true,
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ 
+  limit: '50mb' // Increase from default 1mb to 50mb
+}));
+app.use(express.urlencoded({ extended: true, limit: '50mb'  }));
 
 // DATABASE SETUP
 const sequelize = new Sequelize({
@@ -77,10 +80,8 @@ app.use('/job', createPostRoutes);
 app.use('/chat', chatRoutes);
 app.use('/job-applications', applyJobRoutes);
 app.use('/interviews', interviewRoutes);
+app.use(error)
 
-app.use((req, res) => {
-    res.status(404).json({ message: 'Route not found' });
-});
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

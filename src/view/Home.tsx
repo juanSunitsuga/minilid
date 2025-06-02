@@ -35,11 +35,27 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { FetchEndpoint } from './FetchEndpoint';
 
-// Interface untuk job post dari API
+// ✅ UPDATED Interface untuk job post dengan salary fields
 interface JobPost {
   job_id: string;
   title: string;
   description: string;
+  recruiter_id?: string;
+  recruiter?: {
+    recruiter_id: string;
+    name: string;
+    company_id: string;
+    company?: {
+      company_id: string;
+      company_name: string;
+      address: string;
+    };
+  };
+  company?: {
+    company_id: string;
+    name: string;
+    address: string;
+  };
   category: {
     category_id: number;
     name: string;
@@ -52,8 +68,11 @@ interface JobPost {
     skill_id: number;
     name: string;
   }[];
+  // ✅ NEW: Salary fields
+  salary_min?: number;
+  salary_max?: number;
+  salary_type?: string;
   posted_date: string;
-  recruiter_id?: string;
 }
 
 const Home: React.FC = () => {
@@ -73,6 +92,44 @@ const Home: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // ✅ NEW: Format salary function
+  const formatSalary = (job: JobPost): string | null => {
+    const { salary_min, salary_max, salary_type } = job;
+    
+    if (!salary_min && !salary_max) {
+      return null; // No salary info
+    }
+
+    const formatNumber = (num: number) => {
+      return new Intl.NumberFormat('id-ID').format(num);
+    };
+
+    const typeLabel = {
+      hourly: '/hour',
+      daily: '/day', 
+      monthly: '/month',
+      yearly: '/year'
+    }[salary_type || 'monthly'];
+
+    if (salary_min && salary_max) {
+      return `Rp ${formatNumber(salary_min)} - ${formatNumber(salary_max)}${typeLabel}`;
+    } else if (salary_min) {
+      return `From Rp ${formatNumber(salary_min)}${typeLabel}`;
+    } else if (salary_max) {
+      return `Up to Rp ${formatNumber(salary_max)}${typeLabel}`;
+    }
+
+    return 'Negotiable';
+  };
+
+  // ✅ NEW: Get salary chip color function
+  const getSalaryChipColor = (job: JobPost) => {
+    if (!job.salary_min && !job.salary_max) {
+      return { bg: 'rgba(158, 158, 158, 0.1)', color: '#616161' }; // Gray for no salary
+    }
+    return { bg: 'rgba(76, 175, 80, 0.1)', color: '#2E7D32' }; // Green for salary provided
+  };
+
   // Format date to relative time (e.g., "2 days ago")
   const formatPostedDate = (dateString: string): string => {
     const now = new Date();
@@ -167,7 +224,6 @@ const Home: React.FC = () => {
   useEffect(() => {
     if (bookmarkedJobs.length > 0) {
       localStorage.setItem('bookmarkedJobs', JSON.stringify(bookmarkedJobs));
-      // You could add toast notification here
       console.log('Job saved to bookmarks!');
     }
   }, [bookmarkedJobs]);
@@ -241,8 +297,6 @@ const Home: React.FC = () => {
           >
             Your gateway to exciting career opportunities and professional growth
           </Typography>
-          
-          {/* More hero section code... */}
           
           {/* Animated scroll down indicator */}
           <Fade in={showScrollIndicator}>
@@ -346,14 +400,27 @@ const Home: React.FC = () => {
           </Box>
           <Divider sx={{ mb: 3, opacity: 0.7 }} />
           
-          {/* Jobs grid */}
+          {/* Loading State */}
+          {isLoading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+          
+          {/* ✅ UPDATED: Jobs grid with salary information */}
           {!isLoading && !error && featuredJobs.length > 0 && (
             <Box sx={{ 
               display: 'flex', 
               flexWrap: 'wrap', 
               margin: theme => theme.spacing(-1) 
             }}>
-              {/* Job Cards */}
               {featuredJobs.map(job => (
                 <Box 
                   key={job.job_id}
@@ -422,17 +489,32 @@ const Home: React.FC = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                           <BusinessIcon fontSize="small" color="action" sx={{ mr: 1 }} />
                           <Typography variant="body2" color="text.secondary">
-                            {/* Company might not be in our data model yet */}
-                            Company Name
+                            {job.company?.name || 'Company Name Not Available'}
                           </Typography>
                         </Box>
+                        
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                           <LocationIcon fontSize="small" color="action" sx={{ mr: 1 }} />
                           <Typography variant="body2" color="text.secondary">
-                            {/* Location might not be in our data model yet */}
-                            Remote / On-site
+                            {job.company?.address || 'Location Not Available'}
                           </Typography>
                         </Box>
+
+                        {/* ✅ NEW: Salary Information Display */}
+                        {formatSalary(job) && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                            <SalaryIcon fontSize="small" color="action" sx={{ mr: 1 }} />
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                color: getSalaryChipColor(job).color,
+                                fontWeight: 600
+                              }}
+                            >
+                              {formatSalary(job)}
+                            </Typography>
+                          </Box>
+                        )}
                         
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2, mb: 3 }}>
                           <Chip 
@@ -446,6 +528,29 @@ const Home: React.FC = () => {
                               borderRadius: 1
                             }}
                           />
+                          
+                          {/* ✅ NEW: Salary Chip */}
+                          {formatSalary(job) && (
+                            <Chip 
+                              icon={<SalaryIcon sx={{ fontSize: '16px !important' }} />} 
+                              label={formatSalary(job)} 
+                              size="small"
+                              sx={{
+                                backgroundColor: getSalaryChipColor(job).bg,
+                                color: getSalaryChipColor(job).color,
+                                fontWeight: 500,
+                                borderRadius: 1,
+                                maxWidth: '100%',
+                                '& .MuiChip-label': {
+                                  fontSize: '0.7rem',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }
+                              }}
+                            />
+                          )}
+                          
                           <Chip 
                             icon={<TimerIcon sx={{ fontSize: '16px !important' }} />} 
                             label={formatPostedDate(job.posted_date)} 
@@ -457,6 +562,7 @@ const Home: React.FC = () => {
                               borderRadius: 1
                             }}
                           />
+                          
                           {job.category && (
                             <Chip 
                               label={job.category.name} 
@@ -520,7 +626,10 @@ const Home: React.FC = () => {
                               boxShadow: '0 4px 10px rgba(3, 169, 244, 0.3)',
                             }
                           }}
-                          onClick={() => handleViewJobDetails(job.job_id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewJobDetails(job.job_id);
+                          }}
                         >
                           View Details
                         </Button>
@@ -533,7 +642,7 @@ const Home: React.FC = () => {
           )}
         </Box>
         
-        {/* Recent Jobs Section */}
+        {/* ✅ UPDATED: Recent Jobs Section with salary information */}
         <Box 
           sx={{ 
             mb: 4,
@@ -573,7 +682,6 @@ const Home: React.FC = () => {
               <CircularProgress />
             </Box>
           ) : recentJobs.length > 0 ? (
-            // Display recent jobs in a simpler format
             <Box>
               {recentJobs.map(job => (
                 <Box 
@@ -596,11 +704,28 @@ const Home: React.FC = () => {
                   }}
                   onClick={() => handleViewJobDetails(job.job_id)}
                 >
-                  <Box>
+                  <Box sx={{ flex: 1 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0277BD' }}>
                       {job.title}
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                    
+                    {/* ✅ NEW: Salary info in recent jobs */}
+                    {formatSalary(job) && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                        <SalaryIcon fontSize="small" sx={{ mr: 0.5, color: getSalaryChipColor(job).color }} />
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: getSalaryChipColor(job).color,
+                            fontWeight: 500
+                          }}
+                        >
+                          {formatSalary(job)}
+                        </Typography>
+                      </Box>
+                    )}
+                    
+                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
                       {job.type && (
                         <Chip 
                           label={job.type.name} 
@@ -613,23 +738,55 @@ const Home: React.FC = () => {
                           }}
                         />
                       )}
-                      <Typography variant="body2" color="text.secondary">
+                      {job.company?.name && (
+                        <Chip 
+                          label={job.company.name} 
+                          size="small"
+                          sx={{
+                            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                            height: 24,
+                            fontSize: '0.7rem'
+                          }}
+                        />
+                      )}
+                      <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
                         Posted {formatPostedDate(job.posted_date)}
                       </Typography>
                     </Box>
                   </Box>
-                  <Button 
-                    variant="outlined" 
-                    size="small" 
-                    color="primary"
-                    sx={{
-                      borderRadius: 1.5,
-                      minWidth: 100,
-                      textTransform: 'none'
-                    }}
-                  >
-                    View
-                  </Button>
+                  
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                    {/* ✅ NEW: Salary badge for recent jobs */}
+                    {formatSalary(job) && (
+                      <Chip 
+                        label={formatSalary(job)} 
+                        size="small"
+                        sx={{
+                          backgroundColor: getSalaryChipColor(job).bg,
+                          color: getSalaryChipColor(job).color,
+                          fontWeight: 600,
+                          fontSize: '0.7rem',
+                          maxWidth: '150px'
+                        }}
+                      />
+                    )}
+                    <Button 
+                      variant="outlined" 
+                      size="small" 
+                      color="primary"
+                      sx={{
+                        borderRadius: 1.5,
+                        minWidth: 100,
+                        textTransform: 'none'
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewJobDetails(job.job_id);
+                      }}
+                    >
+                      View
+                    </Button>
+                  </Box>
                 </Box>
               ))}
             </Box>

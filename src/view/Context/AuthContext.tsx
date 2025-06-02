@@ -65,15 +65,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Function to refresh user data from tokens in localStorage
     const refreshUserData = async () => {
         setIsLoading(true);
-        
+
         try {
             const token = localStorage.getItem('accessToken');
             const storedUserType = localStorage.getItem('userType') as 'applier' | 'recruiter' | 'company' | null;
-            
-            console.log('Refreshing auth data...', { token, storedUserType }); // Add logging
-            
+
             if (!token || !storedUserType) {
-                console.log('No token or userType found, logging out');
                 setIsAuthenticated(false);
                 setUserType(null);
                 setUserData(null);
@@ -81,7 +78,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return;
             }
 
-            // User is authenticated based on token presence
+            // Check token validity with backend
+            const verifyResponse = await FetchEndpoint('/auth/verify', 'GET', token, null);
+            if (!verifyResponse.ok) {
+                // Token invalid or expired
+                logout();
+                return;
+            }
+
+            // User is authenticated based on token presence and verification
             setIsAuthenticated(true);
             setUserType(storedUserType);
             
