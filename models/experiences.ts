@@ -9,10 +9,12 @@ import { Recruiters } from "./recruiters";
 export class Experiences extends Model {
     @Column({
         primaryKey: true,
-        type: DataType.UUID
+        type: DataType.UUID,
+        defaultValue: DataType.UUIDV4
     })
     declare experience_id: string;
 
+    @ForeignKey(() => Appliers)
     @Column({
         type: DataType.UUID,
         allowNull: false,
@@ -27,13 +29,13 @@ export class Experiences extends Model {
     declare user_type: 'applier' | 'recruiter';
 
     @Column({
-        type: DataType.STRING,
+        type: DataType.STRING(30),
         allowNull: false,
     })
     declare company_name: string;
 
     @Column({
-        type: DataType.STRING,
+        type: DataType.STRING(30),
         allowNull: false,
     })
     declare job_title: string;
@@ -56,7 +58,26 @@ export class Experiences extends Model {
     })
     declare description: string | null;
 
-    // Virtual getter methods to get the associated user
+    // Associations based on user_type
+    @BelongsTo(() => Appliers, {
+        foreignKey: 'user_id',
+        constraints: false,
+        scope: {
+            user_type: 'applier'
+        }
+    })
+    declare applier?: Appliers;
+
+    @BelongsTo(() => Recruiters, {
+        foreignKey: 'user_id', 
+        constraints: false,
+        scope: {
+            user_type: 'recruiter'
+        }
+    })
+    declare recruiter?: Recruiters;
+
+    // Helper method to get the associated user
     async getUser() {
         if (this.user_type === 'applier') {
             return await Appliers.findByPk(this.user_id);

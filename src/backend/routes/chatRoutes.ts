@@ -13,7 +13,6 @@ import multer from 'multer';
 import process from 'process';
 import { readdirSync } from 'fs';  // Keep native fs separate
 import { promises as fs } from 'fs';
-import { InterviewSchedules } from "../../../models/interview_schedules";
 import jwt from "jsonwebtoken";
 import { appConfig } from "../../../config/app";
 import { th } from "date-fns/locale";
@@ -755,20 +754,6 @@ router.post("/chats/:chat_id/interview", authMiddleware, chatAccessMiddleware, c
   // Add message to JSON file
   await addMessageToChat(chatId, newMessage);
 
-  // Create corresponding interview schedule if job_id is provided
-  if (job_id) {
-    // Create an interview schedule
-    await InterviewSchedules.create({
-      schedule_id: uuidv4(),
-      job_id,
-      interview_date: new Date(interviewDetails.date),
-      location: interviewDetails.location,
-      recruiter_id: chat.recruiter_id,
-      applier_id: chat.applier_id,
-      status: "PENDING"
-    });
-  }
-
   // Update chat with latest message info
   const chatData = await readChatJson(chatId);
   if (chatData) {
@@ -818,14 +803,6 @@ router.patch("/chats/:chat_id/messages/:message_id", authMiddleware, chatAccessM
     try {
       const interviewData = JSON.parse(content || chatData.messages[messageIndex].content);
 
-      if (interviewData.schedule_id) {
-        // Update the interview schedule status
-        const schedule = await InterviewSchedules.findByPk(interviewData.schedule_id);
-        if (schedule) {
-          schedule.status = interviewData.status || schedule.status;
-          await schedule.save();
-        }
-      }
     } catch (e) {
       console.error("Error updating interview schedule:", e);
     }
