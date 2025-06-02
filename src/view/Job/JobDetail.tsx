@@ -135,6 +135,27 @@ interface Skill {
   name: string;
 }
 
+interface JobPost {
+  job_id: string;
+  title: string;
+  description: string;
+  posted_date: string;
+  category?: {
+    category_id: string;
+    name: string;
+  };
+  type?: {
+    type_id: string;
+    name: string;
+  };
+  company?: {
+    company_id: string | null;
+    name: string;
+    address: string;
+  };
+  applicants_count: number;
+}
+
 const JobDetail: React.FC = () => {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
@@ -167,6 +188,7 @@ const JobDetail: React.FC = () => {
   const [selectedApplication, setSelectedApplication] = useState<JobApplication | null>(null);
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [jobs, setJobs] = useState<JobPost[]>([]);
 
   const [editData, setEditData] = useState({
     salary_min: '',
@@ -175,6 +197,50 @@ const JobDetail: React.FC = () => {
     category_id: '',
     type_id: ''
   });
+
+  const fetchJobs = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem('accessToken');
+        console.log('Fetching job postings with token:', token);
+        const response = await FetchEndpoint('/job-applications/job-applicants', 'GET', token, null);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch job postings');
+        }
+        
+        const data = await response.json();
+        setJobs(data.data || []);
+      } catch (err: any) {
+        console.error('Error fetching job postings:', err);
+        setError(err.message || 'An error occurred while fetching your job postings');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+  const handleDeleteJob = async (jobId: string) => {
+    if (!window.confirm('Are you sure you want to delete this job posting?')) {
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await FetchEndpoint(`/job/jobs/${jobId}`, 'DELETE', token, null);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error('Failed to delete job');
+      }
+      
+      // Refresh the list
+      fetchJobs();
+    } catch (err: any) {
+      console.error('Error deleting job:', err);
+      alert(err.message || 'An error occurred while deleting the job posting');
+    }
+  };
 
   const downloadCV = async (applicationId: string, applierName: string) => {
     try {
@@ -208,7 +274,6 @@ const JobDetail: React.FC = () => {
       console.log('CV downloaded successfully');
     } catch (err) {
       console.error('Error downloading CV:', err);
-      alert(`Failed to download CV: ${err.message}`);
     }
   };
 
@@ -1094,7 +1159,6 @@ const JobDetail: React.FC = () => {
                         </Alert>
                       )}
 
-                      {/* ✅ SHOW MANAGEMENT BUTTONS IF OWN JOB */}
                       {isOwnJob && (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
                           <Button
@@ -1114,7 +1178,6 @@ const JobDetail: React.FC = () => {
                             View Applications
                           </Button>
 
-                          {/* ✅ NEW: Edit Job Button with popup */}
                           <Button
                             variant="outlined"
                             color="secondary"
@@ -1131,6 +1194,26 @@ const JobDetail: React.FC = () => {
                             }}
                           >
                             Edit Job Details
+                          </Button>
+
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            size="medium"
+                            fullWidth
+                            onClick={handleDeleteJob}
+                            startIcon={<DeleteIcon />}
+                            sx={{
+                              py: 1,
+                              fontSize: '0.9rem',
+                              fontWeight: 500,
+                              borderRadius: 2,
+                              textTransform: 'none',
+                              borderColor: '#d32f2f',
+                              color: '#d32f2f'
+                            }}
+                          >
+                            Delete Job
                           </Button>
                         </Box>
                       )}
@@ -1234,7 +1317,7 @@ const JobDetail: React.FC = () => {
                   <Box sx={{ flex: 1, p: 3, overflow: 'auto' }}>
                     {selectedApplication ? (
                       <Box>
-                        <Typography variant="h6" fontWeight={600} gutterBottom>
+                        <Typography variant="h6" fontWeight={600} gutterBottom onClick={() => navigate(`/profile/${selectedApplication.applier.applier_id}`)}>
                           {selectedApplication.applier.name}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" gutterBottom>
