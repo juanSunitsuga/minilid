@@ -1,5 +1,6 @@
-import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
+import { Table, Column, Model, DataType, ForeignKey, BelongsTo, HasMany } from "sequelize-typescript";
 import { Companies } from "./companies";
+import { JobPosts } from "./job_posts";
 
 @Table({
     tableName: "recruiters",
@@ -48,4 +49,11 @@ export class Recruiters extends Model {
         allowNull: true,
     })
     declare about: string | null;
+
+    //add has many relationship with job posts
+    @HasMany(() => JobPosts, {
+        foreignKey: 'recruiter_id',
+        as: 'job_posts'
+    })  
+    declare job_posts?: JobPosts[];
 }

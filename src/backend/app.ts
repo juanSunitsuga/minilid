@@ -27,6 +27,7 @@ import profileRoutes from './routes/profileRoutes';
 import chatRoutes from './routes/chatRoutes';
 import applyJobRoutes from './routes/applyJobRoutes';
 import interviewRoutes from './routes/interviewRoutes';
+import companyRoutes from './routes/companyRoutes';
 import error from '../middleware/errorHandler';
 
 // Import configuration
@@ -80,7 +81,7 @@ app.use('/job', createPostRoutes);
 app.use('/chat', chatRoutes);
 app.use('/job-applications', applyJobRoutes);
 app.use('/interviews', interviewRoutes);
-app.use('/companies', interviewRoutes);
+app.use('/company', companyRoutes);
 app.use(error)
 
 

@@ -51,17 +51,17 @@ router.get("/appliers/:id", controllerWrapper(async (req, res) => {
     const applier = await Appliers.findOne({
         where: { applier_id: applierId }
         // include: [
-            // {
-            //     model: Skills,
-            //     as: "skills",
-            //     attributes: ["skill_id", "name"],
-            //     through: { attributes: [] },
-            // },
-            // {
-            //     model: Experiences,
-            //     as: "experiences",
-            //     attributes: ["experience_id", "company_name", "start_date", "end_date"],
-            // },
+        // {
+        //     model: Skills,
+        //     as: "skills",
+        //     attributes: ["skill_id", "name"],
+        //     through: { attributes: [] },
+        // },
+        // {
+        //     model: Experiences,
+        //     as: "experiences",
+        //     attributes: ["experience_id", "company_name", "start_date", "end_date"],
+        // },
         // ],
     });
 
@@ -129,7 +129,7 @@ router.get("/appliers-skills", controllerWrapper(async (req, res) => {
         skill_id: skill.skill_id,
         name: skill.name,
     }));
-    
+
     return {
         message: "Skills retrieved successfully.",
         data: skills,
@@ -197,14 +197,14 @@ router.post("/appliers-skills", authMiddleware, controllerWrapper(async (req, re
 }));
 
 router.post("/experiences", authMiddleware, controllerWrapper(async (req, res) => {
-    const { 
-        user_type, 
-        user_id, 
-        company_name, 
-        job_title, 
-        start_date, 
-        end_date, 
-        description 
+    const {
+        user_type,
+        user_id,
+        company_name,
+        job_title,
+        start_date,
+        end_date,
+        description
     } = req.body;
 
     if (!user_type || !user_id || !company_name || !job_title || !start_date) {
@@ -273,22 +273,22 @@ router.get("/experiences", controllerWrapper(async (req, res) => {
 
 router.put("/experiences/:experience_id", controllerWrapper(async (req, res) => {
     const { experience_id } = req.params;
-    const { 
-        company_name, 
-        job_title, 
-        start_date, 
-        end_date, 
-        description 
+    const {
+        company_name,
+        job_title,
+        start_date,
+        end_date,
+        description
     } = req.body;
 
     const experience = await Experiences.findByPk(experience_id);
-    
+
     if (!experience) {
         throw new Error("Experience not found.");
     }
 
     if (company_name) experience.company_name = company_name;
-    if (job_title) experience.job_title = job_title; 
+    if (job_title) experience.job_title = job_title;
     if (start_date) experience.start_date = new Date(start_date);
     if (end_date !== undefined) experience.end_date = end_date ? new Date(end_date) : null;
     if (description !== undefined) experience.description = description;
@@ -305,7 +305,7 @@ router.delete("/experiences/:experience_id", controllerWrapper(async (req, res) 
     const { experience_id } = req.params;
 
     const experience = await Experiences.findByPk(experience_id);
-    
+
     if (!experience) {
         throw new Error("Experience not found.");
     }
@@ -314,6 +314,42 @@ router.delete("/experiences/:experience_id", controllerWrapper(async (req, res) 
 
     return {
         message: "Experience deleted successfully."
+    };
+}));
+
+router.put("/recruiters/:recruiter_id", authMiddleware, controllerWrapper(async (req, res) => {
+    const recruiterId = req.params.recruiter_id; // Fixed: was req.params.recruiter
+    
+    if (!recruiterId) {
+        throw new Error("Recruiter ID is required.");
+    }
+
+    const recruiter = await Recruiters.findOne({
+        where: { recruiter_id: recruiterId },
+    });
+
+    if (!recruiter) {
+        throw new Error("Recruiter not found.");
+    }
+
+    // Update the recruiter to remove company association
+    await Recruiters.update(
+        {
+            company_id: null,
+        },
+        {
+            where: { recruiter_id: recruiterId },
+        }
+    );
+
+    // Get the updated recruiter data
+    const updatedRecruiter = await Recruiters.findOne({
+        where: { recruiter_id: recruiterId },
+    });
+
+    return {
+        message: "Recruiter removed from company successfully.",
+        data: updatedRecruiter,
     };
 }));
 
