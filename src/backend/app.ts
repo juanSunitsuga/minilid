@@ -58,7 +58,6 @@ app.use('/profile', profileRoutes);
 app.use('/job', createPostRoutes);
 app.use('/chat', chatRoutes);
 app.use('/job-applications', applyJobRoutes);
-app.use('/interviews', interviewRoutes);
 app.use(error);
 
 app.use((req, res) => {
