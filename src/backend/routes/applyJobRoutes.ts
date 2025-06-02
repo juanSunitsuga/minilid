@@ -269,12 +269,44 @@ router.get("/my-applications", authMiddleware, controllerWrapper(async (req, res
             } : null
         };
     });
-    console.log(1, combined)
+    
     return {
         message: "Job applications retrieved successfully",
         data: combined
     };
 }));
+
+router.delete("/delete/:applicationId", authMiddleware, controllerWrapper(async (req, res) => {
+    const userId = req.user?.id;
+    const applicationId = req.params.applicationId;
+    if (!userId) {
+        throw new Error("Unauthorized: User ID not found");
+    }
+    // Find applier
+    const applier = await Appliers.findOne({
+        where: { applier_id: userId }
+    });
+    if (!applier) {
+        throw new Error("Applier profile not found");
+    }
+    // Find application
+    const application = await JobAppliers.findOne({
+        where: {
+            id: applicationId,
+            applier_id: userId,
+        }
+    });
+    if (!application) {
+        throw new Error("Application not found or you don't have permission to delete it");
+    }
+    // Delete the application
+    await application.destroy();
+    
+    return {
+        message: "Job application deleted successfully"
+    };
+}
+));
 
 // Cancel job application
 router.delete("/cancel/:applicationId", authMiddleware, controllerWrapper(async (req, res) => {
@@ -326,7 +358,6 @@ router.get('/job-applicants', authMiddleware, controllerWrapper(async (req, res)
         where: { recruiter_id: userId }
     });
 
-    console.log(0, recruiter)
 
     if (!recruiter) {
         throw new Error("Unauthorized: Recruiter not found");
