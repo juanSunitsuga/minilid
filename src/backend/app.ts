@@ -59,6 +59,7 @@ app.use('/job', createPostRoutes);
 app.use('/chat', chatRoutes);
 app.use('/job-applications', applyJobRoutes);
 app.use('/experiences', experiencesRoutes);
+app.use('/companies', interviewRoutes);
 app.use('/skills', skillsRoutes);
 app.use(error);
 
