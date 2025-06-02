@@ -199,48 +199,91 @@ const JobDetail: React.FC = () => {
   });
 
   const fetchJobs = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const token = localStorage.getItem('accessToken');
-        console.log('Fetching job postings with token:', token);
-        const response = await FetchEndpoint('/job-applications/job-applicants', 'GET', token, null);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch job postings');
-        }
-        
-        const data = await response.json();
-        setJobs(data.data || []);
-      } catch (err: any) {
-        console.error('Error fetching job postings:', err);
-        setError(err.message || 'An error occurred while fetching your job postings');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-  const handleDeleteJob = async (jobId: string) => {
-    if (!window.confirm('Are you sure you want to delete this job posting?')) {
-      return;
-    }
-    
+    setLoading(true);
+    setError(null);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await FetchEndpoint(`/job/jobs/${jobId}`, 'DELETE', token, null);
-      
+      console.log('Fetching job postings with token:', token);
+      const response = await FetchEndpoint('/job-applications/job-applicants', 'GET', token, null);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error('Failed to delete job');
+        throw new Error('Failed to fetch job postings');
       }
-      
-      // Refresh the list
-      fetchJobs();
+
+      const data = await response.json();
+      setJobs(data.data || []);
     } catch (err: any) {
-      console.error('Error deleting job:', err);
-      alert(err.message || 'An error occurred while deleting the job posting');
+      console.error('Error fetching job postings:', err);
+      setError(err.message || 'An error occurred while fetching your job postings');
+    } finally {
+      setLoading(false);
     }
   };
+
+  const handleDeleteJob = async () => {
+  try {
+    const token = localStorage.getItem('accessToken');
+    
+    if (!token) {
+      alert('Authentication required. Please log in again.');
+      return;
+    }
+
+    // First, check if there are any applications
+    console.log('Checking applications for job:', jobId);
+    const applicationsResponse = await FetchEndpoint(`/job-applications/job/${jobId}/applications`, 'GET', token, null);
+    
+    if (applicationsResponse.ok) {
+      const applicationsData = await applicationsResponse.json();
+      const applicationsCount = applicationsData.applications?.length || 0;
+      
+      if (applicationsCount > 0) {
+        const confirmMessage = `This job has ${applicationsCount} application(s). Deleting this job will also delete all applications. Are you sure you want to continue?`;
+        if (!window.confirm(confirmMessage)) {
+          return;
+        }
+      } else {
+        if (!window.confirm('Are you sure you want to delete this job posting?')) {
+          return;
+        }
+      }
+    } else {
+      // If we can't check applications, still ask for confirmation
+      if (!window.confirm('Are you sure you want to delete this job posting? This may also delete related applications.')) {
+        return;
+      }
+    }
+    
+    console.log('Deleting job with ID:', jobId);
+    
+    const response = await FetchEndpoint(`/job/jobs/${jobId}`, 'DELETE', token, null);
+    
+    if (!response.ok) {
+      let errorMessage = 'Failed to delete job';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || `Server error: ${response.status}`;
+        
+        // Handle specific foreign key constraint error
+        if (errorMessage.includes('foreign key constraint')) {
+          errorMessage = 'Cannot delete job: There are still active applications. Please contact support.';
+        }
+      } catch (parseError) {
+        errorMessage = `HTTP Error: ${response.status} ${response.statusText}`;
+      }
+      
+      console.error('Delete failed:', response.status, errorMessage);
+      throw new Error(errorMessage);
+    }
+    
+    alert('Job posting deleted successfully!');
+    navigate('/dashboard');
+    
+  } catch (err: any) {
+    console.error('Error deleting job:', err);
+    alert(err.message || 'An error occurred while deleting the job posting');
+  }
+};
 
   const downloadCV = async (applicationId: string, applierName: string) => {
     try {
@@ -312,7 +355,7 @@ const JobDetail: React.FC = () => {
   useEffect(() => {
     if (skillSearchTerm.trim() === '') {
       setFilteredSkills([]);
-      setShowSuggestions(false); 
+      setShowSuggestions(false);
       return;
     }
 
@@ -359,15 +402,15 @@ const JobDetail: React.FC = () => {
       const response = await FetchEndpoint(`/job-applications/applications/${applicationId}/status`, 'PATCH', token, { status: newStatus });
 
       if (newStatus === 'interviewing') {
-        const response = await FetchEndpoint(`/chat/create-chat`, 'POST', token, {job_application_id: applicationId})
-        
-        
+        const response = await FetchEndpoint(`/chat/create-chat`, 'POST', token, { job_application_id: applicationId })
+
+
         if (!response.ok) {
           throw new Error('Failed to update application status');
         }
         const chat = await response.json();
         console.log('Chat created:', chat);
-        
+
         navigate(`/chat`);
       }
 

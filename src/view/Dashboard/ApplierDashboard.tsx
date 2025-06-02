@@ -30,28 +30,24 @@ import {
 import { FetchEndpoint } from '../FetchEndpoint';
 import { Link } from 'react-router-dom';
 
-// Add this type to better match your backend response
-interface JobPost {
-    job_id: string;
-    title: string;
-    description: string;
-    posted_date: string;
-    company?: {
-        company_id: string | null;
-        name: string;
-        address: string;
-    };
-}
 
 // Updated Application interface
 interface Application {
     id: number;
     job_id: string;
-    applier_id: string;
     status: string;
-    createdAt: string;
-    updated_at: string;
-    jobPost: JobPost;
+    cover_letter: string;
+    appliedAt: string; // or Date if you parse it
+    job?: {
+        job_id: string;
+        title: string;
+        description: string;
+        posted_date: string; // or Date if you parse it
+    } | null;
+    company?: {
+        name: string;
+        address: string;
+    } | null;
 }
 
 const ApplierDashboard: React.FC = () => {
@@ -94,7 +90,7 @@ const ApplierDashboard: React.FC = () => {
         try {
             const token = localStorage.getItem('accessToken');
             // Update this endpoint too
-            const response = await FetchEndpoint(`/job-applications/cancel/${applicationId}`, 'DELETE', token, null);
+            const response = await FetchEndpoint(`/job-applications/delete/${applicationId}`, 'DELETE', token, null);
 
             if (!response.ok) {
                 throw new Error('Failed to cancel application');
@@ -313,13 +309,13 @@ const ApplierDashboard: React.FC = () => {
                                     {applications.map((application) => (
                                         < TableRow key = { application.id } hover >
                                             <TableCell>
-                                                <Typography variant="body1">{application.jobPost.title}</Typography>
+                                                <Typography variant="body1">{application.job?.title}</Typography>
                                             </TableCell>
                                             <TableCell>
-                                                {application.jobPost.company?.name || "Unknown Company"}
+                                                {application.company?.name || "Unknown Company"}
                                             </TableCell>
                                             <TableCell>
-                                                {new Date(application.createdAt).toLocaleDateString()}
+                                                {new Date(application.job?.posted_date).toLocaleDateString()}
                                             </TableCell>
                                             <TableCell>
                                                 {getStatusChip(application.status)}
@@ -341,7 +337,7 @@ const ApplierDashboard: React.FC = () => {
                                                         size="small"
                                                         color="primary"
                                                         component={Link}
-                                                        to={`/jobs/${application.job_id}`}
+                                                        to={`/job/${application.job_id}`}
                                                     >
                                                         <JobIcon />
                                                     </IconButton>
