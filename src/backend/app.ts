@@ -40,9 +40,11 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: true, limit: '50mb'  }));
 
+import { Dialect } from 'sequelize';
 // DATABASE SETUP
 const sequelize = new Sequelize({
     ...config.development,
+    dialect: config.development.dialect as Dialect,
     models: [
         Appliers, Companies, Experiences, 
         JobCategories, JobPosts, JobTypes, Recruiters, 
@@ -50,47 +52,22 @@ const sequelize = new Sequelize({
     ]
 });
 
-// Initialize database connection
-async function initializeDatabase() {
-    try {
-        await sequelize.authenticate();
-        console.log('Database connection has been established successfully.');
-        
-        await sequelize.sync({ 
-          force: false, 
-          alter: true,
-          hooks: true
-        });
-        console.log('Database synchronized successfully');
-    } catch (error) {
-        console.error('Unable to connect to the database:', error);
-    }
-}
-
 // ROUTES
 app.use('/auth', registerLoginRoutes);
 app.use('/profile', profileRoutes);
 app.use('/job', createPostRoutes);
 app.use('/chat', chatRoutes);
 app.use('/job-applications', applyJobRoutes);
-app.use('/experiences', experiencesRoutes);
-app.use('/skills', skillsRoutes);
-app.use(error)
+app.use('/interviews', interviewRoutes);
+app.use(error);
 
-
-// Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error(err.stack);
-    res.status(500).json({ 
-        message: 'Something went wrong!', 
-        error: process.env.NODE_ENV === 'development' ? err.message : undefined 
-    });
+app.use((req, res) => {
+    res.status(404).json({ message: 'Route not found' });
 });
 
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
-    await initializeDatabase();
     console.log(`Server is running on port ${PORT}`);
 });
 
