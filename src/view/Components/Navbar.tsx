@@ -107,14 +107,6 @@ const Navbar: React.FC = () => {
                 <span className="nav-text">Me</span>
               </Link>
 
-              {/* Tampilkan Create Job button hanya untuk recruiter */}
-              {userType === 'recruiter' && (
-                <Link to="/create-job" className={`nav-item ${activePath === '/create-job' ? 'active' : ''}`}>
-                  <FaBriefcase className="nav-icon" />
-                  <span className="nav-text">Create Job</span>
-                </Link>
-              )}
-
               <button
                 onClick={logout}
                 className={`nav-item ${activePath === '/logout' ? 'active' : ''}`}

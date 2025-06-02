@@ -162,7 +162,7 @@ const RecruiterDashboard: React.FC = () => {
             color="primary" 
             startIcon={<AddIcon />}
             component={Link}
-            to="/jobs/create"
+            to="/create-job"
           >
             Post New Job
           </Button>
@@ -319,10 +319,10 @@ const RecruiterDashboard: React.FC = () => {
                   <Typography variant="body2" color="text.secondary">
                     Start posting jobs to attract candidates
                   </Typography>
-                  <Button 
-                    component={Link} 
-                    to="/jobs/create" 
-                    variant="contained" 
+                  <Button
+                    component={Link}
+                    to="/jobs/create"
+                    variant="contained"
                     sx={{ mt: 2 }}
                     startIcon={<AddIcon />}
                   >
@@ -335,17 +335,24 @@ const RecruiterDashboard: React.FC = () => {
                     <TableHead>
                       <TableRow>
                         <TableCell><strong>Job Title</strong></TableCell>
+                        <TableCell><strong>Type</strong></TableCell>
                         <TableCell><strong>Category</strong></TableCell>
                         <TableCell><strong>Posted Date</strong></TableCell>
                         <TableCell><strong>Applicants</strong></TableCell>
-                        <TableCell><strong>Actions</strong></TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {jobs.map((job) => (
-                        <TableRow key={job.job_id} hover>
+                        <TableRow 
+                          key={job.job_id}
+                          component={Link}
+                          to={`/job/${job.job_id}`}
+                          hover>
                           <TableCell>
                             <Typography variant="body1">{job.title}</Typography>
+                          </TableCell>
+                          <TableCell>
+                            {job.type?.name || 'Uncategorized'}
                           </TableCell>
                           <TableCell>
                             {job.category?.name || 'Uncategorized'}
@@ -361,37 +368,6 @@ const RecruiterDashboard: React.FC = () => {
                             >
                               <ApplicantsIcon />
                             </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Tooltip title="View Applicants">
-                              <IconButton 
-                                size="small" 
-                                color="primary"
-                                onClick={() => navigate(`/jobs/${job.job_id}/applicants`)}
-                                disabled={job.applicants_count === 0}
-                              >
-                                <ViewIcon />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Edit Job">
-                              <IconButton 
-                                size="small" 
-                                color="info"
-                                component={Link}
-                                to={`/jobs/edit/${job.job_id}`}
-                              >
-                                <EditIcon />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete Job">
-                              <IconButton 
-                                size="small" 
-                                color="error"
-                                onClick={() => handleDeleteJob(job.job_id)}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </Tooltip>
                           </TableCell>
                         </TableRow>
                       ))}
