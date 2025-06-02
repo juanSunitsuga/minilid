@@ -60,7 +60,6 @@ export class Recruiters extends Model {
     })
     declare experiences: Experiences[];
 
-    //add has many relationship with job posts
     @HasMany(() => JobPosts, {
         foreignKey: 'recruiter_id',
         as: 'job_posts'

@@ -88,7 +88,7 @@ const Profile: React.FC = () => {
           ? `/profile/recruiters/${userId}`
           : `/profile/appliers/${userId}`;
         
-        const response = await FetchEndpoint(endpoint, 'GET', token);
+        const response = await FetchEndpoint(endpoint, 'GET', token, null);
         const data = await response.json();
         
         if (!response.ok) {
@@ -99,7 +99,7 @@ const Profile: React.FC = () => {
         
         // Also fetch skills if needed
         if (userType === 'applier') {
-          const skillsResponse = await FetchEndpoint(`/profile/appliers-skills?applier_id=${userId}`, 'GET', token);
+          const skillsResponse = await FetchEndpoint(`/profile/appliers-skills?applier_id=${userId}`, 'GET', token,null);
           const skillsData = await skillsResponse.json();
           
           
@@ -278,97 +278,6 @@ const Profile: React.FC = () => {
           userType={userType as 'applier' | 'recruiter'}
           onAddExperience={() => console.log('Add experience clicked')}
         />
-        
-        {/* Job Applications Section - Using existing components */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          <Paper 
-            elevation={0}
-            sx={{ 
-              p: 3, 
-              borderRadius: 3, 
-              border: '1px solid',
-              borderColor: 'divider'
-            }}
-          >
-            <Typography variant="h5" fontWeight="600" sx={{ mb: 2 }}>Job Applications</Typography>
-            
-            <Grid container spacing={2}>
-              {applications.map((app) => (
-                <Grid item xs={12} sm={6} key={app.id}>
-                  <Card 
-                    variant="outlined" 
-                    sx={{ 
-                      borderRadius: 2, 
-                      borderColor: 'divider', 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      height: '100%'
-                    }}
-                  >
-                    <CardContent sx={{ flex: 1 }}>
-                      <Typography variant="h6" fontWeight="500" sx={{ mb: 1 }}>
-                        {app.job_title}
-                      </Typography>
-                      
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        {app.company_name}
-                      </Typography>
-                      
-                      <Divider sx={{ my: 1 }} />
-                      
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                        <Chip 
-                          label={app.status} 
-                          variant="outlined" 
-                          size="small"
-                          sx={getStatusChipProps(app.status)}
-                        />
-                        
-                        <Chip 
-                          label={`Applied on ${app.applied_date}`} 
-                          variant="outlined" 
-                          size="small"
-                          color="default"
-                        />
-                        
-                        {app.interview_date && (
-                          <Chip 
-                            label={`Interview on ${app.interview_date}`} 
-                            variant="outlined" 
-                            size="small"
-                            color="default"
-                          />
-                        )}
-                      </Box>
-                    </CardContent>
-                    
-                    <Divider />
-                    
-                    <Box sx={{ p: 1 }}>
-                      <Button 
-                        variant="contained" 
-                        size="small" 
-                        fullWidth
-                        sx={{ 
-                          borderRadius: 2, 
-                          py: 1.5, 
-                          fontSize: '0.875rem' 
-                        }}
-                        onClick={() => console.log('View details clicked')}
-                      >
-                        View Details
-                      </Button>
-                    </Box>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Paper>
-        </motion.div>
         
         {/* Footer */}
         <motion.div

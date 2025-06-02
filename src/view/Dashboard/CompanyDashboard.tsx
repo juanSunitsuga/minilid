@@ -217,7 +217,7 @@ const CompanyDashboard: React.FC = () => {
         `/profile/recruiters/${recruiter.recruiter_id}`, 
         'PUT', 
         token, 
-        {} // Send empty object instead of null
+        {} 
       );
       
       if (!response.ok) {

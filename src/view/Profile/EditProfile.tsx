@@ -208,8 +208,8 @@ const EditProfile: React.FC<EditProfileProps> = ({
 
       // Use the correct endpoint based on user type
       const endpoint = userType === 'recruiter' 
-        ? `/profile/recruiters/${userId}` 
-        : `/profile/appliers/${userId}`;
+        ? `/profile/recruiters/${userId}/edit` 
+        : `/profile/appliers/${userId}/edit`;
       
       console.log('Submitting to endpoint:', endpoint);
       console.log('Data:', dataToSubmit);

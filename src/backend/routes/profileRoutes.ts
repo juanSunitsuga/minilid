@@ -8,6 +8,7 @@ import { controllerWrapper } from "../../utils/controllerWrapper";
 import authMiddleware from "../../middleware/Auth";
 import { ApplierSkill } from "../../../models/applier_skill";
 import { v4 } from "uuid";
+import { ro } from "date-fns/locale";
 
 const router = express.Router();
 
@@ -72,8 +73,6 @@ router.get("/appliers/:id", controllerWrapper(async (req, res) => {
 
     const applier = await Appliers.findOne({
         where: { applier_id: applierId },
-        // Note: Skills and experiences associations are commented out
-        // Uncomment to include related data:
         include: [
             {
                 model: Skills,
@@ -98,6 +97,34 @@ router.get("/appliers/:id", controllerWrapper(async (req, res) => {
         data: applier,
     }
 }));
+
+router.get("/recruiters/:id", controllerWrapper(async (req, res) => {
+    const recruiterId = req.params.id;
+    if (!recruiterId) {
+        throw new Error("Applier ID is required.");
+    }
+
+    const recruiter = await Recruiters.findOne({
+        where: { recruiter_id: recruiterId },
+        include: [
+            {
+                model: Experiences,
+                as: "experiences",
+                attributes: ["experience_id", "company_name", "start_date", "end_date"],
+            },
+        ],
+    });
+
+    if (!recruiter) {
+        throw new Error("Applier not found.");
+    }
+
+    return {
+        message: "Applier profile retrieved successfully.",
+        data: recruiter,
+    }
+}));
+
 router.get("/recruiters", controllerWrapper(async (req, res) => {
     const recruiterId = req.query.recruiter_id;
     if (!recruiterId) {
@@ -342,7 +369,7 @@ router.delete("/experiences/:experience_id", controllerWrapper(async (req, res) 
 
 router.put("/recruiters/:recruiter_id", authMiddleware, controllerWrapper(async (req, res) => {
     const recruiterId = req.params.recruiter_id; // Fixed: was req.params.recruiter
-    
+
     if (!recruiterId) {
         throw new Error("Recruiter ID is required.");
     }
@@ -375,5 +402,171 @@ router.put("/recruiters/:recruiter_id", authMiddleware, controllerWrapper(async 
         data: updatedRecruiter,
     };
 }));
+
+router.put("/recruiters/:id", authMiddleware, controllerWrapper(async (req, res) => {
+    const recruiterId = req.params.id;
+    
+    // Ensure the authenticated user is updating their own profile
+    if (req.user && req.user.id !== recruiterId) {
+        throw new Error("You are not authorized to update this profile.");
+    }
+    
+    const {
+        name,
+        email,
+        password,
+        currentPassword
+    } = req.body;
+
+    // Find the recruiter
+    const recruiter = await Recruiters.findOne({
+        where: { recruiter_id: recruiterId }
+    });
+
+    if (!recruiter) {
+        throw new Error("Recruiter profile not found.");
+    }
+
+    // Always require current password for any changes
+    if (!currentPassword) {
+        throw new Error("Current password is required for profile updates.");
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, recruiter.password);
+    if (!isCurrentPasswordValid) {
+        throw new Error("Current password is incorrect.");
+    }
+
+    // If password is being updated, hash the new password
+    if (password) {
+        const saltRounds = 10;
+        const hashedNewPassword = await bcrypt.hash(password, saltRounds);
+        recruiter.password = hashedNewPassword;
+    }
+
+    // Update fields if they are provided
+    if (name !== undefined) recruiter.name = name;
+    if (email !== undefined) recruiter.email = email;
+    
+    // Save the updated profile
+    await recruiter.save();
+
+    // Return updated recruiter without the password
+    const { password: _, ...recruiterData } = recruiter.get({ plain: true });
+
+    return {
+        message: "Recruiter profile updated successfully.",
+        data: recruiterData
+    };
+}));
+
+router.put("/appliers/:id/edit", authMiddleware, controllerWrapper(async (req, res) => {
+    const applierId = req.params.id;
+    
+    // Ensure the authenticated user is updating their own profile
+    if (req.user && req.user.id !== applierId) {
+        throw new Error("You are not authorized to update this profile.");
+    }
+    
+    const {
+        name,
+        email,
+        password,
+        currentPassword
+    } = req.body;
+
+    // Find the applier
+    const applier = await Appliers.findOne({
+        where: { applier_id: applierId }
+    });
+
+    if (!applier) {
+        throw new Error("Applier profile not found.");
+    }
+
+    // Always require current password for any changes
+    if (!currentPassword) {
+        throw new Error("Current password is required for profile updates.");
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, applier.password);
+    if (!isCurrentPasswordValid) {
+        throw new Error("Current password is incorrect.");
+    }
+
+    // If password is being updated, hash the new password
+    if (password) {
+        const saltRounds = 10;
+        const hashedNewPassword = await bcrypt.hash(password, saltRounds);
+        applier.password = hashedNewPassword;
+    }
+
+    // Update fields if they are provided
+    if (name !== undefined) applier.name = name;
+    if (email !== undefined) applier.email = email;
+    
+    // Save the updated profile
+    await applier.save();
+
+    // Return updated applier without the password
+    const { password: _, ...applierData } = applier.get({ plain: true });
+
+    return {
+        message: "Applier profile updated successfully.",
+        data: applierData
+    };
+}));
+
+router.post("/appliers/:applier_id/about", authMiddleware, controllerWrapper(async (req, res) => {
+    const applierId = req.params.applier_id;
+    const { about } = req.body;
+
+    if (!applierId || !about) {
+        throw new Error("Applier ID and about information are required.");
+    }
+
+    const applier = await Appliers.findOne({
+        where: { applier_id: applierId },
+    });
+
+    if (!applier) {
+        throw new Error("Applier not found.");
+    }
+
+    // Update the applier's about information
+    applier.about = about;
+    await applier.save();
+
+    return {
+        message: "Applier about information updated successfully.",
+        data: applier,
+    };
+}));
+
+router.post("/recruiters/:recruiter_id/about", authMiddleware, controllerWrapper(async (req, res) => {
+    const recruiterId = req.params.recruiter_id;
+    const { about } = req.body;
+
+    if (!recruiterId || !about) {
+        throw new Error("Recruiter ID and about information are required.");
+    }
+    const recruiter = await Recruiters.findOne({
+        where: { recruiter_id: recruiterId },
+    });
+    if (!recruiter) {
+        throw new Error("Recruiter not found.");
+    }
+    recruiter.about = about;
+    await recruiter.save();
+
+    return {
+        message: "Recruiter about information updated successfully.",
+        data: recruiter,
+    };
+}
+));
+
 
 export default router;

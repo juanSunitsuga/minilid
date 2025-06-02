@@ -45,7 +45,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           ? `/profile/recruiters/${userId}`
           : `/profile/appliers/${userId}`;
 
-        const response = await FetchEndpoint(endpoint, 'GET', token);
+        const response = await FetchEndpoint(endpoint, 'GET', token, null);
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -206,7 +206,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
             {/* Headline */}
             <Typography variant="h6" color="text.secondary" sx={{ mt: 0.5 }}>
-              {userType === 'applier' ? "Student at Institut Teknologi Harapan Bangsa" : "Recruiter"}
+              {userType === 'applier' ? "I am an Applier" : "I am a Recruiter"}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>

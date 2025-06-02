@@ -57,7 +57,8 @@ const Skills: React.FC<SkillsProps> = ({
       const response = await FetchEndpoint(
         `/profile/appliers-skills?applier_id=${userId}`, 
         'GET', 
-        token
+        token,
+        null
       );
       
       if (!response.ok) {
@@ -163,7 +164,8 @@ const Skills: React.FC<SkillsProps> = ({
       const response = await FetchEndpoint(
         `/skills/appliers-skills/${skillId}`, 
         'DELETE', 
-        token
+        token,
+        null
       );
 
       if (!response.ok) {
