@@ -98,247 +98,42 @@ router.get("/appliers/:id", controllerWrapper(async (req, res) => {
         data: applier,
     }
 }));
-
-/**
- * POST /api/profile/appliers/:id/about
- * Update applier's about section
- * Used for: Updating the about/bio information for an applier
- * Requires: Authentication
- */
-router.post("/appliers/:id/about", authMiddleware, controllerWrapper(async (req, res) => {
-    const applierId = req.params.id;
-    const { about } = req.body;
-
-    if (!applierId || !about) {
-        throw new Error("Applier ID and about information are required.");
+router.get("/recruiters", controllerWrapper(async (req, res) => {
+    const recruiterId = req.query.recruiter_id;
+    if (!recruiterId) {
+        throw new Error("Recruiter ID is required.");
     }
 
-    // Ensure the authenticated user is updating their own profile
-    if (req.user && req.user.id !== applierId) {
-        throw new Error("You are not authorized to update this profile.");
-    }
-
-    const applier = await Appliers.findOne({
-        where: { applier_id: applierId }
-    });
-
-    if (!applier) {
-        throw new Error("Applier profile not found.");
-    }
-
-    // Update the about field
-    applier.about = about;
-    
-    // Save the updated profile
-    await applier.save();
-
-    return {
-        message: "Applier about information updated successfully.",
-        data: applier,
-    };
-}));
-
-/**
- * PUT /api/profile/appliers/:id
- * Update applier profile information
- * Used for: Updating applier's basic profile data (name, email, password)
- * Requires: Authentication, user can only update their own profile
- */
-router.put("/appliers/:id", authMiddleware, controllerWrapper(async (req, res) => {
-    const applierId = req.params.id;
-    
-    // Ensure the authenticated user is updating their own profile
-    if (req.user && req.user.id !== applierId) {
-        throw new Error("You are not authorized to update this profile.");
-    }
-    
-    const {
-        name,
-        email,
-        password,
-        currentPassword
-    } = req.body;
-
-    // Find the applier
-    const applier = await Appliers.findOne({
-        where: { applier_id: applierId }
-    });
-
-    if (!applier) {
-        throw new Error("Applier profile not found.");
-    }
-
-    // Always require current password for any changes
-    if (!currentPassword) {
-        throw new Error("Current password is required for profile updates.");
-    }
-
-    // Verify current password
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, applier.password);
-    if (!isCurrentPasswordValid) {
-        throw new Error("Current password is incorrect.");
-    }
-
-    // If password is being updated, hash the new password
-    if (password) {
-        const saltRounds = 10;
-        const hashedNewPassword = await bcrypt.hash(password, saltRounds);
-        applier.password = hashedNewPassword;
-    }
-
-    // Update fields if they are provided
-    if (name !== undefined) applier.name = name;
-    if (email !== undefined) applier.email = email;
-    
-    // Save the updated profile
-    await applier.save();
-
-    // Return updated applier without the password
-    const { password: _, ...applierData } = applier.get({ plain: true });
-
-    return {
-        message: "Applier profile updated successfully.",
-        data: applierData
-    };
-}));
-
-/**
- * PUT /api/profile/recruiters/:id
- * Update recruiter profile information
- * Used for: Updating recruiter's basic profile data (name, email, password)
- * Requires: Authentication, user can only update their own profile
- */
-router.put("/recruiters/:id", authMiddleware, controllerWrapper(async (req, res) => {
-    const recruiterId = req.params.id;
-    
-    // Ensure the authenticated user is updating their own profile
-    if (req.user && req.user.id !== recruiterId) {
-        throw new Error("You are not authorized to update this profile.");
-    }
-    
-    const {
-        name,
-        email,
-        password,
-        currentPassword
-    } = req.body;
-
-    // Find the recruiter
     const recruiter = await Recruiters.findOne({
-        where: { recruiter_id: recruiterId }
-    });
-
-    if (!recruiter) {
-        throw new Error("Recruiter profile not found.");
-    }
-
-    // Always require current password for any changes
-    if (!currentPassword) {
-        throw new Error("Current password is required for profile updates.");
-    }
-
-    // Verify current password
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, recruiter.password);
-    if (!isCurrentPasswordValid) {
-        throw new Error("Current password is incorrect.");
-    }
-
-    // If password is being updated, hash the new password
-    if (password) {
-        const saltRounds = 10;
-        const hashedNewPassword = await bcrypt.hash(password, saltRounds);
-        recruiter.password = hashedNewPassword;
-    }
-
-    // Update fields if they are provided
-    if (name !== undefined) recruiter.name = name;
-    if (email !== undefined) recruiter.email = email;
-    
-    // Save the updated profile
-    await recruiter.save();
-
-    // Return updated recruiter without the password
-    const { password: _, ...recruiterData } = recruiter.get({ plain: true });
-
-    return {
-        message: "Recruiter profile updated successfully.",
-        data: recruiterData
-    };
-}));
-
-// =============================================
-// SKILLS MANAGEMENT ROUTES
-// =============================================
-
-/**
- * GET /api/profile/appliers-skills
- * Get all skills for the authenticated applier or a specific applier by query
- * Used for: Retrieving an applier's skill list for profile display
- * Query parameter: applier_id (optional - if not provided, uses authenticated user)
- * Requires: Authentication for fetching own skills, public for viewing others
- */
-router.get("/appliers-skills", controllerWrapper(async (req, res) => {
-    const queryApplierId = req.query.applier_id as string;
-    
-    // If no applier_id in query, this should be an authenticated request for own skills
-    if (!queryApplierId) {
-        // This would require authentication middleware
-        throw new Error("Applier ID is required as query parameter.");
-    }
-
-    console.log('Fetching skills for applier:', queryApplierId);
-
-    // Find the applier with their skills
-    const applier = await Appliers.findOne({
-        where: { applier_id: queryApplierId },
+        where: { recruiter_id: recruiterId },
         include: [
             {
                 model: Skills,
                 as: "skills",
                 attributes: ["skill_id", "name"],
-                through: { attributes: [] }, // This excludes junction table attributes
+                through: { attributes: [] },
             },
         ],
     });
-    
-    if (!applier) {
-        throw new Error("Applier not found.");
+
+    if (!recruiter) {
+        throw new Error("Recruiter not found.");
     }
-    
-    // Format skills data to match expected structure
-    const skills = applier.skills ? applier.skills.map((skill: any) => ({
-        skill_id: skill.skill_id,
-        name: skill.name,
-    })) : [];
-    
-    console.log('Found skills:', skills.length);
-    
+
     return {
-        message: "Skills retrieved successfully.",
-        data: skills,
-    };
+        message: "Recruiter profile retrieved successfully.",
+        data: recruiter,
+    }
 }));
 
-/**
- * GET /api/profile/appliers-skills/me
- * Get skills for the authenticated applier (alternative endpoint)
- * Used for: Retrieving authenticated user's own skills
- * Requires: Authentication
- */
-router.get("/appliers-skills/me", authMiddleware, controllerWrapper(async (req, res) => {
-    const applierId = req.user?.id;
+// Update the skills endpoint
+router.get("/appliers-skills", controllerWrapper(async (req, res) => {
+    const applierId = req.query.applier_id;
 
     if (!applierId) {
-        throw new Error("User authentication required.");
+        throw new Error("Applier ID is required.");
     }
 
-    if (req.user?.userType !== "applier") {
-        throw new Error("Only appliers can access this endpoint.");
-    }
-
-    console.log('Fetching skills for authenticated applier:', applierId);
-
-    // Find the applier with their skills
     const applier = await Appliers.findOne({
         where: { applier_id: applierId },
         include: [
@@ -350,33 +145,20 @@ router.get("/appliers-skills/me", authMiddleware, controllerWrapper(async (req, 
             },
         ],
     });
-    
     if (!applier) {
-        throw new Error("Applier profile not found.");
+        throw new Error("Applier not found.");
     }
-    
-    // Format skills data
-    const skills = applier.skills ? applier.skills.map((skill: any) => ({
+    const skills = applier.skills.map((skill: any) => ({
         skill_id: skill.skill_id,
         name: skill.name,
-    })) : [];
-    
-    console.log('Found skills for authenticated user:', skills.length);
-    
+    }));
+
     return {
-        message: "Your skills retrieved successfully.",
+        message: "Skills retrieved successfully.",
         data: skills,
     };
 }));
 
-/**
- * POST /api/profile/appliers-skills
- * Add new skills to an applier's profile
- * Used for: Adding/updating skills for an applier
- * Requires: Authentication
- * Body: { applier_id, skills: string[] }
- * Note: Creates new skills if they don't exist, links existing ones
- */
 router.post("/appliers-skills", authMiddleware, controllerWrapper(async (req, res) => {
     const { applier_id, skills } = req.body;
 
@@ -389,9 +171,8 @@ router.post("/appliers-skills", authMiddleware, controllerWrapper(async (req, re
         throw new Error("Applier not found.");
     }
 
-    // Get existing skills for the applier
     const applierWithSkills = await Appliers.findOne({
-        where: { applier_id: applier_id },
+        where: { user_id: applier_id },
         include: [{
             model: Skills,
             as: "skills",
@@ -400,13 +181,11 @@ router.post("/appliers-skills", authMiddleware, controllerWrapper(async (req, re
         }]
     });
 
-    const existingSkills = applierWithSkills?.skills || [] as Skill[];
-    const existingSkillNames = existingSkills.map((skill: Skill) => skill.name);
+    const existingSkills = applierWithSkills?.skills || [];
+    const existingSkillNames = existingSkills.map(skill => skill.name);
 
-    // Filter out skills that already exist
     const newSkillNames = skills.filter((skill: any) => !existingSkillNames.includes(skill));
 
-    // Create new skills if they don't exist in the Skills table
     const newSkillInstances = await Promise.all(
         newSkillNames.map(async (skillName: string) => {
             const [skillInstance] = await Skills.findOrCreate({
@@ -425,7 +204,6 @@ router.post("/appliers-skills", authMiddleware, controllerWrapper(async (req, re
         ...newSkillInstances
     ];
 
-    // Create associations in ApplierSkill junction table
     await Promise.all(
         newSkillInstances.map(async (skill) => {
             await ApplierSkill.create({
@@ -452,77 +230,69 @@ router.post("/experiences", authMiddleware, controllerWrapper(async (req, res) =
         description
     } = req.body;
 
-//     if (!user_type || !user_id || !company_name || !job_title || !start_date) {
-//         throw new Error("User type, user ID, company name, job title, and start date are required.");
-//     }
+    if (!user_type || !user_id || !company_name || !job_title || !start_date) {
+        throw new Error("User type, user ID, company name, job title, and start date are required.");
+    }
 
-//     if (user_type !== 'applier' && user_type !== 'recruiter') {
-//         throw new Error("User type must be either 'applier' or 'recruiter'.");
-//     }
+    if (user_type !== 'applier' && user_type !== 'recruiter') {
+        throw new Error("User type must be either 'applier' or 'recruiter'.");
+    }
 
-//     // Verify user exists
-//     let user;
-//     if (user_type === 'applier') {
-//         user = await Appliers.findOne({ where: { user_id } });
-//     } else {
-//         user = await Recruiters.findOne({ where: { user_id } });
-//     }
+    let user;
+    if (user_type === 'applier') {
+        user = await Appliers.findOne({ where: { user_id } });
+    } else {
+        user = await Recruiters.findOne({ where: { user_id } });
+    }
 
-//     if (!user) {
-//         throw new Error(`${user_type.charAt(0).toUpperCase() + user_type.slice(1)} not found.`);
-//     }
+    if (!user) {
+        throw new Error('Applier not found.');
+    }
 
-//     const experience = await Experiences.create({
-//         experience_id: v4(),
-//         user_id,
-//         user_type,
-//         company_name,
-//         job_title,
-//         start_date: new Date(start_date),
-//         end_date: end_date ? new Date(end_date) : null,
-//         description: description || null
-//     });
+    const experience = await Experiences.create({
+        experience_id: v4(),
+        user_id,
+        user_type,
+        company_name,
+        job_title,
+        start_date: new Date(start_date),
+        end_date: end_date ? new Date(end_date) : null,
+        description: description || null
+    });
 
-//     return {
-//         status: 'success',
-//         message: "Experience added successfully.",
-//         data: experience
-//     };
-// }));
+    return {
+        status: 'success',
+        message: "Experience added successfully.",
+        data: experience
+    };
+}));
 
-// /**
-//  * GET /api/profile/experiences
-//  * Get all experiences for a specific user
-//  * Used for: Retrieving work experience history for profile display
-//  * Query parameters: user_type, user_id
-//  * Returns: Experiences ordered by start_date (most recent first)
-//  */
-// router.get("/experiences", controllerWrapper(async (req, res) => {
-//     const { user_type, user_id } = req.query;
+router.get("/experiences", controllerWrapper(async (req, res) => {
+    const { user_type, user_id } = req.query;
 
-//     if (!user_type || !user_id) {
-//         throw new Error("User type and user ID are required.");
-//     }
+    if (!user_type || !user_id) {
+        throw new Error("User type and user ID are required.");
+    }
 
-//     if (user_type !== 'applier' && user_type !== 'recruiter') {
-//         throw new Error("User type must be either 'applier' or 'recruiter'.");
-//     }
+    if (user_type !== 'applier' && user_type !== 'recruiter') {
+        throw new Error("User type must be either 'applier' or 'recruiter'.");
+    }
 
-//     const experiences = await Experiences.findAll({
-//         where: {
-//             user_id,
-//             user_type
-//         },
-//         order: [
-//             ['start_date', 'DESC'] // Most recent experience first
-//         ]
-//     });
+    const experiences = await Experiences.findAll({
+        where: {
+            user_id,
+            user_type
+        },
+        order: [
+            ['start_date', 'DESC']
+        ]
+    });
 
-//     return {
-//         message: "Experiences retrieved successfully.",
-//         data: experiences
-//     };
-// }));
+    return {
+        message: "Experiences retrieved successfully.",
+        data: experiences
+    };
+}));
 
 router.put("/experiences/:experience_id", controllerWrapper(async (req, res) => {
     const { experience_id } = req.params;
@@ -546,21 +316,16 @@ router.put("/experiences/:experience_id", controllerWrapper(async (req, res) => 
     if (end_date !== undefined) experience.end_date = end_date ? new Date(end_date) : null;
     if (description !== undefined) experience.description = description;
 
-//     await experience.save();
+    await experience.save();
 
-//     return {
-//         message: "Experience updated successfully.",
-//         data: experience
-//     };
-// }));
+    return {
+        message: "Experience updated successfully.",
+        data: experience
+    };
+}));
 
-// /**
-//  * DELETE /api/profile/experiences/:experience_id
-//  * Delete work experience entry
-//  * Used for: Removing work experience from profile
-//  */
-// router.delete("/experiences/:experience_id", controllerWrapper(async (req, res) => {
-//     const { experience_id } = req.params;
+router.delete("/experiences/:experience_id", controllerWrapper(async (req, res) => {
+    const { experience_id } = req.params;
 
     const experience = await Experiences.findByPk(experience_id);
 
@@ -568,7 +333,7 @@ router.put("/experiences/:experience_id", controllerWrapper(async (req, res) => 
         throw new Error("Experience not found.");
     }
 
-//     await experience.destroy();
+    await experience.destroy();
 
     return {
         message: "Experience deleted successfully."
