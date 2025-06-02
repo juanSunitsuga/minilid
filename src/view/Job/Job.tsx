@@ -183,6 +183,10 @@ const Job: React.FC = () => {
     setApplyDialogOpen(true);
   };
 
+  const saveBookmarksToStorage = (bookmarks: string[]) => {
+    localStorage.setItem('bookmarkedJobs', JSON.stringify(bookmarks));
+  };
+
   // Handle apply job submission - Using FetchEndpoint instead of axios
   const handleApplyJob = async () => {
     if (!selectedJobId) return;
@@ -540,7 +544,7 @@ const Job: React.FC = () => {
       const token = localStorage.getItem('accessToken');
       const currentPage = Math.ceil(jobPosts.length / 10); // Assuming 10 jobs per page
       
-      const response = await FetchEndpoint(`/jobs?page=${currentPage + 1}`, 'GET', token);
+      const response = await FetchEndpoint(`/jobs?page=${currentPage + 1}`, 'GET', token, null);
       const data = await response.json();
       
       if (!response.ok) {
