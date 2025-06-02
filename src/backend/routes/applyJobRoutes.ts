@@ -260,7 +260,7 @@ router.delete("/cancel/:applicationId", authMiddleware, controllerWrapper(async 
     const application = await JobAppliers.findOne({
         where: {
             id: applicationId,
-            status: 'interviewing', // Only allow cancellation if status is 'interviewing'
+            status: ['interviewing', 'rejected'], // Allow cancellation if status is either 'interviewing' or 'rejected'
         }
     });
 

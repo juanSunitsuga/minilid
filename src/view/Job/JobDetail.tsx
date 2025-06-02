@@ -1294,15 +1294,11 @@ const JobDetail: React.FC = () => {
                               size="small"
                               disabled={
                                 updatingStatus === selectedApplication.id ||
-                                selectedApplication.status === 'rejected' ||
-                                selectedApplication.status === 'interviewing'
+                                !(selectedApplication.status === 'interviewing' || selectedApplication.status === 'rejected')
                               }
                               onClick={async () => {
-                                if (
-                                  selectedApplication.status === 'rejected' ||
-                                  selectedApplication.status === 'interviewing'
-                                ) {
-                                  alert('You cannot finish an application that is rejected or interviewing.');
+                                if (!(selectedApplication.status === 'interviewing' || selectedApplication.status === 'rejected')) {
+                                  alert('You can only finish an application that is interviewing or rejected.');
                                   return;
                                 }
                                 if (window.confirm('Are you sure you want to finish (delete) this application?')) {
@@ -1446,7 +1442,7 @@ const JobDetail: React.FC = () => {
                   {/* Cover Letter */}
                   <Box sx={{ ml: 59, mt: -28.5 }}>
                     <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-                      Cover Letter (Optional)
+                      Cover Letter
                     </Typography>
                     <TextField
                       multiline
