@@ -71,22 +71,22 @@ router.get("/appliers/:id", controllerWrapper(async (req, res) => {
     }
 
     const applier = await Appliers.findOne({
-        where: { applier_id: applierId }
+        where: { applier_id: applierId },
         // Note: Skills and experiences associations are commented out
         // Uncomment to include related data:
-        // include: [
-            // {
-            //     model: Skills,
-            //     as: "skills",
-            //     attributes: ["skill_id", "name"],
-            //     through: { attributes: [] },
-            // },
-            // {
-            //     model: Experiences,
-            //     as: "experiences",
-            //     attributes: ["experience_id", "company_name", "start_date", "end_date"],
-            // },
-        // ],
+        include: [
+            {
+                model: Skills,
+                as: "skills",
+                attributes: ["skill_id", "name"],
+                through: { attributes: [] },
+            },
+            {
+                model: Experiences,
+                as: "experiences",
+                attributes: ["experience_id", "company_name", "start_date", "end_date"],
+            },
+        ],
     });
 
     if (!applier) {

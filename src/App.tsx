@@ -13,6 +13,7 @@ import Chat from './view/Chat/Chat';
 import CreateJob from './view/CreateJob';
 import Dashboard from './view/Dashboard/Dashboard';
 import JobDetail from './view/Job/JobDetail';
+import ViewProfile from './view/Profile/ViewProfile';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
             <Route path="/jobs" element={<Job />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:userId" element={<ViewProfile />} />
             <Route path="/create-job" element={<CreateJob />} />
             <Route path="/job/:jobId" element={<JobDetail />} />
             <Route path="/dashboard" element={<Dashboard />} />
