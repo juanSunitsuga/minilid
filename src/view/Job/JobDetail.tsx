@@ -1234,7 +1234,7 @@ const JobDetail: React.FC = () => {
                   <Box sx={{ flex: 1, p: 3, overflow: 'auto' }}>
                     {selectedApplication ? (
                       <Box>
-                        <Typography variant="h6" fontWeight={600} gutterBottom>
+                        <Typography variant="h6" fontWeight={600} gutterBottom onClick={() => navigate(`/profile/${selectedApplication.applier.applier_id}`)}>
                           {selectedApplication.applier.name}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" gutterBottom>
