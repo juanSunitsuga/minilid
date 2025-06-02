@@ -53,7 +53,8 @@ import {
   TuneOutlined as TuneIcon,
   SortOutlined as SortIcon
 } from '@mui/icons-material';
-import { FetchEndpoint } from './FetchEndpoint'; // Import the FetchEndpoint utility
+import { FetchEndpoint } from '../FetchEndpoint'; // Import the FetchEndpoint utility
+import { NotNull } from 'sequelize-typescript';
 
 // Align interfaces with backend models
 interface JobPost {
@@ -236,7 +237,7 @@ const Job: React.FC = () => {
         const token = localStorage.getItem('accessToken');
         
         // Fetch job posts
-        const jobsResponse = await FetchEndpoint('/job', 'GET', token);
+        const jobsResponse = await FetchEndpoint('/job', 'GET', token, null);
         const jobsData = await jobsResponse.json();
         
         if (!jobsResponse.ok) {
@@ -248,7 +249,7 @@ const Job: React.FC = () => {
         }
         
         // Fetch job types
-        const typesResponse = await FetchEndpoint('/job-types', 'GET', token);
+        const typesResponse = await FetchEndpoint('/job-types', 'GET', token, null);
         const typesData = await typesResponse.json();
         
         if (!typesResponse.ok) {
@@ -260,7 +261,7 @@ const Job: React.FC = () => {
         }
         
         // Fetch job categories
-        const categoriesResponse = await FetchEndpoint('/job-categories', 'GET', token);
+        const categoriesResponse = await FetchEndpoint('/job-categories', 'GET', token, null);
         const categoriesData = await categoriesResponse.json();
         
         if (!categoriesResponse.ok) {
@@ -275,7 +276,7 @@ const Job: React.FC = () => {
         let appliedJobIds: string[] = [];
         if (token) {
           try {
-            const applicationsResponse = await FetchEndpoint('/job/my-applications', 'GET', token);
+            const applicationsResponse = await FetchEndpoint('/job/my-applications', 'GET', token, null);
             const applicationsData = await applicationsResponse.json();
             
             if (applicationsResponse.ok) {
