@@ -47,11 +47,9 @@ import { useAuth } from '../Context/AuthContext';
 
 interface Recruiter {
   recruiter_id: string;
+  company_id: string | null;
   name: string;
   email: string;
-  job_count?: number;
-  active_applicants?: number;
-  company_id: string | null;
 }
 
 interface CompanyInfo {
@@ -61,6 +59,7 @@ interface CompanyInfo {
   description?: string;
   logo_url?: string;
   website?: string;
+  industry?: string;
 }
 
 const CompanyDashboard: React.FC = () => {
@@ -170,8 +169,6 @@ const CompanyDashboard: React.FC = () => {
 
   // Calculate statistics
   const totalRecruiters = recruiters.length;
-  const totalJobs = recruiters.reduce((acc, recruiter) => acc + (recruiter.job_count || 0), 0);
-  const totalApplicants = recruiters.reduce((acc, recruiter) => acc + (recruiter.active_applicants || 0), 0);
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -271,17 +268,6 @@ const CompanyDashboard: React.FC = () => {
           flexBasis: { xs: '100%', sm: '30%' }, 
           minWidth: { xs: '100%', sm: '250px' } 
         }}>
-          <Card sx={{ height: '100%', bgcolor: 'info.light' }}>
-            <CardContent sx={{ textAlign: 'center' }}>
-              <WorkIcon sx={{ fontSize: 40, color: 'info.contrastText', mb: 1 }} />
-              <Typography variant="h5" fontWeight="bold" color="info.contrastText">
-                {totalJobs}
-              </Typography>
-              <Typography variant="body2" color="info.contrastText">
-                Total Jobs Posted
-              </Typography>
-            </CardContent>
-          </Card>
         </Box>
 
         {/* Active Applicants */}
@@ -290,18 +276,7 @@ const CompanyDashboard: React.FC = () => {
           flexBasis: { xs: '100%', sm: '30%' }, 
           minWidth: { xs: '100%', sm: '250px' } 
         }}>
-          <Card sx={{ height: '100%', bgcolor: 'success.light' }}>
-            <CardContent sx={{ textAlign: 'center' }}>
-              <PeopleIcon sx={{ fontSize: 40, color: 'success.contrastText', mb: 1 }} />
-              <Typography variant="h5" fontWeight="bold" color="success.contrastText">
-                {totalApplicants}
-              </Typography>
-              <Typography variant="body2" color="success.contrastText">
-                Active Applicants
-              </Typography>
-            </CardContent>
-          </Card>
-        </Box>
+         </Box>
       </Box>
       
       {/* Recruiters Management */}
@@ -392,12 +367,6 @@ const CompanyDashboard: React.FC = () => {
                           <EmailIcon fontSize="small" color="action" />
                           {recruiter.email}
                         </Box>
-                      </TableCell>
-                      <TableCell>
-                        {recruiter.job_count || 0}
-                      </TableCell>
-                      <TableCell>
-                        {recruiter.active_applicants || 0}
                       </TableCell>
                       <TableCell>
                         <Tooltip title="Remove recruiter from company">

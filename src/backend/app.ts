@@ -80,6 +80,7 @@ app.use('/job', createPostRoutes);
 app.use('/chat', chatRoutes);
 app.use('/job-applications', applyJobRoutes);
 app.use('/interviews', interviewRoutes);
+app.use('/companies', interviewRoutes);
 app.use(error)
 
 
