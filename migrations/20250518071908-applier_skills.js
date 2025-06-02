@@ -8,8 +8,8 @@ export default {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
-          model: 'job_posts',
-          key: 'job_id'
+          model: 'appliers', // Fixed: Changed from 'job_posts' to 'appliers'
+          key: 'applier_id'   // Fixed: Changed from 'job_id' to 'applier_id'
         },
         onDelete: 'CASCADE',
         primaryKey: true,

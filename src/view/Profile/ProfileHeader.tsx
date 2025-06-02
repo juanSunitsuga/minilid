@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   Box, Typography, Avatar, Button, Paper, Stack, IconButton, CircularProgress
 } from '@mui/material';
-import { 
+import {
   Edit as EditIcon, PhotoCamera
 } from '@mui/icons-material';
 import EditProfile from './EditProfile';
@@ -29,32 +29,32 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       try {
         setIsLoading(true);
         setError(null);
-        
+
         const token = localStorage.getItem('accessToken');
         if (!token) {
           throw new Error('Authentication token not found');
         }
-        
+
         const userId = localStorage.getItem('userId');
         if (!userId) {
           throw new Error('User ID not found');
         }
-        
+
         // Determine which endpoint to call based on user type
-        const endpoint = userType === 'recruiter' 
-          ? `/profile/recruiters/${userId}` 
+        const endpoint = userType === 'recruiter'
+          ? `/profile/recruiters/${userId}`
           : `/profile/appliers/${userId}`;
-          
+
         const response = await FetchEndpoint(endpoint, 'GET', token);
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.message || 'Failed to fetch profile data');
         }
-        
+
         const responseData = await response.json();
         setProfileData(responseData.data);
-        
+
         // If onProfileUpdate is provided, call it with the fetched data
         if (onProfileUpdate) {
           onProfileUpdate(responseData.data);
@@ -66,7 +66,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         setIsLoading(false);
       }
     };
-    
+
     // Fetch data only if no initial user data was provided
     if ((!initialUserData || Object.keys(initialUserData).length === 0) && userType) {
       fetchProfileData();
@@ -85,7 +85,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   const handleProfileUpdate = (updatedData: any) => {
     setProfileData((prev: any) => ({ ...prev, ...updatedData }));
-    
+
     if (onProfileUpdate) {
       onProfileUpdate(updatedData);
     }
@@ -94,22 +94,42 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const { name, email, about, profile_picture } = profileData;
 
   return (
-    <Paper 
+    <Paper
       elevation={0}
-      sx={{ 
-        borderRadius: 3, 
+      sx={{
+        borderRadius: 3,
         mb: 2.5,
         border: '1px solid',
         borderColor: 'divider',
         overflow: 'hidden',
-        width: '100%'
+        width: '100%',
+        position: 'relative'  // Added for positioning the edit button
       }}
     >
+      {/* Edit Button - Float at top right */}
+      <IconButton
+        aria-label="edit profile"
+        onClick={handleOpenEditModal}
+        sx={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          backgroundColor: 'white',
+          zIndex: 10,
+          boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+          '&:hover': {
+            backgroundColor: 'rgba(255,255,255,0.9)'
+          }
+        }}
+      >
+        <EditIcon />
+      </IconButton>
+
       {/* Cover Photo */}
-      <Box 
-        sx={{ 
-          height: 200, 
-          bgcolor: 'background.default', 
+      <Box
+        sx={{
+          height: 200,
+          bgcolor: 'background.default',
           position: 'relative',
           backgroundImage: 'url(https://images.unsplash.com/photo-1497215728101-856f4ea42174?ixlib=rb-4.0.3)',
           backgroundSize: 'cover',
@@ -121,49 +141,53 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
       {/* Profile info section */}
       <Box sx={{ position: 'relative', px: 3, pb: 3, width: '100%' }}>
-        {/* Profile Photo with Loading State */}
-        {isLoading ? (
-          <Box 
-            sx={{
-              width: 150,
-              height: 150,
-              borderRadius: '50%',
-              border: '4px solid #fff',
-              position: 'absolute',
-              top: -75,
-              left: 24,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              bgcolor: 'background.paper'
-            }}
-          >
-            <CircularProgress />
-          </Box>
-        ) : (
-          <Avatar
-            src={profile_picture || "https://placehold.co/200"}
-            alt={name || "User"}
-            sx={{
-              width: 150,
-              height: 150,
-              border: '4px solid #fff',
-              position: 'absolute',
-              top: -75,
-              left: 24,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-            }}
-          >
-            {name?.charAt(0) || "U"}
-          </Avatar>
-        )}
+        {/* Profile Photo with Loading State and Edit Button */}
+        <Box sx={{ position: 'relative' }}>
+          {isLoading ? (
+            <Box
+              sx={{
+                width: 150,
+                height: 150,
+                borderRadius: '50%',
+                border: '4px solid #fff',
+                position: 'absolute',
+                top: -75,
+                left: 24,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                bgcolor: 'background.paper'
+              }}
+            >
+              <CircularProgress />
+            </Box>
+          ) : (
+            <>
+              <Avatar
+                src={profile_picture || "https://placehold.co/200"}
+                alt={name || "User"}
+                sx={{
+                  width: 150,
+                  height: 150,
+                  border: '4px solid #fff',
+                  position: 'absolute',
+                  top: -75,
+                  left: 24,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                }}
+              >
+                {name?.charAt(0) || "U"}
+              </Avatar>
+            </>
+          )}
+        </Box>
 
         {/* Profile Header */}
-        <Box 
-          sx={{ 
-            pt: 9, 
-            display: 'flex', 
+        <Box
+          sx={{
+            pt: 9,
+            display: 'flex',
             justifyContent: 'space-between',
             width: '100%'
           }}
@@ -179,31 +203,11 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 </Typography>
               )}
             </Box>
-            
-            {/* Action buttons */}
-            <Stack direction="row" spacing={1.5} sx={{ mt: 2 }}>
-              <Button 
-                variant="contained" 
-                color="primary" 
-                sx={{ borderRadius: 5, px: 3 }}
-                onClick={handleOpenEditModal}
-                disabled={isLoading}
-              >
-                Edit Profile
-              </Button>
-              <Button 
-                variant="outlined" 
-                sx={{ 
-                  borderRadius: 5, 
-                  px: 3, 
-                  borderColor: 'primary.main',
-                  color: 'primary.main',
-                }}
-                disabled={isLoading}
-              >
-                More
-              </Button>
-            </Stack>
+
+            {/* Headline */}
+            <Typography variant="h6" color="text.secondary" sx={{ mt: 0.5 }}>
+              {userType === 'applier' ? "Student at Institut Teknologi Harapan Bangsa" : "Recruiter"}
+            </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
             {/* You could add additional content here if needed */}

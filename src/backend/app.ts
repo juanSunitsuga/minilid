@@ -17,7 +17,7 @@ import { Messages } from '../../models/messages';
 import { Recruiters } from '../../models/recruiters';
 import { Skills } from '../../models/skills';
 import { JobPostSkill } from '../../models/job_post_skills';
-import { ApplierSkill } from '../../models/applier_skills';
+import { ApplierSkill } from '../../models/applier_skill';
 import { JobAppliers } from '../../models/job_applier';
 
 // Import routes
@@ -26,6 +26,8 @@ import createPostRoutes from './routes/createPostRoutes';
 import profileRoutes from './routes/profileRoutes';
 import chatRoutes from './routes/chatRoutes';
 import applyJobRoutes from './routes/applyJobRoutes';
+import experiencesRoutes from './routes/experiencesRoutes';
+import skillsRoutes from './routes/skillsRoutes';
 
 // Import configuration
 import config from '../../config/config.json';
@@ -75,6 +77,8 @@ app.use('/profile', profileRoutes);
 app.use('/job', createPostRoutes);
 app.use('/chat', chatRoutes);
 app.use('/job-applications', applyJobRoutes);
+app.use('/experiences', experiencesRoutes);
+app.use('/skills', skillsRoutes);
 
 app.use((req, res) => {
     res.status(404).json({ message: 'Route not found' });

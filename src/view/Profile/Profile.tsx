@@ -10,7 +10,6 @@ import ProfileHeader from './ProfileHeader';
 import About from './About';
 import Skills from './Skills';
 import ExperienceSection from './Experience';
-import Education from './Education';
 import EditProfile from './EditProfile';
 
 // Interface based on appliers.ts model
@@ -35,13 +34,6 @@ interface Experience {
   description: string;
 }
 
-interface EducationItem {
-  id?: number;
-  institution: string;
-  degree: string;
-  year: string;
-}
-
 interface Application {
   id: number;
   job_title: string;
@@ -57,13 +49,6 @@ const Profile: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [experiences, setExperiences] = useState<Experience[]>([]);
-  const [education, setEducation] = useState<EducationItem[]>([
-    {
-      institution: 'Institut Teknologi Harapan Bangsa',
-      degree: 'Bachelor of Computer Science',
-      year: '2021 - 2025'
-    }
-  ]);
   const [applications, setApplications] = useState<Application[]>([
     {
       id: 1,
@@ -117,6 +102,7 @@ const Profile: React.FC = () => {
           const skillsResponse = await FetchEndpoint(`/profile/appliers-skills?applier_id=${userId}`, 'GET', token);
           const skillsData = await skillsResponse.json();
           
+          
           if (skillsResponse.ok) {
             setProfileData(prevData => {
               console.log('Current profile data:', prevData);
@@ -154,7 +140,7 @@ const Profile: React.FC = () => {
         throw new Error('Authentication token not found');
       }
       
-      const response = await FetchEndpoint(`/profile/appliers/${profileData?.applier_id}/about`, 'PUT', token, {
+      const response = await FetchEndpoint(`/profile/appliers/${profileData?.applier_id}/about`, 'POST', token, {
         about: aboutText
       });
       
@@ -182,17 +168,6 @@ const Profile: React.FC = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) {
         throw new Error('Authentication token not found');
-      }
-      
-      const response = await FetchEndpoint('/profile/appliers-skills', 'POST', token, {
-        applier_id: profileData?.applier_id,
-        skills: skillNames
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to update skills');
       }
       
       // Update local state with new skills
@@ -302,12 +277,6 @@ const Profile: React.FC = () => {
           userId={profileData?.applier_id}
           userType={userType as 'applier' | 'recruiter'}
           onAddExperience={() => console.log('Add experience clicked')}
-        />
-        
-        {/* Education Section Component */}
-        <Education 
-          education={education}
-          onAddEducation={() => console.log('Add education clicked')}
         />
         
         {/* Job Applications Section - Using existing components */}
