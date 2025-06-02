@@ -403,7 +403,7 @@ router.put("/recruiters/:recruiter_id", authMiddleware, controllerWrapper(async 
     };
 }));
 
-router.put("/recruiters/:id", authMiddleware, controllerWrapper(async (req, res) => {
+router.put("/recruiters/:id/edit", authMiddleware, controllerWrapper(async (req, res) => {
     const recruiterId = req.params.id;
     
     // Ensure the authenticated user is updating their own profile

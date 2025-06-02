@@ -6,7 +6,6 @@ import {
   IconButton, 
   Button, 
   Avatar,
-  Chip,
   Divider,
   Alert,
   CircularProgress,
@@ -18,10 +17,8 @@ import {
   FormControlLabel,
   Checkbox,
   Grid,
-  Fade,
-  Tooltip,
-  Card,
-  CardContent,
+  Menu,
+  MenuItem,
   Skeleton
 } from '@mui/material';
 import { 
@@ -29,15 +26,10 @@ import {
   BusinessCenter, 
   Edit as EditIcon,
   Delete as DeleteIcon,
-  LocationOn,
-  CalendarToday,
+  MoreHoriz as MoreHorizIcon,
   Close as CloseIcon,
-  Save as SaveIcon,
-  Cancel as CancelIcon,
-  WorkOutline,
-  MoreVert as MoreVertIcon
+  WorkOutline
 } from '@mui/icons-material';
-import { motion, AnimatePresence } from 'framer-motion';
 import { FetchEndpoint } from '../FetchEndpoint';
 
 // Updated interface to match your Experiences model
@@ -72,15 +64,15 @@ const Experience: React.FC<ExperienceProps> = ({
   const [experiences, setExperiences] = useState<Experience[]>(propExperiences);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingExperience, setEditingExperience] = useState<Experience | null>(null);
   const [dialogLoading, setDialogLoading] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+  const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
+  const [expandedDescription, setExpandedDescription] = useState<string | null>(null);
   
-  // Form states
   const [formData, setFormData] = useState({
     company_name: '',
     job_title: '',
@@ -90,14 +82,9 @@ const Experience: React.FC<ExperienceProps> = ({
     is_current: false
   });
 
-  // UI states
-  const [expandedCard, setExpandedCard] = useState<string | null>(null);
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-
   // Format date for display
   const formatDate = (date: string | Date | null | undefined): string => {
     if (!date) return 'Present';
-    
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     return dateObj.toLocaleDateString('en-US', { 
       month: 'short', 
@@ -108,7 +95,6 @@ const Experience: React.FC<ExperienceProps> = ({
   // Format date for input (YYYY-MM)
   const formatDateForInput = (date: string | Date | null | undefined): string => {
     if (!date) return '';
-    
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     const year = dateObj.getFullYear();
     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -169,6 +155,7 @@ const Experience: React.FC<ExperienceProps> = ({
       is_current: !experience.end_date
     });
     setDialogOpen(true);
+    setMenuAnchor(null);
   };
 
   // Handle dialog close
@@ -199,6 +186,18 @@ const Experience: React.FC<ExperienceProps> = ({
     }));
   };
 
+  // Handle menu
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, exp: Experience) => {
+    event.stopPropagation();
+    setSelectedExperience(exp);
+    setMenuAnchor(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchor(null);
+    setSelectedExperience(null);
+  };
+
   // Validate form
   const validateForm = (): boolean => {
     setDialogError(null);
@@ -207,31 +206,26 @@ const Experience: React.FC<ExperienceProps> = ({
       setDialogError('Company name is required');
       return false;
     }
-
     if (!formData.job_title.trim()) {
       setDialogError('Job title is required');
       return false;
     }
-
     if (!formData.start_date) {
       setDialogError('Start date is required');
       return false;
     }
-
     if (!formData.is_current && !formData.end_date) {
       setDialogError('End date is required for past positions');
       return false;
     }
-
     if (!formData.is_current && formData.end_date && formData.start_date >= formData.end_date) {
       setDialogError('End date must be after start date');
       return false;
     }
-
     return true;
   };
 
-  // Handle form submission - FIXED TO CONNECT TO BACKEND
+  // Handle form submission
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
@@ -249,9 +243,8 @@ const Experience: React.FC<ExperienceProps> = ({
         throw new Error('Authentication token not found. Please log in again.');
       }
 
-      // Prepare data following the profile routes pattern
       const submitData = {
-        [`${userType}_id`]: userId, // applier_id or recruiter_id
+        [`${userType}_id`]: userId,
         company_name: formData.company_name.trim(),
         job_title: formData.job_title.trim(),
         start_date: formData.start_date + '-01',
@@ -259,13 +252,10 @@ const Experience: React.FC<ExperienceProps> = ({
         description: formData.description.trim() || null
       };
 
-      console.log('Submitting experience data:', submitData);
-
       let response;
       let endpoint;
 
       if (isEditing && editingExperience) {
-        // Update existing experience - UPDATED TO MATCH PROFILE ROUTES
         endpoint = `/experiences/${userType}s-experiences/${editingExperience.experience_id}`;
         const updateData = {
           company_name: submitData.company_name,
@@ -275,27 +265,19 @@ const Experience: React.FC<ExperienceProps> = ({
           description: submitData.description
         };
         
-        console.log('Updating experience with endpoint:', endpoint, updateData);
         response = await FetchEndpoint(endpoint, 'PUT', token, updateData);
       } else {
-        // Create new experience - UPDATED TO MATCH PROFILE ROUTES
         endpoint = `/experiences/${userType}s-experiences`;
-        console.log('Creating experience with endpoint:', endpoint);
         response = await FetchEndpoint(endpoint, 'POST', token, submitData);
       }
-
-      console.log('Response status:', response.status);
       
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Error response:', errorData);
         throw new Error(errorData.message || 'Failed to save experience');
       }
 
       const data = await response.json();
-      console.log('Success response:', data);
 
-      // Update local state with the response data
       if (isEditing && editingExperience) {
         setExperiences(prev => prev.map(exp => 
           exp.experience_id === editingExperience.experience_id ? data.data : exp
@@ -304,14 +286,12 @@ const Experience: React.FC<ExperienceProps> = ({
         setExperiences(prev => [data.data, ...prev]);
       }
 
-      // Call parent callbacks if provided
       if (isEditing && onEditExperience) {
         onEditExperience(data.data);
       } else if (onAddExperience) {
         onAddExperience();
       }
 
-      // Close dialog
       handleDialogClose();
 
     } catch (error: any) {
@@ -322,12 +302,9 @@ const Experience: React.FC<ExperienceProps> = ({
     }
   };
 
-  // Fetch experiences from API - FIXED TO ADD QUERY PARAMETERS
+  // Fetch experiences from API
   const fetchExperiences = async () => {
-    if (!userId || !userType) {
-        console.log('Missing userId or userType for fetching experiences');
-        return;
-    }
+    if (!userId || !userType) return;
     
     setLoading(true);
     setError(null);
@@ -338,21 +315,15 @@ const Experience: React.FC<ExperienceProps> = ({
             throw new Error('Authentication token not found');
         }
 
-        // UPDATED TO MATCH PROFILE ROUTES PATTERN
         const endpoint = `/experiences/${userType}s-experiences?${userType}_id=${userId}`;
-        console.log('Fetching experiences from:', endpoint);
-
         const response = await FetchEndpoint(endpoint, 'GET', token);
         
         if (!response.ok) {
             const errorData = await response.json();
-            console.error('Fetch error response:', errorData);
             throw new Error(errorData.message || 'Failed to fetch experiences');
         }
 
         const data = await response.json();
-        console.log('Fetch success response:', data);
-
         setExperiences(data.data || []);
     } catch (error: any) {
         console.error('Error fetching experiences:', error);
@@ -362,7 +333,7 @@ const Experience: React.FC<ExperienceProps> = ({
     }
   };
 
-  // Delete experience - CORRECTED ENDPOINT
+  // Delete experience
   const handleDeleteExperience = async (experienceId: string) => {
     if (!confirm('Are you sure you want to delete this experience?')) {
       return;
@@ -374,23 +345,16 @@ const Experience: React.FC<ExperienceProps> = ({
         throw new Error('Authentication token not found');
       }
 
-      // UPDATED TO MATCH PROFILE ROUTES PATTERN
       const endpoint = `/experiences/${userType}s-experiences/${experienceId}`;
-      console.log('Deleting experience with endpoint:', endpoint);
-
       const response = await FetchEndpoint(endpoint, 'DELETE', token);
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Delete error response:', errorData);
         throw new Error(errorData.message || 'Failed to delete experience');
       }
 
-      const data = await response.json();
-      console.log('Delete success response:', data);
-
-      // Remove from local state
       setExperiences(prev => prev.filter(exp => exp.experience_id !== experienceId));
+      setMenuAnchor(null);
     } catch (error: any) {
       console.error('Error deleting experience:', error);
       setError(error.message || 'Failed to delete experience');
@@ -399,7 +363,6 @@ const Experience: React.FC<ExperienceProps> = ({
 
   // Load experiences on component mount
   useEffect(() => {
-    console.log('Effect triggered with userId:', userId, 'userType:', userType);
     if (userId && userType) {
       fetchExperiences();
     }
@@ -416,718 +379,387 @@ const Experience: React.FC<ExperienceProps> = ({
   const ExperienceSkeleton = () => (
     <Box>
       {[1, 2, 3].map((item) => (
-        <Card key={item} sx={{ mb: 2, p: 2 }}>
+        <Box key={item} sx={{ mb: 3, p: 3 }}>
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <Skeleton variant="circular" width={56} height={56} />
+            <Skeleton variant="circular" width={48} height={48} />
             <Box sx={{ flex: 1 }}>
-              <Skeleton variant="text" width="60%" height={32} />
-              <Skeleton variant="text" width="40%" height={24} />
-              <Skeleton variant="text" width="80%" height={20} />
-              <Skeleton variant="rectangular" width="100%" height={60} sx={{ mt: 1 }} />
+              <Skeleton variant="text" width="60%" height={24} />
+              <Skeleton variant="text" width="40%" height={20} />
+              <Skeleton variant="text" width="30%" height={16} />
+              <Skeleton variant="text" width="100%" height={16} sx={{ mt: 1 }} />
+              <Skeleton variant="text" width="80%" height={16} />
             </Box>
           </Box>
-        </Card>
+        </Box>
       ))}
     </Box>
   );
 
-  // Debug info
-  console.log('Experience component state:', {
-    userId,
-    userType,
-    experiencesCount: experiences.length,
-    loading,
-    error
-  });
-
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+      <Paper 
+        elevation={0}
+        sx={{ 
+          borderRadius: 2, 
+          mb: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          overflow: 'hidden'
+        }}
       >
-        <Paper 
-          elevation={0}
-          sx={{ 
-            p: 0, 
-            borderRadius: 4, 
-            mb: 2.5,
-            border: '1px solid',
-            borderColor: 'divider',
-            background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-            overflow: 'hidden'
-          }}
-        >
-          {/* Enhanced Header */}
-          <Box sx={{ 
-            p: 3, 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            background: 'linear-gradient(135deg, #fafbff 0%, #f0f4ff 100%)'
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar 
-                sx={{ 
-                  bgcolor: 'primary.main',
-                  width: 40,
-                  height: 40,
-                  boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)'
-                }}
-              >
-                <WorkOutline />
-              </Avatar>
-              <Box>
-                <Typography variant="h5" fontWeight="700" sx={{ color: 'text.primary' }}>
-                  Experience
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {experiences.length} {experiences.length === 1 ? 'position' : 'positions'}
-                </Typography>
-              </Box>
-            </Box>
-            
-            {!readonly && (
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Tooltip title="Add Experience" arrow>
-                  <IconButton 
-                    onClick={handleAddClick}
-                    sx={{ 
-                      bgcolor: 'primary.main',
-                      color: 'white',
-                      '&:hover': { 
-                        bgcolor: 'primary.dark',
-                        transform: 'scale(1.05)'
-                      },
-                      boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)',
-                      transition: 'all 0.3s ease'
-                    }}
-                    size="medium"
-                  >
-                    <AddIcon />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            )}
+        {/* Header */}
+        <Box sx={{ 
+          p: 3, 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <WorkOutline sx={{ color: 'text.secondary' }} />
+            <Typography variant="h6" fontWeight="600">
+              Experience
+            </Typography>
           </Box>
+          
+          {!readonly && (
+            <IconButton 
+              onClick={handleAddClick}
+              sx={{ 
+                color: 'text.secondary',
+                '&:hover': { 
+                  color: 'primary.main',
+                  bgcolor: 'rgba(25, 118, 210, 0.04)'
+                }
+              }}
+            >
+              <AddIcon />
+            </IconButton>
+          )}
+        </Box>
 
-          <Box sx={{ p: 3 }}>
-            {/* Error Alert */}
-            <AnimatePresence>
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                >
-                  <Alert 
-                    severity="error" 
-                    sx={{ 
-                      mb: 3, 
-                      borderRadius: 3,
-                      boxShadow: '0 4px 12px rgba(244, 67, 54, 0.15)',
-                      border: '1px solid rgba(244, 67, 54, 0.2)'
-                    }}
-                    onClose={() => setError(null)}
-                  >
-                    {error}
-                  </Alert>
-                </motion.div>
-              )}
-            </AnimatePresence>
+        <Divider />
 
-            {/* Loading State */}
-            {loading && <ExperienceSkeleton />}
+        <Box sx={{ p: 3 }}>
+          {/* Error Alert */}
+          {error && (
+            <Alert 
+              severity="error" 
+              sx={{ mb: 3 }}
+              onClose={() => setError(null)}
+            >
+              {error}
+            </Alert>
+          )}
 
-            {/* Experience List */}
-            {!loading && experiences && experiences.length > 0 ? (
-              <Box>
-                <AnimatePresence>
-                  {experiences.map((exp, index) => (
-                    <motion.div
-                      key={exp.experience_id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ delay: index * 0.1 }}
-                    >
-                      <Card
-                        sx={{ 
-                          mb: 2,
-                          borderRadius: 3,
-                          border: '1px solid',
-                          borderColor: hoveredCard === exp.experience_id ? 'primary.main' : 'divider',
-                          transition: 'all 0.3s ease',
-                          transform: hoveredCard === exp.experience_id ? 'translateY(-2px)' : 'none',
-                          boxShadow: hoveredCard === exp.experience_id 
-                            ? '0 8px 24px rgba(33, 150, 243, 0.15)' 
-                            : '0 2px 8px rgba(0,0,0,0.1)',
-                          '&:hover': {
-                            borderColor: 'primary.main',
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 8px 24px rgba(33, 150, 243, 0.15)',
-                          }
-                        }}
-                        onMouseEnter={() => setHoveredCard(exp.experience_id)}
-                        onMouseLeave={() => setHoveredCard(null)}
-                      >
-                        <CardContent sx={{ p: 3 }}>
-                          <Box sx={{ display: 'flex', position: 'relative' }}>
-                            {/* Enhanced Company Logo/Icon */}
-                            <Avatar 
-                              sx={{ 
-                                bgcolor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                mr: 3,
-                                width: 64,
-                                height: 64,
-                                boxShadow: '0 6px 16px rgba(102, 126, 234, 0.3)',
-                                border: '3px solid white'
-                              }}
-                            >
-                              <BusinessCenter sx={{ fontSize: 32, color: 'white' }} />
-                            </Avatar>
+          {/* Loading State */}
+          {loading && <ExperienceSkeleton />}
 
-                            {/* Experience Details */}
-                            <Box sx={{ flex: 1 }}>
-                              {/* Job Title */}
-                              <Typography 
-                                variant="h6" 
-                                fontWeight="700" 
-                                sx={{ 
-                                  mb: 0.5, 
-                                  color: 'text.primary',
-                                  lineHeight: 1.3
-                                }}
-                              >
-                                {exp.job_title}
-                              </Typography>
-
-                              {/* Company Name and Employment Type */}
-                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, gap: 1.5 }}>
-                                <Typography 
-                                  variant="body1" 
-                                  sx={{ 
-                                    color: 'text.secondary', 
-                                    fontWeight: 600,
-                                    fontSize: '1rem'
-                                  }}
-                                >
-                                  {exp.company_name}
-                                </Typography>
-                                <Chip 
-                                  label="Full-time" 
-                                  size="small" 
-                                  variant="outlined"
-                                  sx={{ 
-                                    fontSize: '0.75rem',
-                                    height: 24,
-                                    borderColor: 'primary.main',
-                                    color: 'primary.main',
-                                    fontWeight: 500,
-                                    '&:hover': {
-                                      bgcolor: 'primary.light',
-                                      color: 'primary.dark'
-                                    }
-                                  }}
-                                />
-                              </Box>
-
-                              {/* Date Range and Duration */}
-                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, gap: 2 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-                                  <CalendarToday sx={{ fontSize: 18, color: 'primary.main' }} />
-                                  <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                                    {formatDate(exp.start_date)} - {formatDate(exp.end_date)}
-                                  </Typography>
-                                </Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <Typography variant="body2" color="text.secondary">
-                                    •
-                                  </Typography>
-                                  <Chip
-                                    label={calculateDuration(exp.start_date, exp.end_date)}
-                                    size="small"
-                                    sx={{
-                                      height: 20,
-                                      fontSize: '0.7rem',
-                                      bgcolor: 'success.light',
-                                      color: 'success.dark',
-                                      fontWeight: 600
-                                    }}
-                                  />
-                                </Box>
-                              </Box>
-
-                              {/* Location */}
-                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 0.8 }}>
-                                <LocationOn sx={{ fontSize: 18, color: 'text.secondary' }} />
-                                <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                                  Remote • Hybrid
-                                </Typography>
-                              </Box>
-
-                              {/* Description */}
-                              {exp.description && (
-                                <Box sx={{ mt: 2 }}>
-                                  <Typography 
-                                    variant="body2" 
-                                    color="text.primary"
-                                    sx={{ 
-                                      lineHeight: 1.7,
-                                      fontSize: '0.9rem',
-                                      maxHeight: expandedCard === exp.experience_id ? 'none' : 80,
-                                      overflow: 'hidden',
-                                      position: 'relative',
-                                      transition: 'max-height 0.3s ease'
-                                    }}
-                                  >
-                                    {exp.description}
-                                  </Typography>
-                                  
-                                  {exp.description.length > 150 && (
-                                    <Button
-                                      variant="text"
-                                      size="small"
-                                      onClick={() => setExpandedCard(
-                                        expandedCard === exp.experience_id ? null : exp.experience_id
-                                      )}
-                                      sx={{ 
-                                        mt: 1,
-                                        p: 0,
-                                        textTransform: 'none',
-                                        fontSize: '0.875rem',
-                                        fontWeight: 600,
-                                        color: 'primary.main',
-                                        '&:hover': {
-                                          bgcolor: 'transparent',
-                                          color: 'primary.dark'
-                                        }
-                                      }}
-                                    >
-                                      {expandedCard === exp.experience_id ? '...see less' : '...see more'}
-                                    </Button>
-                                  )}
-                                </Box>
-                              )}
-                            </Box>
-
-                            {/* Enhanced Action Buttons */}
-                            {!readonly && (
-                              <Fade in={hoveredCard === exp.experience_id || true}>
-                                <Box sx={{ 
-                                  display: 'flex', 
-                                  flexDirection: 'column', 
-                                  gap: 1, 
-                                  ml: 2,
-                                  alignSelf: 'flex-start'
-                                }}>
-                                  <Tooltip title="Edit Experience" arrow>
-                                    <IconButton 
-                                      size="small"
-                                      onClick={() => handleEditClick(exp)}
-                                      sx={{ 
-                                        bgcolor: 'background.paper',
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        '&:hover': { 
-                                          bgcolor: 'primary.light',
-                                          borderColor: 'primary.main',
-                                          color: 'primary.main',
-                                          transform: 'scale(1.1)'
-                                        },
-                                        transition: 'all 0.2s ease'
-                                      }}
-                                    >
-                                      <EditIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
-                                  
-                                  <Tooltip title="Delete Experience" arrow>
-                                    <IconButton 
-                                      size="small"
-                                      onClick={() => handleDeleteExperience(exp.experience_id)}
-                                      sx={{ 
-                                        bgcolor: 'background.paper',
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        color: 'text.secondary',
-                                        '&:hover': { 
-                                          bgcolor: 'error.light',
-                                          borderColor: 'error.main',
-                                          color: 'error.main',
-                                          transform: 'scale(1.1)'
-                                        },
-                                        transition: 'all 0.2s ease'
-                                      }}
-                                    >
-                                      <DeleteIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
-                                </Box>
-                              </Fade>
-                            )}
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </Box>
-            ) : !loading ? (
-              // Enhanced Empty state
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <Box sx={{ 
-                  textAlign: 'center', 
-                  py: 8,
-                  background: 'linear-gradient(135deg, #f8fafc 0%, #e3f2fd 100%)',
-                  borderRadius: 3,
-                  border: '2px dashed',
-                  borderColor: 'primary.light'
-                }}>
-                  <motion.div
-                    animate={{ y: [0, -10, 0] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
+          {/* Experience List */}
+          {!loading && experiences && experiences.length > 0 ? (
+            <Box>
+              {experiences.map((exp, index) => (
+                <Box key={exp.experience_id}>
+                  <Box sx={{ display: 'flex', gap: 2, py: 2 }}>
+                    {/* Company Logo */}
                     <Avatar 
                       sx={{ 
-                        bgcolor: 'primary.light', 
-                        mx: 'auto', 
-                        mb: 3,
-                        width: 80,
-                        height: 80,
-                        boxShadow: '0 8px 24px rgba(33, 150, 243, 0.2)'
+                        bgcolor: 'grey.200',
+                        color: 'grey.600',
+                        width: 48,
+                        height: 48
                       }}
                     >
-                      <BusinessCenter sx={{ fontSize: 40, color: 'primary.main' }} />
+                      <BusinessCenter />
                     </Avatar>
-                  </motion.div>
-                  
-                  <Typography variant="h5" fontWeight="700" sx={{ mb: 1, color: 'text.primary' }}>
-                    Start building your experience
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 400, mx: 'auto', lineHeight: 1.6 }}>
-                    Showcase your professional journey and highlight the experiences that make you stand out.
-                  </Typography>
-                  
-                  {!readonly && (
-                    <Button 
-                      variant="contained"
-                      size="large"
-                      sx={{ 
-                        borderRadius: 3, 
-                        px: 6,
-                        py: 1.5,
-                        textTransform: 'none',
-                        fontWeight: 700,
-                        fontSize: '1rem',
-                        boxShadow: '0 6px 20px rgba(33, 150, 243, 0.3)',
-                        background: 'linear-gradient(135deg, #2196F3 0%, #21CBF3 100%)',
-                        '&:hover': {
-                          boxShadow: '0 8px 25px rgba(33, 150, 243, 0.4)',
-                          transform: 'translateY(-2px)'
-                        },
-                        transition: 'all 0.3s ease'
-                      }}
-                      startIcon={<AddIcon />}
-                      onClick={handleAddClick}
-                    >
-                      Add your first experience
-                    </Button>
-                  )}
-                </Box>
-              </motion.div>
-            ) : null}
 
-            {/* Add Position Button (when experiences exist) */}
-            {!readonly && experiences.length > 0 && !loading && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
+                    {/* Experience Details */}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      {/* Job Title */}
+                      <Typography 
+                        variant="subtitle1" 
+                        fontWeight="600" 
+                        sx={{ lineHeight: 1.3 }}
+                      >
+                        {exp.job_title}
+                      </Typography>
+
+                      {/* Company Name */}
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary"
+                        sx={{ mt: 0.5 }}
+                      >
+                        {exp.company_name}
+                      </Typography>
+
+                      {/* Duration */}
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary"
+                        sx={{ mt: 0.5 }}
+                      >
+                        {formatDate(exp.start_date)} - {formatDate(exp.end_date)} · {calculateDuration(exp.start_date, exp.end_date)}
+                      </Typography>
+
+                      {/* Description */}
+                      {exp.description && (
+                        <Box sx={{ mt: 1 }}>
+                          <Typography 
+                            variant="body2" 
+                            color="text.primary"
+                            sx={{ 
+                              lineHeight: 1.5,
+                              display: '-webkit-box',
+                              WebkitLineClamp: expandedDescription === exp.experience_id ? 'none' : 3,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            {exp.description}
+                          </Typography>
+                          
+                          {exp.description.length > 150 && (
+                            <Button
+                              variant="text"
+                              size="small"
+                              onClick={() => setExpandedDescription(
+                                expandedDescription === exp.experience_id ? null : exp.experience_id
+                              )}
+                              sx={{ 
+                                mt: 0.5,
+                                p: 0,
+                                textTransform: 'none',
+                                fontSize: '0.875rem',
+                                fontWeight: 600,
+                                color: 'text.secondary',
+                                '&:hover': {
+                                  bgcolor: 'transparent',
+                                  color: 'primary.main'
+                                }
+                              }}
+                            >
+                              {expandedDescription === exp.experience_id ? '...see less' : '...see more'}
+                            </Button>
+                          )}
+                        </Box>
+                      )}
+                    </Box>
+
+                    {/* Action Menu */}
+                    {!readonly && (
+                      <Box>
+                        <IconButton 
+                          size="small"
+                          onClick={(e) => handleMenuClick(e, exp)}
+                          sx={{ 
+                            color: 'text.secondary',
+                            '&:hover': { 
+                              color: 'text.primary',
+                              bgcolor: 'rgba(0, 0, 0, 0.04)'
+                            }
+                          }}
+                        >
+                          <MoreHorizIcon />
+                        </IconButton>
+                      </Box>
+                    )}
+                  </Box>
+                  
+                  {index < experiences.length - 1 && <Divider sx={{ my: 2 }} />}
+                </Box>
+              ))}
+            </Box>
+          ) : !loading ? (
+            // Empty state
+            <Box sx={{ 
+              textAlign: 'center', 
+              py: 6,
+              color: 'text.secondary'
+            }}>
+              <BusinessCenter sx={{ fontSize: 48, mb: 2, color: 'text.disabled' }} />
+              <Typography variant="body1" sx={{ mb: 1 }}>
+                No work experience added yet
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Share your professional journey and highlight the experiences that make you stand out.
+              </Typography>
+              
+              {!readonly && (
+                <Button 
+                  variant="outlined"
+                  onClick={handleAddClick}
+                  startIcon={<AddIcon />}
+                  sx={{ textTransform: 'none' }}
+                >
+                  Add experience
+                </Button>
+              )}
+            </Box>
+          ) : null}
+
+          {/* Add More Button */}
+          {!readonly && experiences.length > 0 && !loading && (
+            <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+              <Button 
+                variant="outlined"
+                onClick={handleAddClick}
+                startIcon={<AddIcon />}
+                sx={{ 
+                  textTransform: 'none',
+                  borderColor: 'text.secondary',
+                  color: 'text.secondary',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    color: 'primary.main'
+                  }
+                }}
               >
-                <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
-                  <Button 
-                    variant="outlined"
-                    size="large"
-                    sx={{ 
-                      borderRadius: 3, 
-                      px: 4,
-                      py: 1.5,
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      borderColor: 'primary.main',
-                      color: 'primary.main',
-                      border: '2px solid',
-                      '&:hover': {
-                        borderColor: 'primary.dark',
-                        bgcolor: 'primary.light',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 6px 20px rgba(33, 150, 243, 0.2)'
-                      },
-                      transition: 'all 0.3s ease'
-                    }}
-                    startIcon={<AddIcon />}
-                    onClick={handleAddClick}
-                  >
-                    Add another position
-                  </Button>
-                </Box>
-              </motion.div>
-            )}
-          </Box>
-        </Paper>
-      </motion.div>
+                Add experience
+              </Button>
+            </Box>
+          )}
+        </Box>
 
-      {/* Enhanced Experience Dialog */}
+        {/* Action Menu */}
+        <Menu
+          anchorEl={menuAnchor}
+          open={Boolean(menuAnchor)}
+          onClose={handleMenuClose}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <MenuItem 
+            onClick={() => selectedExperience && handleEditClick(selectedExperience)}
+            sx={{ fontSize: '0.875rem' }}
+          >
+            <EditIcon sx={{ mr: 1, fontSize: '1rem' }} />
+            Edit
+          </MenuItem>
+          <MenuItem 
+            onClick={() => selectedExperience && handleDeleteExperience(selectedExperience.experience_id)}
+            sx={{ fontSize: '0.875rem', color: 'error.main' }}
+          >
+            <DeleteIcon sx={{ mr: 1, fontSize: '1rem' }} />
+            Delete
+          </MenuItem>
+        </Menu>
+      </Paper>
+
+      {/* Experience Dialog */}
       <Dialog 
         open={dialogOpen} 
         onClose={handleDialogClose}
-        maxWidth="lg"
+        maxWidth="md"
         fullWidth
         PaperProps={{
-          component: motion.div,
-          initial: { opacity: 0, scale: 0.9 },
-          animate: { opacity: 1, scale: 1 },
-          exit: { opacity: 0, scale: 0.9 },
-          transition: { duration: 0.3 },
-          sx: {
-            borderRadius: 4,
-            overflow: 'hidden',
-            boxShadow: '0 24px 48px rgba(0,0,0,0.2)',
-            background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)'
-          }
+          sx: { borderRadius: 2 }
         }}
       >
         <DialogTitle sx={{ 
-          p: 4, 
           display: 'flex', 
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white'
+          pb: 2
         }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}>
-              {isEditing ? <EditIcon /> : <AddIcon />}
-            </Avatar>
-            <Box>
-              <Typography variant="h5" fontWeight="700">
-                {isEditing ? 'Edit Experience' : 'Add Experience'}
-              </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                {isEditing ? 'Update your experience details' : 'Share your professional journey'}
-              </Typography>
-            </Box>
-          </Box>
-          
-          <IconButton
-            onClick={handleDialogClose}
-            disabled={dialogLoading}
-            sx={{
-              color: 'white',
-              bgcolor: 'rgba(255,255,255,0.1)',
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
-            }}
-          >
+          <Typography variant="h6" fontWeight="600">
+            {isEditing ? 'Edit experience' : 'Add experience'}
+          </Typography>
+          <IconButton onClick={handleDialogClose} size="small">
             <CloseIcon />
           </IconButton>
         </DialogTitle>
 
-        <DialogContent sx={{ p: 4 }}>
-          <AnimatePresence>
-            {dialogError && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
-                <Alert 
-                  severity="error" 
-                  sx={{ 
-                    mb: 3, 
-                    borderRadius: 3,
-                    boxShadow: '0 4px 12px rgba(244, 67, 54, 0.15)' 
-                  }}
-                  onClose={() => setDialogError(null)}
-                >
-                  {dialogError}
-                </Alert>
-              </motion.div>
-            )}
-          </AnimatePresence>
+        <DialogContent sx={{ pt: 0 }}>
+          {dialogError && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {dialogError}
+            </Alert>
+          )}
 
-          <Grid container spacing={3}>
-            {/* Job Title */}
-            <Grid item xs={12} md={6}>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
               <TextField
                 required
                 fullWidth
-                id="job_title"
+                label="Title"
                 name="job_title"
-                label="Job Title"
                 value={formData.job_title}
                 onChange={handleInputChange}
-                variant="outlined"
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 3,
-                    '&:hover': {
-                      '& > fieldset': {
-                        borderColor: 'primary.main',
-                      }
-                    }
-                  }
-                }}
+                placeholder="Ex: Software Engineer"
               />
             </Grid>
 
-            {/* Company Name */}
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12}>
               <TextField
                 required
                 fullWidth
-                id="company_name"
+                label="Company"
                 name="company_name"
-                label="Company Name"
                 value={formData.company_name}
                 onChange={handleInputChange}
-                variant="outlined"
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 3,
-                    '&:hover': {
-                      '& > fieldset': {
-                        borderColor: 'primary.main',
-                      }
-                    }
-                  }
-                }}
+                placeholder="Ex: Microsoft"
               />
             </Grid>
 
-            {/* Start Date */}
-            <Grid item xs={12} md={6}>
+            <Grid item xs={6}>
               <TextField
                 required
                 fullWidth
-                id="start_date"
+                label="Start date"
                 name="start_date"
-                label="Start Date"
                 type="month"
                 value={formData.start_date}
                 onChange={handleInputChange}
-                variant="outlined"
-                InputLabelProps={{
-                  shrink: true,
-                }}
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 3,
-                  }
-                }}
+                InputLabelProps={{ shrink: true }}
               />
             </Grid>
 
-            {/* End Date */}
-            <Grid item xs={12} md={6}>
+            <Grid item xs={6}>
               <TextField
                 fullWidth
-                id="end_date"
+                label="End date"
                 name="end_date"
-                label="End Date"
                 type="month"
                 value={formData.end_date}
                 onChange={handleInputChange}
-                variant="outlined"
                 disabled={formData.is_current}
-                InputLabelProps={{
-                  shrink: true,
-                }}
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 3,
-                  }
-                }}
+                InputLabelProps={{ shrink: true }}
               />
             </Grid>
 
-            {/* Current Job Checkbox */}
             <Grid item xs={12}>
               <FormControlLabel
                 control={
                   <Checkbox
+                    name="is_current"
                     checked={formData.is_current}
                     onChange={handleCurrentJobChange}
-                    name="is_current"
-                    sx={{
-                      '&.Mui-checked': {
-                        color: 'primary.main',
-                      }
-                    }}
                   />
                 }
                 label="I am currently working in this role"
-                sx={{ 
-                  '& .MuiFormControlLabel-label': {
-                    fontSize: '1rem',
-                    fontWeight: 500
-                  }
-                }}
               />
             </Grid>
 
-            {/* Description */}
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                id="description"
-                name="description"
-                label="Description"
                 multiline
-                rows={5}
+                rows={4}
+                label="Description"
+                name="description"
                 value={formData.description}
                 onChange={handleInputChange}
-                variant="outlined"
-                placeholder="Describe your role, responsibilities, and key achievements..."
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 3,
-                  }
-                }}
+                placeholder="Describe your responsibilities and achievements..."
               />
             </Grid>
           </Grid>
         </DialogContent>
 
-        <DialogActions sx={{ 
-          px: 4, 
-          py: 3, 
-          borderTop: '1px solid', 
-          borderColor: 'divider',
-          gap: 2
-        }}>
+        <DialogActions sx={{ p: 3, pt: 2 }}>
           <Button 
-            onClick={handleDialogClose}
+            onClick={handleDialogClose} 
             disabled={dialogLoading}
-            startIcon={<CancelIcon />}
-            sx={{ 
-              borderRadius: 3, 
-              px: 4,
-              py: 1.5,
-              textTransform: 'none',
-              fontWeight: 600,
-              color: 'text.secondary',
-              '&:hover': {
-                bgcolor: 'action.hover'
-              }
-            }}
+            sx={{ textTransform: 'none' }}
           >
             Cancel
           </Button>
@@ -1135,23 +767,16 @@ const Experience: React.FC<ExperienceProps> = ({
             variant="contained"
             onClick={handleSubmit}
             disabled={dialogLoading}
-            startIcon={dialogLoading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-            sx={{ 
-              borderRadius: 3, 
-              px: 4,
-              py: 1.5,
-              textTransform: 'none',
-              fontWeight: 700,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              boxShadow: '0 6px 20px rgba(102, 126, 234, 0.3)',
-              '&:hover': { 
-                boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
-                transform: 'translateY(-1px)'
-              },
-              transition: 'all 0.3s ease'
-            }}
+            sx={{ textTransform: 'none' }}
           >
-            {dialogLoading ? 'Saving...' : (isEditing ? 'Update Experience' : 'Add Experience')}
+            {dialogLoading ? (
+              <>
+                <CircularProgress size={16} sx={{ mr: 1 }} />
+                Saving...
+              </>
+            ) : (
+              isEditing ? 'Save' : 'Add experience'
+            )}
           </Button>
         </DialogActions>
       </Dialog>

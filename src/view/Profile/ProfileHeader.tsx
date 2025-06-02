@@ -8,6 +8,7 @@ import {
 import EditProfile from './EditProfile';
 import { FetchEndpoint } from '../FetchEndpoint';
 import { useAuth } from '../Context/AuthContext';
+import { FaUser } from 'react-icons/fa';
 
 interface ProfileHeaderProps {
   onProfileUpdate?: (updatedData: any) => void;
@@ -160,6 +161,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 bgcolor: 'background.paper'
               }}
             >
+              <FaUser/>
               <CircularProgress />
             </Box>
           ) : (

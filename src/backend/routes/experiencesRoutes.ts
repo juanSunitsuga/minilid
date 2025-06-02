@@ -299,14 +299,18 @@ router.delete("/appliers-experiences/:experience_id", authMiddleware, controller
  * Get all experiences for a specific recruiter
  * Used for: Retrieving a recruiter's experience list for profile display
  * Query parameter: recruiter_id
+ * Following the same pattern as appliers-experiences route
  */
 router.get("/recruiters-experiences", controllerWrapper(async (req, res) => {
     const recruiterId = req.query.recruiter_id;
+
+    console.log('Fetching experiences for recruiter:', recruiterId);
 
     if (!recruiterId) {
         throw new Error("Recruiter ID is required.");
     }
 
+    // Now we can use include since associations are properly set up
     const recruiter = await Recruiters.findOne({
         where: { recruiter_id: recruiterId },
         include: [
@@ -314,8 +318,7 @@ router.get("/recruiters-experiences", controllerWrapper(async (req, res) => {
                 model: Experiences,
                 as: "experiences",
                 attributes: ["experience_id", "company_name", "job_title", "start_date", "end_date", "description"],
-                where: { user_type: 'recruiter' },
-                required: false
+                required: false // LEFT JOIN
             }
         ]
     });
@@ -324,6 +327,7 @@ router.get("/recruiters-experiences", controllerWrapper(async (req, res) => {
         throw new Error("Recruiter not found.");
     }
 
+    // Extract and format experiences
     const experiences = recruiter.experiences?.map((exp: any) => ({
         experience_id: exp.experience_id,
         company_name: exp.company_name,
@@ -333,7 +337,10 @@ router.get("/recruiters-experiences", controllerWrapper(async (req, res) => {
         description: exp.description
     })) || [];
 
+    // Sort by start_date (most recent first)
     experiences.sort((a: any, b: any) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
+
+    console.log('Found experiences:', experiences.length);
 
     return {
         message: "Experiences retrieved successfully.",
@@ -357,6 +364,9 @@ router.post("/recruiters-experiences", authMiddleware, controllerWrapper(async (
         end_date, 
         description 
     } = req.body;
+
+    console.log('Received experience data:', req.body);
+    console.log('Authenticated user:', req.user);
 
     if (!recruiter_id || !company_name || !job_title || !start_date) {
         throw new Error("Recruiter ID, company name, job title, and start date are required.");
@@ -386,6 +396,8 @@ router.post("/recruiters-experiences", authMiddleware, controllerWrapper(async (
         description: description || null
     });
 
+    console.log('Created experience:', experience.toJSON());
+
     return {
         status: 'success',
         message: "Experience added successfully.",
@@ -396,6 +408,9 @@ router.post("/recruiters-experiences", authMiddleware, controllerWrapper(async (
 /**
  * PUT /api/experiences/recruiters-experiences/:experience_id
  * Update existing work experience for a recruiter
+ * Used for: Editing work experience entries
+ * Requires: Authentication
+ * Body: { company_name?, job_title?, start_date?, end_date?, description? }
  */
 router.put("/recruiters-experiences/:experience_id", authMiddleware, controllerWrapper(async (req, res) => {
     const { experience_id } = req.params;
@@ -406,6 +421,9 @@ router.put("/recruiters-experiences/:experience_id", authMiddleware, controllerW
         end_date, 
         description 
     } = req.body;
+
+    console.log('Updating experience:', experience_id, req.body);
+    console.log('Authenticated user:', req.user);
 
     const experience = await Experiences.findOne({
         where: { 
@@ -463,6 +481,7 @@ router.put("/recruiters-experiences/:experience_id", authMiddleware, controllerW
             if (isNaN(endDateObj.getTime())) {
                 throw new Error("Invalid end date.");
             }
+            // Check if end date is after start date
             const startDateToCheck = updates.start_date || experience.start_date;
             if (endDateObj <= startDateToCheck) {
                 throw new Error("End date must be after start date.");
@@ -479,6 +498,8 @@ router.put("/recruiters-experiences/:experience_id", authMiddleware, controllerW
     await experience.update(updates);
     await experience.reload();
 
+    console.log('Updated experience:', experience.toJSON());
+
     return {
         message: "Experience updated successfully.",
         data: experience.toJSON()
@@ -488,9 +509,14 @@ router.put("/recruiters-experiences/:experience_id", authMiddleware, controllerW
 /**
  * DELETE /api/experiences/recruiters-experiences/:experience_id
  * Delete work experience entry for a recruiter
+ * Used for: Removing work experience from recruiter profile
+ * Requires: Authentication
  */
 router.delete("/recruiters-experiences/:experience_id", authMiddleware, controllerWrapper(async (req, res) => {
     const { experience_id } = req.params;
+
+    console.log('Deleting experience:', experience_id);
+    console.log('Authenticated user:', req.user);
 
     const experience = await Experiences.findOne({
         where: { 
@@ -515,8 +541,12 @@ router.delete("/recruiters-experiences/:experience_id", authMiddleware, controll
         throw new Error("Associated recruiter not found.");
     }
 
+    // Store experience data for response (before deletion)
     const deletedExperienceData = experience.toJSON();
+
     await experience.destroy();
+
+    console.log('Deleted experience successfully:', deletedExperienceData.experience_id);
 
     return {
         message: "Experience deleted successfully.",
@@ -571,6 +601,78 @@ router.get("/appliers-stats/:applier_id", controllerWrapper(async (req, res) => 
 
     const companies = [...new Set(experiences.map(exp => exp.company_name))];
     const jobTitles = [...new Set(experiences.map(exp => exp.job_title))];
+
+    return {
+        message: "Experience statistics retrieved successfully.",
+        data: {
+            total_experiences: totalExperiences,
+            current_experiences: currentExperiences,
+            past_experiences: pastExperiences,
+            total_experience_duration: {
+                years: totalYears,
+                months: remainingMonths,
+                total_months: totalMonths
+            },
+            companies_count: companies.length,
+            companies: companies,
+            job_titles_count: jobTitles.length,
+            job_titles: jobTitles,
+            experiences: experiences.map(exp => exp.toJSON())
+        }
+    };
+}));
+
+/**
+ * GET /api/experiences/recruiters-stats/:recruiter_id
+ * Get experience statistics for a recruiter
+ * Used for: Retrieving a recruiter's experience statistics for profile display
+ * Parameter: recruiter_id
+ * Following the same pattern as appliers-stats route
+ */
+router.get("/recruiters-stats/:recruiter_id", controllerWrapper(async (req, res) => {
+    const { recruiter_id } = req.params;
+
+    console.log('Fetching experience stats for recruiter:', recruiter_id);
+
+    const recruiter = await Recruiters.findOne({ where: { recruiter_id } });
+
+    if (!recruiter) {
+        throw new Error("Recruiter not found.");
+    }
+
+    const experiences = await Experiences.findAll({
+        where: {
+            user_id: recruiter_id,
+            user_type: 'recruiter'
+        },
+        order: [['start_date', 'DESC']]
+    });
+
+    // Calculate statistics
+    const totalExperiences = experiences.length;
+    const currentExperiences = experiences.filter(exp => !exp.end_date).length;
+    const pastExperiences = experiences.filter(exp => exp.end_date).length;
+
+    // Calculate total experience duration
+    let totalMonths = 0;
+    experiences.forEach(exp => {
+        const start = new Date(exp.start_date);
+        const end = exp.end_date ? new Date(exp.end_date) : new Date();
+        const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+        totalMonths += months;
+    });
+
+    const totalYears = Math.floor(totalMonths / 12);
+    const remainingMonths = totalMonths % 12;
+
+    const companies = [...new Set(experiences.map(exp => exp.company_name))];
+    const jobTitles = [...new Set(experiences.map(exp => exp.job_title))];
+
+    console.log('Found experience stats:', {
+        total: totalExperiences,
+        current: currentExperiences,
+        past: pastExperiences
+    });
 
     return {
         message: "Experience statistics retrieved successfully.",

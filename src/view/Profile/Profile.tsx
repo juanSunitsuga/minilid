@@ -14,11 +14,18 @@ import EditProfile from './EditProfile';
 
 // Interface based on appliers.ts model
 interface Applier {
-  applier_id: string;  // Keep this required
-  name: string;        // Keep this required
-  email: string;       // Keep this required
+  applier_id: string;
+  name: string;
+  email: string;
   about: string | null;
-  skills?: Skill[];    // Make this optional
+  skills?: Skill[];
+}
+
+interface Recruiter {
+  recruiter_id: string;
+  name: string;
+  email: string;
+  about: string | null;
 }
 
 interface Skill {
@@ -45,7 +52,7 @@ interface Application {
 
 const Profile: React.FC = () => {
   const { isAuthenticated, userData, userType } = useAuth();
-  const [profileData, setProfileData] = useState<Applier | null>(null);
+  const [profileData, setProfileData] = useState<Applier | Recruiter | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [experiences, setExperiences] = useState<Experience[]>([]);
@@ -97,11 +104,10 @@ const Profile: React.FC = () => {
         
         setProfileData(data.data);
         
-        // Also fetch skills if needed
+        // Only fetch skills if user is an applier
         if (userType === 'applier') {
-          const skillsResponse = await FetchEndpoint(`/profile/appliers-skills?applier_id=${userId}`, 'GET', token,null);
+          const skillsResponse = await FetchEndpoint(`/skills/appliers-skills?applier_id=${userId}`, 'GET', token, null);
           const skillsData = await skillsResponse.json();
-          
           
           if (skillsResponse.ok) {
             setProfileData(prevData => {
@@ -109,12 +115,9 @@ const Profile: React.FC = () => {
               if (!prevData) return null;
 
               return {
-                applier_id: prevData.applier_id,
-                name: prevData.name,
-                email: prevData.email,
-                about: prevData.about,
+                ...prevData,
                 skills: skillsData.data || []
-              };
+              } as Applier;
             });
           }
         }
@@ -139,17 +142,31 @@ const Profile: React.FC = () => {
       if (!token) {
         throw new Error('Authentication token not found');
       }
-      
-      const response = await FetchEndpoint(`/profile/appliers/${profileData?.applier_id}/about`, 'POST', token, {
+
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+
+      let endpoint = '';
+      if (userType === 'applier') {
+        endpoint = `/profile/appliers/${userId}/about`;
+      } else if (userType === 'recruiter') {
+        endpoint = `/profile/recruiters/${userId}/about`;
+      } else {
+        throw new Error('Unknown user type');
+      }
+
+      const response = await FetchEndpoint(endpoint, 'POST', token, {
         about: aboutText
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || 'Failed to update profile');
       }
-      
+
       if (profileData) {
         setProfileData({
           ...profileData,
@@ -162,30 +179,39 @@ const Profile: React.FC = () => {
     }
   };
 
-  // Handle skills update
-  const handleUpdateSkills = async (skillNames: string[]) => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-      
-      // Update local state with new skills
-      if (profileData) {
-        const updatedSkills = skillNames.map((name, index) => ({
-          skill_id: index, // This is just a placeholder; backend would assign real IDs
-          skill_name: name
-        }));
+  // Handle skills update - only for appliers
+  const handleUpdateSkills = async () => {
+    // Refresh the profile data to get updated skills
+    const token = localStorage.getItem('accessToken');
+    const userId = localStorage.getItem('userId');
+    
+    if (token && userId && userType === 'applier') {
+      try {
+        const skillsResponse = await FetchEndpoint(`/skills/appliers-skills?applier_id=${userId}`, 'GET', token, null);
+        const skillsData = await skillsResponse.json();
         
-        setProfileData({
-          ...profileData,
-          skills: updatedSkills
-        });
+        if (skillsResponse.ok) {
+          setProfileData(prevData => {
+            if (!prevData) return null;
+            return {
+              ...prevData,
+              skills: skillsData.data || []
+            } as Applier;
+          });
+        }
+      } catch (error) {
+        console.error('Error refreshing skills:', error);
       }
-    } catch (error: any) {
-      console.error('Error updating skills:', error);
-      throw new Error(error.message || 'Failed to update skills');
     }
+  };
+
+  // Type guard functions
+  const isApplier = (profile: Applier | Recruiter | null): profile is Applier => {
+    return profile !== null && 'applier_id' in profile;
+  };
+
+  const isRecruiter = (profile: Applier | Recruiter | null): profile is Recruiter => {
+    return profile !== null && 'recruiter_id' in profile;
   };
 
   // Function to determine chip color based on status
@@ -248,8 +274,7 @@ const Profile: React.FC = () => {
         <ProfileHeader 
           name={profileData?.name || ""}
           email={profileData?.email}
-          headline="Student at Institut Teknologi Harapan Bangsa"
-        //   profilePicture={profileData?.profile_picture}
+          headline={userType === 'recruiter' ? "Recruiter" : "Student at Institut Teknologi Harapan Bangsa"}
           userData={profileData}
           onProfileUpdate={(updatedData) => {
             setProfileData({
@@ -265,19 +290,115 @@ const Profile: React.FC = () => {
           onSave={handleSaveAbout}
         />
 
-        {/* Skills Section Component */}
-        <Skills 
-          skills={profileData?.skills || []}
-          onUpdateSkills={handleUpdateSkills}
-        />
+        {/* Skills Section Component - Only show for appliers */}
+        {userType === 'applier' && isApplier(profileData) && (
+          <Skills 
+            skills={profileData.skills || []}
+            onUpdateSkills={handleUpdateSkills}
+          />
+        )}
         
         {/* Experience Section Component */}
         <ExperienceSection 
           experiences={experiences}
-          userId={profileData?.applier_id}
+          userId={isApplier(profileData) ? profileData.applier_id : (isRecruiter(profileData) ? profileData.recruiter_id : undefined)}
           userType={userType as 'applier' | 'recruiter'}
           onAddExperience={() => console.log('Add experience clicked')}
         />
+        
+        {/* Job Applications Section - Only show for appliers */}
+        {userType === 'applier' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <Paper 
+              elevation={0}
+              sx={{ 
+                p: 3, 
+                borderRadius: 3, 
+                mb: 2.5,
+                border: '1px solid',
+                borderColor: 'divider'
+              }}
+            >
+              <Typography variant="h5" fontWeight="600" sx={{ mb: 2 }}>Job Applications</Typography>
+              
+              <Grid container spacing={2}>
+                {applications.map((app) => (
+                  <Grid item xs={12} sm={6} key={app.id}>
+                    <Card 
+                      variant="outlined" 
+                      sx={{ 
+                        borderRadius: 2, 
+                        borderColor: 'divider', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        height: '100%'
+                      }}
+                    >
+                      <CardContent sx={{ flex: 1 }}>
+                        <Typography variant="h6" fontWeight="500" sx={{ mb: 1 }}>
+                          {app.job_title}
+                        </Typography>
+                        
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          {app.company_name}
+                        </Typography>
+                        
+                        <Divider sx={{ my: 1 }} />
+                        
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                          <Chip 
+                            label={app.status} 
+                            variant="outlined" 
+                            size="small"
+                            sx={getStatusChipProps(app.status)}
+                          />
+                          
+                          <Chip 
+                            label={`Applied on ${app.applied_date}`} 
+                            variant="outlined" 
+                            size="small"
+                            color="default"
+                          />
+                          
+                          {app.interview_date && (
+                            <Chip 
+                              label={`Interview on ${app.interview_date}`} 
+                              variant="outlined" 
+                              size="small"
+                              color="default"
+                            />
+                          )}
+                        </Box>
+                      </CardContent>
+                      
+                      <Divider />
+                      
+                      <Box sx={{ p: 1 }}>
+                        <Button 
+                          variant="contained" 
+                          size="small" 
+                          fullWidth
+                          sx={{ 
+                            borderRadius: 2, 
+                            py: 1.5, 
+                            fontSize: '0.875rem' 
+                          }}
+                          onClick={() => console.log('View details clicked')}
+                        >
+                          View Details
+                        </Button>
+                      </Box>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </Paper>
+          </motion.div>
+        )}
         
         {/* Footer */}
         <motion.div
