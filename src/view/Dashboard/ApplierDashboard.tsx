@@ -92,7 +92,7 @@ const ApplierDashboard: React.FC = () => {
         try {
             const token = localStorage.getItem('accessToken');
             // Update this endpoint too
-            const response = await FetchEndpoint(`/job-applications/cancel/${applicationId}`, 'DELETE', token, null);
+            const response = await FetchEndpoint(`/job-applications/delete/${applicationId}`, 'DELETE', token, null);
 
             if (!response.ok) {
                 throw new Error('Failed to cancel application');
