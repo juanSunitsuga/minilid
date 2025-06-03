@@ -146,9 +146,12 @@ const Home: React.FC = () => {
     } else if (diffDays < 30) {
       const weeks = Math.floor(diffDays / 7);
       return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
-    } else {
+    } else if (diffDays < 365) { 
       const months = Math.floor(diffDays / 30);
       return `${months} ${months === 1 ? 'month' : 'months'} ago`;
+    } else { 
+      const years = Math.floor(diffDays / 365);
+      return `${years} ${years === 1 ? 'year' : 'years'} ago`;
     }
   };
   
