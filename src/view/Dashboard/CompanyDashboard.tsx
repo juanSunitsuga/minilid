@@ -463,16 +463,6 @@ const CompanyDashboard: React.FC = () => {
                 {companyInfo?.company_name || 'Your Company'}
               </Typography>
               
-              <Chip 
-                label={companyInfo?.industry || 'Technology'} 
-                sx={{ 
-                  bgcolor: 'rgba(255,255,255,0.2)', 
-                  color: 'white',
-                  mb: 2,
-                  fontWeight: 600
-                }} 
-              />
-              
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3, opacity: 0.95 }}>
                 {companyInfo?.address && (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
