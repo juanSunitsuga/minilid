@@ -23,12 +23,7 @@ export class Skills extends Model {
     })
     declare name: string;
 
-    @BelongsToMany(() => JobPosts, {
-        through: () => JobPostSkill,
-        foreignKey: "skill_id",
-        otherKey: "job_post_id",
-        as: "job_posts"
-    })
+    @BelongsToMany(() => JobPosts, () => JobPostSkill)
     declare job_posts: JobPosts[];
     
     // Many-to-Many relationship with Appliers
