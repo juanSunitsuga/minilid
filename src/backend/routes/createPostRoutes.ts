@@ -2,12 +2,15 @@ import express from "express";
 import { JobPosts } from "../../../models/job_posts";
 import { Skills } from "../../../models/skills";
 import { JobPostSkill } from "../../../models/job_post_skills";
+import { JobAppliers } from "../../../models/job_appliers";
 import { controllerWrapper } from "../../utils/controllerWrapper";
 import { JobCategories } from "../../../models/job_categories";
 import { JobTypes } from "../../../models/job_types";
 import { Companies } from "../../../models/companies";
 import { Recruiters } from "../../../models/recruiters";
 import authMiddleware from "../../middleware/Auth";
+import jwt from "jsonwebtoken";
+import { appConfig } from "../../../config/app";
 
 const router = express.Router();
 
@@ -207,64 +210,42 @@ router.post("/jobposts", authMiddleware, controllerWrapper(async (req, res) => {
 
 router.delete('/jobs/:jobId', authMiddleware, controllerWrapper(async (req, res) => {
   const { jobId } = req.params;
-
   const user_id = req.user?.id;
   if (!user_id) {
     return res.status(401).json({ error: "User authentication failed" });
   }
-  const existingJob = await JobPosts.findOne({
-    where: { job_id: jobId },
-    include: [
-      {
-        model: Recruiters,
-        as: 'recruiter',
-        attributes: ['recruiter_id', 'name']
-      }
-    ]
-  });
-
-  if (!existingJob) {
-    return res.status(404).json({ error: "Job not found" });
-  }
-
-  const recruiter = await Recruiters.findOne({
-    where: { recruiter_id: user_id }
-  });
-
-  if (!recruiter) {
-    return res.status(403).json({
-      error: "User is not registered as a recruiter"
+  try {
+    const job = await JobPosts.findOne({
+      where: { job_id: jobId },
+      include: [
+        {
+          model: Recruiters,
+          as: 'recruiter',
+          attributes: ['recruiter_id']
+        }
+      ]
     });
-  }
 
-  if (existingJob.recruiter_id !== recruiter.recruiter_id) {
-    return res.status(403).json({
-      error: "You can only delete your own job posts"
-    });
-  }
-
-  await JobPostSkill.destroy({
-    where: { job_id: jobId }
-  });
-  const deletedCount = await JobPosts.destroy({
-    where: { job_id: jobId }
-  });
-
-  if (deletedCount === 0) {
-    return res.status(500).json({
-      error: "Failed to delete job post",
-      details: "No rows were affected"
-    });
-  }
-
-  return res.status(200).json({
-    message: "Job post deleted successfully",
-    deleted_job: {
-      job_id: jobId,
-      title: existingJob.title,
-      recruiter: existingJob.recruiter?.name || "Unknown"
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
     }
-  });
+
+    if (job.recruiter.recruiter_id !== user_id) {
+      return res.status(403).json({
+        error: "You can only delete your own job posts"
+      });
+    }
+
+    await JobPosts.destroy({ where: { job_id: jobId } });
+
+    return res.status(200).json({ message: "Job deleted successfully" });
+
+  } catch (error) {
+    return res.status(500).json({
+      error: "Failed to delete job",
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 }));
 
 // ✅ ADD: Get single job by ID
